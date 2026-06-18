@@ -1,0 +1,27 @@
+class RouteNames {
+  static const String splash = '/';
+  static const String onboarding = '/onboarding';
+  static const String login = '/login';
+  static const String register = '/register';
+  static const String forgotPassword = '/forgot-password';
+  static const String selectUserType = '/select-user-type';
+  static const String setupProfile = '/setup-profile';
+  static const String registerFarm = '/register-farm';
+  static const String farmSuccess = '/farm-success';
+  static const String dashboard = '/dashboard';
+  static const String myFarms = '/my-farms';
+  static const String farmDetail = '/farm-detail';
+  static const String editFarm = '/edit-farm';
+  static const String lotDetail = '/lot-detail';
+  static const String createLot = '/create-lot';
+  static const String editLot = '/edit-lot';
+  static const String lotHistory = '/lot-history';
+  static const String registerActivity = '/register-activity';
+  static const String notifications = '/notifications';
+  static const String profile = '/profile';
+  static const String home = '/home';
+  static const String activities = '/activities';
+  static const String editActivity = '/edit-activity';
+  static const String costs = '/costs';
+
+}
