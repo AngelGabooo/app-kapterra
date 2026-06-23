@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:kaabcafe/core/themes/app_theme.dart';
 
 class LoginButton extends StatelessWidget {
   final String text;
@@ -17,27 +16,31 @@ class LoginButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return SizedBox(
       width: double.infinity,
       height: 56,
       child: ElevatedButton(
         onPressed: isEnabled && !isLoading ? onPressed : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryGreen,
-          foregroundColor: Colors.white,
+          backgroundColor: theme.colorScheme.primary,
+          foregroundColor: theme.brightness == Brightness.dark ? Colors.black : Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
           elevation: isLoading ? 0 : 2,
-          disabledBackgroundColor: AppTheme.primaryGreen.withOpacity(0.5),
+          disabledBackgroundColor: theme.colorScheme.primary.withOpacity(0.4),
         ),
         child: isLoading
-            ? const SizedBox(
+            ? SizedBox(
           width: 24,
           height: 24,
           child: CircularProgressIndicator(
             strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              theme.brightness == Brightness.dark ? Colors.black : Colors.white,
+            ),
           ),
         )
             : Text(
@@ -45,6 +48,7 @@ class LoginButton extends StatelessWidget {
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
       ),

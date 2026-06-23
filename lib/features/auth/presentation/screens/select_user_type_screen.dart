@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
-import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/auth/data/models/user_type_model.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/user_type_card.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_button.dart';
@@ -58,16 +57,15 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
     final selectedType = _userTypes.firstWhere((type) => type.isSelected);
     debugPrint('Tipo de usuario seleccionado: ${selectedType.type.title}');
 
-    // ✅ Navegar a configuración de perfil
     if (selectedType.type == UserType.producer) {
-      // Para productores, ir a configuración de perfil
       context.go(RouteNames.setupProfile);
     } else {
-      // Para otros perfiles, mostrar mensaje (próximamente)
+      final theme = Theme.of(context);
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (context) => AlertDialog(
+          backgroundColor: theme.colorScheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -75,24 +73,25 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
             children: [
               Icon(
                 Icons.info_outline,
-                color: AppTheme.goldCoffee,
+                color: theme.colorScheme.tertiary,
                 size: 28,
               ),
               const SizedBox(width: 12),
-              const Text('Próximamente'),
+              Text(
+                'Próximamente',
+                style: TextStyle(color: theme.colorScheme.onSurface),
+              ),
             ],
           ),
           content: Text(
             'El perfil de ${selectedType.type.title} estará disponible próximamente.\n\nPor ahora, puedes continuar con el flujo de productor.',
-            style: const TextStyle(fontSize: 16),
+            style: TextStyle(fontSize: 16, color: theme.colorScheme.onSurface.withOpacity(0.9)),
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
+              onPressed: () => Navigator.pop(context),
               style: TextButton.styleFrom(
-                foregroundColor: AppTheme.primaryGreen,
+                foregroundColor: theme.colorScheme.secondary,
               ),
               child: const Text('Entendido'),
             ),
@@ -110,23 +109,27 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppTheme.lightBeige,
-              AppTheme.primaryGreen.withOpacity(0.03),
-              AppTheme.lightBeige,
+              theme.scaffoldBackgroundColor,
+              theme.colorScheme.primary.withOpacity(0.04),
+              theme.scaffoldBackgroundColor,
             ],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // Barra superior
+              // Barra superior responsiva
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
@@ -134,16 +137,15 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                     IconButton(
                       onPressed: _goBack,
                       icon: const Icon(Icons.arrow_back),
-                      color: AppTheme.darkCoffee,
+                      color: theme.colorScheme.onSurface,
                     ),
                     const Spacer(),
-                    // Logo pequeño
                     Container(
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
-                        color: AppTheme.primaryGreen.withOpacity(0.1),
+                        color: theme.colorScheme.primary.withOpacity(0.12),
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
@@ -154,7 +156,7 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                             return Icon(
                               Icons.agriculture,
                               size: 24,
-                              color: AppTheme.primaryGreen,
+                              color: theme.colorScheme.primary,
                             );
                           },
                         ),
@@ -164,7 +166,7 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                 ),
               ),
 
-              // Contenido principal
+              // Cuerpo con scroll unificado y control de caída de altura
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -174,32 +176,31 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 20),
+                        // 🚨 CONTROL DE ALTURA SEGURO: Empuja el contenido hacia abajo de forma equilibrada
+                        const SizedBox(height: 36),
 
-                        // Título
-                        const Text(
+                        Text(
                           'Selecciona tu perfil',
                           style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                            color: theme.colorScheme.onSurface,
                           ),
                         ),
                         const SizedBox(height: 12),
 
-                        // Subtítulo
                         Text(
                           'Personalizaremos tu experiencia según tu rol dentro de la cadena productiva del café.',
                           style: TextStyle(
                             fontSize: 15,
-                            color: AppTheme.darkCoffee.withOpacity(0.7),
+                            color: theme.colorScheme.onSurface.withOpacity(0.7),
                             height: 1.4,
                           ),
                         ),
 
                         const SizedBox(height: 32),
 
-                        // Tarjetas de selección
+                        // Listado adaptativo de tarjetas
                         ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
@@ -212,19 +213,17 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                           },
                         ),
 
-                        const SizedBox(height: 48),
+                        const SizedBox(height: 32),
                       ],
                     ),
                   ),
                 ),
               ),
 
-              // Botón continuar
+              // Botón inferior perfectamente anclado a la base del scroll
               Container(
                 padding: const EdgeInsets.all(24.0),
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                ),
+                color: Colors.transparent,
                 child: LoginButton(
                   text: 'Continuar',
                   onPressed: _isSelected ? _continue : () {},

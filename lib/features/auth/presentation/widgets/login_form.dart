@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_button.dart';
 
 class LoginForm extends StatefulWidget {
@@ -21,7 +20,6 @@ class _LoginFormState extends State<LoginForm> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   final _formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -38,18 +36,19 @@ class _LoginFormState extends State<LoginForm> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Campo de email
           Text(
             'Correo electrónico',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppTheme.darkCoffee,
+              color: theme.colorScheme.onSurface.withOpacity(0.9),
             ),
           ),
           const SizedBox(height: 8),
@@ -57,44 +56,39 @@ class _LoginFormState extends State<LoginForm> {
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
+            style: TextStyle(color: theme.colorScheme.onSurface),
             decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.primaryGreen),
+              prefixIcon: Icon(Icons.email_outlined, color: theme.colorScheme.secondary),
               hintText: 'ejemplo@kaabterra.com',
+              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.4)),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(20),
-                borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.15)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(20),
-                borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.15)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(20),
-                borderSide: const BorderSide(color: AppTheme.primaryGreen, width: 2),
+                borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
               ),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: theme.colorScheme.surface,
             ),
             validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Por favor ingresa tu correo';
-              }
-              if (!value.contains('@') || !value.contains('.')) {
-                return 'Ingresa un correo válido';
-              }
+              if (value == null || value.isEmpty) return 'Por favor ingresa tu correo';
+              if (!value.contains('@') || !value.contains('.')) return 'Ingresa un correo válido';
               return null;
             },
           ),
-
           const SizedBox(height: 20),
-
-          // Campo de contraseña
           Text(
             'Contraseña',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppTheme.darkCoffee,
+              color: theme.colorScheme.onSurface.withOpacity(0.9),
             ),
           ),
           const SizedBox(height: 8),
@@ -103,12 +97,13 @@ class _LoginFormState extends State<LoginForm> {
             obscureText: _obscurePassword,
             textInputAction: TextInputAction.done,
             onFieldSubmitted: (_) => _handleSubmit(),
+            style: TextStyle(color: theme.colorScheme.onSurface),
             decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.primaryGreen),
+              prefixIcon: Icon(Icons.lock_outline, color: theme.colorScheme.secondary),
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                  color: AppTheme.darkCoffee.withOpacity(0.5),
+                  color: theme.colorScheme.onSurface.withOpacity(0.4),
                 ),
                 onPressed: () {
                   setState(() {
@@ -117,35 +112,29 @@ class _LoginFormState extends State<LoginForm> {
                 },
               ),
               hintText: '••••••••',
+              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.4)),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(20),
-                borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.15)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(20),
-                borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.15)),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(20),
-                borderSide: const BorderSide(color: AppTheme.primaryGreen, width: 2),
+                borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
               ),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: theme.colorScheme.surface,
             ),
             validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Por favor ingresa tu contraseña';
-              }
-              if (value.length < 6) {
-                return 'La contraseña debe tener al menos 6 caracteres';
-              }
+              if (value == null || value.isEmpty) return 'Por favor ingresa tu contraseña';
+              if (value.length < 6) return 'La contraseña debe tener al menos 6 caracteres';
               return null;
             },
           ),
-
           const SizedBox(height: 12),
-
-          // Enlace olvidó contraseña
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
@@ -153,20 +142,16 @@ class _LoginFormState extends State<LoginForm> {
               child: Text(
                 '¿Olvidaste tu contraseña?',
                 style: TextStyle(
-                  color: AppTheme.goldCoffee,
+                  color: theme.colorScheme.tertiary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
           ),
-
           const SizedBox(height: 24),
-
-          // Botón iniciar sesión
           LoginButton(
             text: 'Iniciar sesión',
             onPressed: _handleSubmit,
-            isLoading: _isLoading,
           ),
         ],
       ),

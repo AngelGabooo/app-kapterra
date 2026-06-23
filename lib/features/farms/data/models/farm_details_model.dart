@@ -27,6 +27,33 @@ class FarmDetailsModel {
     required this.longitude,
   });
 
+  // 🚀 MÉTODO COPYWITH CORREGIDO
+  FarmDetailsModel copyWith({
+    String? id,
+    String? name,
+    String? location,
+    double? hectares,
+    int? lots,
+    double? productivity,
+    FarmHealthStatus? status,
+    String? imageUrl,
+    double? latitude,
+    double? longitude,
+  }) {
+    return FarmDetailsModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      location: location ?? this.location,
+      hectares: hectares ?? this.hectares,
+      lots: lots ?? this.lots,
+      productivity: productivity ?? this.productivity,
+      status: status ?? this.status,
+      imageUrl: imageUrl ?? this.imageUrl,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+    );
+  }
+
   Color get statusColor {
     switch (status) {
       case FarmHealthStatus.healthy:

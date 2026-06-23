@@ -1,6 +1,6 @@
+import 'package:kaabcafe/features/splash/data/datasources/splash_local_datasource.dart';
 import 'package:kaabcafe/features/splash/domain/entities/splash_entity.dart';
 import 'package:kaabcafe/features/splash/domain/repositories/splash_repository.dart';
-import 'package:kaabcafe/features/splash/data/datasources/splash_local_datasource.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class SplashRepositoryImpl implements SplashRepository {

@@ -1,146 +1,110 @@
 import 'package:flutter/material.dart';
-import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/farms/data/models/farm_details_model.dart';
 
 class FarmMapPreview extends StatelessWidget {
   final List<FarmDetailsModel> farms;
   final Function(FarmDetailsModel) onFarmTap;
 
-  const FarmMapPreview({
-    super.key,
-    required this.farms,
-    required this.onFarmTap,
-  });
+  const FarmMapPreview({super.key, required this.farms, required this.onFarmTap});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Container(
       height: 200,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.06)),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(28),
         child: Stack(
           children: [
-            // Mapa simulado
+            // Contenedor del Mapa Simulado Adaptativo
             Container(
               width: double.infinity,
               height: 200,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppTheme.primaryGreen.withOpacity(0.3),
-                    AppTheme.secondaryGreen.withOpacity(0.2),
-                  ],
-                ),
-              ),
+              color: theme.colorScheme.primary.withOpacity(0.04),
               child: CustomPaint(
-                painter: MapGridPainter(),
+                painter: MapGridPainter(theme: theme),
                 child: Stack(
-                  children: [
-                    // Marcadores de fincas
-                    ...farms.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final farm = entry.value;
-                      final left = 20.0 + (index * 60) % (screenWidth - 100);
-                      final top = 30.0 + (index * 40) % 140;
-                      return Positioned(
-                        left: left,
-                        top: top,
-                        child: GestureDetector(
-                          onTap: () => onFarmTap(farm),
-                          child: Column(
-                            children: [
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: farm.statusColor,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 2),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: farm.statusColor.withOpacity(0.5),
-                                      blurRadius: 8,
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.agriculture,
-                                  size: 16,
-                                  color: Colors.white,
-                                ),
+                  children: farms.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final farm = entry.value;
+                    final left = 24.0 + (index * 70) % (screenWidth - 120);
+                    final top = 40.0 + (index * 35) % 110;
+
+                    return Positioned(
+                      left: left,
+                      top: top,
+                      child: GestureDetector(
+                        onTap: () => onFarmTap(farm),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: farm.statusColor,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: theme.colorScheme.surface, width: 2.5),
+                                boxShadow: [BoxShadow(color: farm.statusColor.withOpacity(0.3), blurRadius: 10)],
                               ),
-                              Container(
-                                margin: const EdgeInsets.only(top: 4),
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      blurRadius: 4,
-                                    ),
-                                  ],
-                                ),
-                                child: Text(
-                                  farm.name.length > 10 ? '${farm.name.substring(0, 10)}...' : farm.name,
-                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
-                                ),
+                              child: const Icon(Icons.filter_hdr_rounded, size: 14, color: Colors.white),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surface,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.04)),
                               ),
-                            ],
-                          ),
+                              child: Text(
+                                farm.name.length > 10 ? '${farm.name.substring(0, 10)}...' : farm.name,
+                                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: theme.colorScheme.onSurface),
+                              ),
+                            ),
+                          ],
                         ),
-                      );
-                    }),
-                  ],
+                      ),
+                    );
+                  }).toList(),
                 ),
               ),
             ),
-            // Controles del mapa
+            // Controles Ópticos Flotantes
             Positioned(
-              top: 8,
-              right: 8,
+              top: 12,
+              right: 12,
               child: Column(
                 children: [
-                  _buildMapControl(Icons.add),
-                  const SizedBox(height: 8),
-                  _buildMapControl(Icons.remove),
-                  const SizedBox(height: 8),
-                  _buildMapControl(Icons.layers),
+                  _buildMapControl(Icons.add_rounded, theme),
+                  const SizedBox(height: 6),
+                  _buildMapControl(Icons.remove_rounded, theme),
                 ],
               ),
             ),
-            // Leyenda
+            // Leyenda de Nodos
             Positioned(
-              bottom: 8,
-              left: 8,
-              right: 8,
+              bottom: 12,
+              left: 12,
+              right: 12,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(20),
+                  color: theme.colorScheme.onSurface.withOpacity(0.85),
+                  borderRadius: BorderRadius.circular(30),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _buildLegendItem(FarmHealthStatus.healthy, 'Saludable'),
-                    _buildLegendItem(FarmHealthStatus.attention, 'Atención'),
-                    _buildLegendItem(FarmHealthStatus.risk, 'Riesgo'),
+                    _buildLegendItem(const Color(0xFF2E7D32), 'Estable'),
+                    _buildLegendItem(const Color(0xFFF57C00), 'Mantenimiento'),
+                    _buildLegendItem(const Color(0xFFD32F2F), 'Riesgo'),
                   ],
                 ),
               ),
@@ -151,66 +115,45 @@ class FarmMapPreview extends StatelessWidget {
     );
   }
 
-  Widget _buildMapControl(IconData icon) {
+  Widget _buildMapControl(IconData icon, ThemeData theme) {
     return Container(
-      width: 36,
-      height: 36,
+      width: 32,
+      height: 32,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-          ),
-        ],
+        border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.05)),
       ),
-      child: Icon(icon, size: 20, color: AppTheme.primaryGreen),
+      child: Icon(icon, size: 18, color: theme.colorScheme.primary),
     );
   }
 
-  Widget _buildLegendItem(FarmHealthStatus status, String label) {
-    Color color;
-    switch (status) {
-      case FarmHealthStatus.healthy:
-        color = const Color(0xFF2E7D32);
-        break;
-      case FarmHealthStatus.attention:
-        color = const Color(0xFFF57C00);
-        break;
-      case FarmHealthStatus.risk:
-        color = const Color(0xFFD32F2F);
-        break;
-    }
+  Widget _buildLegendItem(Color color, String label) {
     return Row(
       children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 10, color: Colors.white),
-        ),
+        CircleAvatar(radius: 3, backgroundColor: color),
+        const SizedBox(width: 6),
+        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
       ],
     );
   }
 }
 
 class MapGridPainter extends CustomPainter {
+  final ThemeData theme;
+  MapGridPainter({required this.theme});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.2)
-      ..strokeWidth = 0.5
+      ..color = theme.colorScheme.onSurface.withOpacity(0.02)
+      ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
 
-    for (double x = 0; x < size.width; x += 40) {
+    for (double x = 0; x < size.width; x += 35) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
     }
-    for (double y = 0; y < size.height; y += 40) {
+    for (double y = 0; y < size.height; y += 35) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
     }
   }

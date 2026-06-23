@@ -19,7 +19,7 @@ class LotModel {
     required this.estimatedProduction,
     required this.area,
     required this.status,
-    required this.treesCount,
+    required this.treesCount, // ✅ Eliminada la 'a' extra
   });
 
   Color get statusColor {
@@ -42,5 +42,52 @@ class LotModel {
       case LotStatus.risk:
         return 'Riesgo';
     }
+  }
+
+  // Método copyWith para facilitar actualizaciones
+  LotModel copyWith({
+    String? id,
+    String? name,
+    String? variety,
+    double? estimatedProduction,
+    double? area,
+    LotStatus? status,
+    int? treesCount,
+  }) {
+    return LotModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      variety: variety ?? this.variety,
+      estimatedProduction: estimatedProduction ?? this.estimatedProduction,
+      area: area ?? this.area,
+      status: status ?? this.status,
+      treesCount: treesCount ?? this.treesCount,
+    );
+  }
+
+  // Método para convertir a JSON (útil para almacenamiento)
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'variety': variety,
+      'estimatedProduction': estimatedProduction,
+      'area': area,
+      'status': status.index,
+      'treesCount': treesCount,
+    };
+  }
+
+  // Método para crear desde JSON
+  factory LotModel.fromJson(Map<String, dynamic> json) {
+    return LotModel(
+      id: json['id'],
+      name: json['name'],
+      variety: json['variety'],
+      estimatedProduction: json['estimatedProduction'],
+      area: json['area'],
+      status: LotStatus.values[json['status']],
+      treesCount: json['treesCount'],
+    );
   }
 }

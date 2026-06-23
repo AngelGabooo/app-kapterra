@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_button.dart';
 
 class ForgotPasswordForm extends StatefulWidget {
@@ -30,6 +29,8 @@ class _ForgotPasswordFormState extends State<ForgotPasswordForm> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Form(
       key: _formKey,
       child: Column(
@@ -38,11 +39,10 @@ class _ForgotPasswordFormState extends State<ForgotPasswordForm> {
           // Campo de correo electrónico
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withOpacity(theme.brightness == Brightness.dark ? 0.3 : 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
@@ -53,26 +53,27 @@ class _ForgotPasswordFormState extends State<ForgotPasswordForm> {
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _handleSubmit(),
+              style: TextStyle(color: theme.colorScheme.onSurface),
               decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.primaryGreen),
+                prefixIcon: Icon(Icons.email_outlined, color: theme.colorScheme.secondary),
                 hintText: 'correo@ejemplo.com',
                 hintStyle: TextStyle(
-                  color: AppTheme.darkCoffee.withOpacity(0.4),
+                  color: theme.colorScheme.onSurface.withOpacity(0.4),
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide.none,
+                  borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.15)),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide.none,
+                  borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.15)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide: const BorderSide(color: AppTheme.primaryGreen, width: 2),
+                  borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
                 ),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: theme.colorScheme.surface,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 20,
                   vertical: 16,
@@ -107,7 +108,7 @@ class _ForgotPasswordFormState extends State<ForgotPasswordForm> {
               Icon(
                 Icons.security_outlined,
                 size: 16,
-                color: AppTheme.primaryGreen.withOpacity(0.6),
+                color: theme.colorScheme.secondary.withOpacity(0.8),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -115,7 +116,7 @@ class _ForgotPasswordFormState extends State<ForgotPasswordForm> {
                   'Recibirás un enlace seguro para crear una nueva contraseña.',
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppTheme.darkCoffee.withOpacity(0.6),
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
               ),

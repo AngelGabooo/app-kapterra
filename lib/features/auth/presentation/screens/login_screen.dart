@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
-import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_logo.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_form.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/social_login_button.dart';
@@ -22,17 +21,13 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     debugPrint('Login intentado con: $email');
-
-    // Simular proceso de login
     await Future.delayed(const Duration(seconds: 2));
 
     setState(() {
       _isLoading = false;
     });
 
-    // TODO: Implementar lógica de autenticación real
     if (mounted) {
-      // ✅ Navegar directamente al Dashboard después del login exitoso
       context.go(RouteNames.dashboard);
     }
   }
@@ -43,8 +38,6 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     debugPrint('Google login intentado');
-
-    // Simular proceso de login con Google
     await Future.delayed(const Duration(seconds: 2));
 
     setState(() {
@@ -52,51 +45,50 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     if (mounted) {
-      // ✅ Navegar directamente al Dashboard después del login con Google
       context.go(RouteNames.dashboard);
     }
   }
 
-  void _handleRegister() {
-    debugPrint('Navegando a registro...');
-    context.go(RouteNames.register);
-  }
-
-  void _handleForgotPassword() {
-    debugPrint('Navegando a recuperar contraseña...');
-    context.go(RouteNames.forgotPassword);
-  }
+  void _handleRegister() => context.go(RouteNames.register);
+  void _handleForgotPassword() => context.go(RouteNames.forgotPassword);
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppTheme.lightBeige,
-              AppTheme.primaryGreen.withOpacity(0.03),
-              AppTheme.lightBeige,
+              theme.scaffoldBackgroundColor,
+              theme.colorScheme.primary.withOpacity(0.04),
+              theme.scaffoldBackgroundColor,
             ],
           ),
         ),
         child: SafeArea(
+          // Eliminamos el Stack para que no haya elementos flotantes rígidos
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             physics: const BouncingScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 40),
+                // ── CONTROL DE CAÍDA INICIAL ───
+                // Mantengo los 140 píxeles para que empiece bien abajo en la pantalla
+                const SizedBox(height: 140),
 
-                // Logo y títulos
+                // Logo y títulos de Kaab Terra
                 const LoginLogo(),
 
-                const SizedBox(height: 48),
+                const SizedBox(height: 36),
 
-                // Formulario de login
+                // Formulario (Inputs de Email, Password y botón Iniciar Sesión)
                 LoginForm(
                   onLogin: _handleLogin,
                   onForgotPassword: _handleForgotPassword,
@@ -104,60 +96,56 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 24),
 
-                // Separador
+                // Separador "o continuar con"
                 Row(
                   children: [
                     Expanded(
-                      child: Divider(
-                        color: Colors.grey.withOpacity(0.3),
-                        thickness: 1,
-                      ),
+                      child: Divider(color: theme.colorScheme.onSurface.withOpacity(0.15), thickness: 1),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
                         'o continuar con',
                         style: TextStyle(
-                          color: AppTheme.darkCoffee.withOpacity(0.5),
+                          color: theme.colorScheme.onSurface.withOpacity(0.5),
                           fontSize: 14,
                         ),
                       ),
                     ),
                     Expanded(
-                      child: Divider(
-                        color: Colors.grey.withOpacity(0.3),
-                        thickness: 1,
-                      ),
+                      child: Divider(color: theme.colorScheme.onSurface.withOpacity(0.15), thickness: 1),
                     ),
                   ],
                 ),
 
                 const SizedBox(height: 24),
 
-                // Botón Google
+                // Botón de Google (Ahora se moverá perfectamente con el scroll general)
                 SocialLoginButton(
                   text: 'Continuar con Google',
-                  icon: Icons.g_mobiledata,
+                  imageAsset: 'assets/img/google_logo.png', // 🚀 Pásale la ruta de tu PNG oficial
                   onPressed: _handleGoogleLogin,
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 48), // Separación elegante antes del cierre
 
-                // Enlace a registro
+                // ── ENLACE A REGISTRO INTEGRADO AL SCROLL ───
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       '¿No tienes una cuenta? ',
                       style: TextStyle(
-                        color: AppTheme.darkCoffee.withOpacity(0.7),
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
                         fontSize: 14,
+                        fontWeight: FontWeight.normal,
                       ),
                     ),
                     TextButton(
                       onPressed: _handleRegister,
                       style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.goldCoffee,
+                        foregroundColor: theme.colorScheme.tertiary,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       child: const Text(
                         'Crear cuenta',
@@ -170,7 +158,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
 
-                const SizedBox(height: 40),
+                const SizedBox(height: 32), // Colchón de espacio final para que respire al scrollear
               ],
             ),
           ),

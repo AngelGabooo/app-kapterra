@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:kaabcafe/core/themes/app_theme.dart';
 
 class PasswordStrengthIndicator extends StatelessWidget {
   final String password;
@@ -14,12 +13,13 @@ class PasswordStrengthIndicator extends StatelessWidget {
     return 'Muy fuerte';
   }
 
-  Color _getStrengthColor() {
+  Color _getStrengthColor(ThemeData theme) {
     final score = _calculateStrength();
     if (score <= 2) return Colors.red;
     if (score <= 3) return Colors.orange;
-    if (score <= 4) return AppTheme.goldCoffee;
-    return AppTheme.primaryGreen;
+    // Si la contraseña es buena, usa el color secundario o primario del tema activo (Café/Verde)
+    if (score <= 4) return theme.colorScheme.secondary;
+    return theme.colorScheme.primary;
   }
 
   double _getStrengthProgress() {
@@ -40,6 +40,8 @@ class PasswordStrengthIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (password.isEmpty) return const SizedBox.shrink();
+    final theme = Theme.of(context);
+    final color = _getStrengthColor(theme);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,8 +49,8 @@ class PasswordStrengthIndicator extends StatelessWidget {
         const SizedBox(height: 8),
         LinearProgressIndicator(
           value: _getStrengthProgress(),
-          backgroundColor: Colors.grey.withOpacity(0.2),
-          valueColor: AlwaysStoppedAnimation<Color>(_getStrengthColor()),
+          backgroundColor: theme.colorScheme.onSurface.withOpacity(0.12),
+          valueColor: AlwaysStoppedAnimation<Color>(color),
           minHeight: 4,
           borderRadius: BorderRadius.circular(2),
         ),
@@ -57,7 +59,7 @@ class PasswordStrengthIndicator extends StatelessWidget {
           'Fortaleza: ${_getStrengthText()}',
           style: TextStyle(
             fontSize: 12,
-            color: _getStrengthColor(),
+            color: color,
             fontWeight: FontWeight.w500,
           ),
         ),

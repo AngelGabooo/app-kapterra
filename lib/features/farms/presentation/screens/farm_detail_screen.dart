@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
+import 'package:kaabcafe/core/providers/farm_provider.dart';
 import 'package:kaabcafe/features/farms/data/models/farm_details_model.dart';
 import 'package:kaabcafe/features/farms/data/models/lot_model.dart';
 
@@ -12,321 +14,163 @@ class FarmDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Verificación de seguridad
-    if (farm == null) {
-      return Scaffold(
-        backgroundColor: AppTheme.lightBeige,
-        appBar: AppBar(
-          backgroundColor: AppTheme.primaryGreen,
-          foregroundColor: Colors.white,
-          leading: IconButton(
-            onPressed: () => context.go(RouteNames.myFarms), // ✅ Usar go en lugar de pop
-            icon: const Icon(Icons.arrow_back),
-          ),
-          title: const Text('Error'),
-        ),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.error, size: 64, color: Colors.red),
-              SizedBox(height: 16),
-              Text('Error al cargar la finca'),
-            ],
-          ),
-        ),
-      );
-    }
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final farmProvider = Provider.of<FarmProvider>(context);
 
-    // Datos de ejemplo para los lotes
-    final List<LotModel> lots = [
-      LotModel(
-        id: '1',
-        name: 'Lote Norte',
-        variety: 'Bourbon',
-        estimatedProduction: 500,
-        area: 2.5,
-        status: LotStatus.healthy,
-        treesCount: 5000,
-      ),
-      LotModel(
-        id: '2',
-        name: 'Lote Sur',
-        variety: 'Geisha',
-        estimatedProduction: 350,
-        area: 1.8,
-        status: LotStatus.healthy,
-        treesCount: 3600,
-      ),
-      LotModel(
-        id: '3',
-        name: 'Lote Este',
-        variety: 'Catuaí',
-        estimatedProduction: 280,
-        area: 1.2,
-        status: LotStatus.attention,
-        treesCount: 2400,
-      ),
-    ];
+    final updatedFarm = farmProvider.farms.firstWhere(
+          (f) => f.id == farm.id,
+      orElse: () => farm,
+    );
+
+    final List<LotModel> lots = farmProvider.getLotsForFarm(updatedFarm.id);
 
     return Scaffold(
-      backgroundColor: AppTheme.lightBeige,
+      backgroundColor: theme.scaffoldBackgroundColor, // Dinámico
       appBar: AppBar(
-        backgroundColor: AppTheme.primaryGreen,
-        foregroundColor: Colors.white,
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
         leading: IconButton(
-          onPressed: () => context.go(RouteNames.myFarms), // ✅ Usar go en lugar de pop
+          onPressed: () => context.go(RouteNames.myFarms),
           icon: const Icon(Icons.arrow_back),
         ),
-        title: Text(farm.name),
+        title: Text(updatedFarm.name),
         actions: [
           IconButton(
-            onPressed: () {
-              context.push(RouteNames.editFarm, extra: farm);
-            },
+            onPressed: () => context.push(RouteNames.editFarm, extra: updatedFarm),
             icon: const Icon(Icons.edit),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push(RouteNames.createLot, extra: updatedFarm),
+        backgroundColor: colorScheme.primary,
+        icon: Icon(Icons.add_circle_outline, color: colorScheme.onPrimary),
+        label: Text('Crear Lote', style: TextStyle(color: colorScheme.onPrimary)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Información de la finca
             Card(
               elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
+              color: colorScheme.surface,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    _buildInfoRow(Icons.location_on, 'Ubicación', farm.location),
+                    _buildInfoRow(Icons.location_on, 'Ubicación', updatedFarm.location, theme),
                     const SizedBox(height: 12),
-                    _buildInfoRow(Icons.landscape, 'Hectáreas', '${farm.hectares} ha'),
+                    _buildInfoRow(Icons.landscape, 'Hectáreas', '${updatedFarm.hectares} ha', theme),
                     const SizedBox(height: 12),
-                    _buildInfoRow(Icons.view_module, 'Lotes', '${farm.lots} lotes'),
+                    _buildInfoRow(Icons.view_module, 'Lotes', '${updatedFarm.lots} lotes', theme),
                   ],
                 ),
               ),
             ),
-
             const SizedBox(height: 24),
-
-            const Text(
-              'Lotes de la finca',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.darkCoffee,
-              ),
-            ),
+            Text('Lotes de la finca',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
             const SizedBox(height: 16),
 
             if (lots.isEmpty)
-              _buildEmptyLots(context)
+              _buildEmptyLots(context, theme)
             else
-              ...lots.map((lot) => _buildLotCard(context, lot)),
+              ...lots.map((lot) => _buildLotCard(context, lot, updatedFarm, theme)),
+
+            const SizedBox(height: 80),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value) {
+  Widget _buildInfoRow(IconData icon, String label, String value, ThemeData theme) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: AppTheme.primaryGreen),
+        Icon(icon, size: 20, color: theme.colorScheme.primary),
         const SizedBox(width: 12),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: AppTheme.darkCoffee.withOpacity(0.7),
-          ),
-        ),
+        Text(label, style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface.withOpacity(0.7))),
         const SizedBox(width: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.darkCoffee,
-          ),
-        ),
+        Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
       ],
     );
   }
 
-  Widget _buildLotCard(BuildContext context, LotModel lot) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: InkWell(
-        onTap: () {
-          context.push(
-            RouteNames.lotDetail,
-            extra: {
-              'lot': lot,
-              'farm': farm,
-            },
-          );
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: lot.statusColor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      lot.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.darkCoffee,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: lot.statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      lot.statusText,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: lot.statusColor,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Variedad: ${lot.variety}',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppTheme.darkCoffee.withOpacity(0.7),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Área: ${lot.area} ha | Producción: ${lot.estimatedProduction} kg',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: AppTheme.darkCoffee.withOpacity(0.7),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton.icon(
-                    onPressed: () {
-                      context.push(
-                        RouteNames.editLot,
-                        extra: {
-                          'lot': lot,
-                          'farm': farm,
-                        },
-                      );
-                    },
-                    icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('Editar'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppTheme.primaryGreen,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton.icon(
-                    onPressed: () {
-                      context.push(
-                        RouteNames.lotHistory,
-                        extra: {
-                          'lot': lot,
-                          'farm': farm,
-                        },
-                      );
-                    },
-                    icon: const Icon(Icons.history, size: 16),
-                    label: const Text('Historial'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppTheme.goldCoffee,
-                    ),
-                  ),
-                ],
-              ),
-            ],
+  Widget _buildEmptyLots(BuildContext context, ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(color: theme.colorScheme.surfaceVariant, borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        children: [
+          Icon(Icons.view_module, size: 64, color: theme.colorScheme.onSurface.withOpacity(0.3)),
+          const SizedBox(height: 16),
+          Text('No hay lotes registrados', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface)),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () => context.push(RouteNames.createLot, extra: farm),
+            icon: const Icon(Icons.add),
+            label: const Text('Crear Lote'),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildEmptyLots(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+  Widget _buildLotCard(BuildContext context, LotModel lot, FarmDetailsModel farm, ThemeData theme) {
+    return Dismissible(
+      key: Key(lot.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(16)),
+        child: const Icon(Icons.delete, color: Colors.white),
       ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.view_module,
-            size: 64,
-            color: AppTheme.darkCoffee.withOpacity(0.3),
+      confirmDismiss: (direction) async {
+        return await showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Eliminar Lote'),
+            content: const Text('¿Estás seguro de eliminar este lote?'),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            'No hay lotes registrados',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.darkCoffee,
+        );
+      },
+      onDismissed: (direction) {
+        Provider.of<FarmProvider>(context, listen: false).deleteLotFromFarm(farm.id, lot.id);
+      },
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        color: theme.colorScheme.surface,
+        child: InkWell(
+          onTap: () => context.push(RouteNames.lotDetail, extra: {'lot': lot, 'farm': farm}),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(width: 10, height: 10, decoration: BoxDecoration(color: lot.statusColor, shape: BoxShape.circle)),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(lot.name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface))),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text('Variedad: ${lot.variety} | Área: ${lot.area} ha', style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withOpacity(0.7))),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Comienza agregando lotes a tu finca',
-            style: TextStyle(
-              fontSize: 13,
-              color: AppTheme.darkCoffee.withOpacity(0.6),
-            ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: () {
-              context.push(RouteNames.createLot, extra: farm);
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Crear Lote'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryGreen,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

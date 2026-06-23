@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:kaabcafe/core/themes/app_theme.dart';
 
 class OnboardingButton extends StatelessWidget {
   final String text;
@@ -17,6 +16,8 @@ class OnboardingButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     if (!isPrimary) {
       return TextButton(
         onPressed: onPressed,
@@ -25,27 +26,33 @@ class OnboardingButton extends StatelessWidget {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: AppTheme.darkCoffee.withOpacity(0.6),
+            color: theme.colorScheme.onSurface.withOpacity(0.6),
           ),
         ),
       );
+    }
+
+    // Definición de colores dinámicos para los degradados
+    final List<Color> gradientColors;
+    if (theme.brightness == Brightness.dark) {
+      gradientColors = isLastPage
+          ? [theme.colorScheme.tertiary, theme.colorScheme.secondary]
+          : [theme.colorScheme.secondary, theme.colorScheme.primary];
+    } else {
+      gradientColors = isLastPage
+          ? [theme.colorScheme.tertiary, theme.colorScheme.primary]
+          : [theme.colorScheme.primary, theme.colorScheme.secondary];
     }
 
     return Container(
       width: double.infinity,
       height: 56,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isLastPage
-              ? [AppTheme.goldCoffee, AppTheme.primaryGreen]
-              : [AppTheme.primaryGreen, AppTheme.secondaryGreen],
-        ),
+        gradient: LinearGradient(colors: gradientColors),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: isLastPage
-                ? AppTheme.goldCoffee.withOpacity(0.3)
-                : AppTheme.primaryGreen.withOpacity(0.3),
+            color: gradientColors.first.withOpacity(0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),

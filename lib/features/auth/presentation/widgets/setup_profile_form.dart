@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:kaabcafe/core/routes/route_names.dart';
-import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/auth/data/models/setup_profile_model.dart';
 
 class SetupProfileForm extends StatefulWidget {
@@ -10,29 +7,16 @@ class SetupProfileForm extends StatefulWidget {
   const SetupProfileForm({super.key, required this.onComplete});
 
   @override
-  State<SetupProfileForm> createState() => _SetupProfileFormState();
+  State<SetupProfileForm> createState() => SetupProfileFormState(); // 🚀 Cambiado a público (sin guion bajo)
 }
 
-class _SetupProfileFormState extends State<SetupProfileForm> {
+// 🚀 Cambiado a público (sin guion bajo) para que la GlobalKey pueda leer sus métodos internos
+class SetupProfileFormState extends State<SetupProfileForm> {
   final _formKey = GlobalKey<FormState>();
   late SetupProfileModel _profile;
 
-  final _yearsExperienceOptions = [
-    'Menos de 1 año',
-    '1 a 5 años',
-    '5 a 10 años',
-    'Más de 10 años',
-  ];
-
-  final _coffeeVarietyOptions = [
-    'Arábica',
-    'Robusta',
-    'Bourbon',
-    'Typica',
-    'Catuaí',
-    'Geisha',
-    'Otra',
-  ];
+  final _yearsExperienceOptions = ['Menos de 1 año', '1 a 5 años', '5 a 10 años', 'Más de 10 años'];
+  final _coffeeVarietyOptions = ['Arábica', 'Robusta', 'Bourbon', 'Typica', 'Catuaí', 'Geisha', 'Otra'];
 
   @override
   void initState() {
@@ -40,16 +24,42 @@ class _SetupProfileFormState extends State<SetupProfileForm> {
     _profile = SetupProfileModel();
   }
 
-  void _handleSubmit() {
+  // 🚨 NUEVA FUNCIÓN PÚBLICA: Vincula la acción del botón de la pantalla con la validación del form
+  void submitForm() {
     if (_formKey.currentState!.validate()) {
       widget.onComplete(_profile);
-      // ✅ Después de completar el perfil, navegar al registro de finca
-      context.go(RouteNames.registerFarm);
     }
+  }
+
+  InputDecoration _buildInputDecoration({required IconData icon, required String hintText, required ThemeData theme}) {
+    return InputDecoration(
+      prefixIcon: Icon(icon, color: theme.colorScheme.secondary),
+      hintText: hintText,
+      hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.4)),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.15))),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.15))),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2)),
+      filled: true,
+      fillColor: theme.colorScheme.surface,
+    );
+  }
+
+  BoxDecoration _buildCardDecoration(ThemeData theme) {
+    return BoxDecoration(
+      color: theme.brightness == Brightness.dark ? theme.colorScheme.surface : Colors.white,
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.08)),
+      boxShadow: [
+        BoxShadow(color: Colors.black.withOpacity(theme.brightness == Brightness.dark ? 0.2 : 0.04), blurRadius: 10, offset: const Offset(0, 2)),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final labelStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface.withOpacity(0.9));
+
     return Form(
       key: _formKey,
       child: Column(
@@ -58,421 +68,166 @@ class _SetupProfileFormState extends State<SetupProfileForm> {
           // ========== INFORMACIÓN PERSONAL ==========
           Container(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
+            decoration: _buildCardDecoration(theme),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Container(
-                      width: 4,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryGreen,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
+                    Container(width: 4, height: 24, decoration: BoxDecoration(color: theme.colorScheme.secondary, borderRadius: BorderRadius.circular(2))),
                     const SizedBox(width: 12),
-                    const Text(
-                      'Información personal',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.darkCoffee,
-                      ),
-                    ),
+                    Text('Información personal', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
                   ],
                 ),
                 const SizedBox(height: 24),
-
-                // Foto de perfil
                 Center(
                   child: Column(
                     children: [
                       Container(
                         width: 100,
                         height: 100,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppTheme.lightBeige,
-                          border: Border.all(
-                            color: AppTheme.primaryGreen.withOpacity(0.3),
-                            width: 2,
-                          ),
-                        ),
+                        decoration: BoxDecoration(shape: BoxShape.circle, color: theme.scaffoldBackgroundColor, border: Border.all(color: theme.colorScheme.secondary.withOpacity(0.4), width: 2)),
                         child: ClipOval(
                           child: _profile.profileImagePath != null
-                              ? Image.asset(
-                            _profile.profileImagePath!,
-                            fit: BoxFit.cover,
-                          )
-                              : Icon(
-                            Icons.person,
-                            size: 50,
-                            color: AppTheme.primaryGreen.withOpacity(0.5),
-                          ),
+                              ? Image.asset(_profile.profileImagePath!, fit: BoxFit.cover)
+                              : Icon(Icons.person, size: 50, color: theme.colorScheme.onSurface.withOpacity(0.3)),
                         ),
                       ),
                       const SizedBox(height: 12),
                       TextButton.icon(
-                        onPressed: () {
-                          // TODO: Implementar selección de imagen
-                        },
-                        icon: Icon(Icons.add_a_photo, size: 18, color: AppTheme.goldCoffee),
-                        label: Text(
-                          'Agregar fotografía',
-                          style: TextStyle(color: AppTheme.goldCoffee),
-                        ),
+                        onPressed: () {},
+                        icon: Icon(Icons.add_a_photo, size: 18, color: theme.colorScheme.tertiary),
+                        label: Text('Agregar fotografía', style: TextStyle(color: theme.colorScheme.tertiary, fontWeight: FontWeight.w600)),
                       ),
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
-                // Nombre completo
-                const Text(
-                  'Nombre completo',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.darkCoffee,
-                  ),
-                ),
+                Text('Nombre completo', style: labelStyle),
                 const SizedBox(height: 8),
                 TextFormField(
                   onChanged: (value) => _profile.fullName = value,
-                  decoration: _buildInputDecoration(
-                    icon: Icons.person_outline,
-                    hintText: 'Juan Pérez',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor ingresa tu nombre completo';
-                    }
-                    return null;
-                  },
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                  decoration: _buildInputDecoration(icon: Icons.person_outline, hintText: 'Juan Pérez', theme: theme),
+                  validator: (value) => (value == null || value.isEmpty) ? 'Por favor ingresa tu nombre completo' : null,
                 ),
-
                 const SizedBox(height: 20),
-
-                // Teléfono
-                const Text(
-                  'Teléfono',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.darkCoffee,
-                  ),
-                ),
+                Text('Teléfono', style: labelStyle),
                 const SizedBox(height: 8),
                 TextFormField(
                   onChanged: (value) => _profile.phoneNumber = value,
                   keyboardType: TextInputType.phone,
-                  decoration: _buildInputDecoration(
-                    icon: Icons.phone_outlined,
-                    hintText: '+52 123 456 7890',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor ingresa tu número telefónico';
-                    }
-                    return null;
-                  },
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                  decoration: _buildInputDecoration(icon: Icons.phone_outlined, hintText: '+52 123 456 7890', theme: theme),
+                  validator: (value) => (value == null || value.isEmpty) ? 'Por favor ingresa tu número telefónico' : null,
                 ),
-
                 const SizedBox(height: 20),
-
-                // Correo electrónico
-                const Text(
-                  'Correo electrónico',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.darkCoffee,
-                  ),
-                ),
+                Text('Correo electrónico', style: labelStyle),
                 const SizedBox(height: 8),
                 TextFormField(
                   onChanged: (value) => _profile.email = value,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: _buildInputDecoration(
-                    icon: Icons.email_outlined,
-                    hintText: 'juan@ejemplo.com',
-                  ),
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                  decoration: _buildInputDecoration(icon: Icons.email_outlined, hintText: 'juan@ejemplo.com', theme: theme),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor ingresa tu correo';
-                    }
-                    if (!value.contains('@')) {
-                      return 'Ingresa un correo válido';
-                    }
+                    if (value == null || value.isEmpty) return 'Por favor ingresa tu correo';
+                    if (!value.contains('@')) return 'Ingresa un correo válido';
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 20),
-
-                // Municipio
-                const Text(
-                  'Municipio',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.darkCoffee,
-                  ),
-                ),
+                Text('Municipio', style: labelStyle),
                 const SizedBox(height: 8),
                 TextFormField(
                   onChanged: (value) => _profile.municipality = value,
-                  decoration: _buildInputDecoration(
-                    icon: Icons.location_city,
-                    hintText: 'Tu municipio',
-                  ),
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                  decoration: _buildInputDecoration(icon: Icons.location_city, hintText: 'Tu municipio', theme: theme),
                 ),
-
                 const SizedBox(height: 20),
-
-                // Estado o región
-                const Text(
-                  'Estado o región',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.darkCoffee,
-                  ),
-                ),
+                Text('Estado o región', style: labelStyle),
                 const SizedBox(height: 8),
                 TextFormField(
                   onChanged: (value) => _profile.region = value,
-                  decoration: _buildInputDecoration(
-                    icon: Icons.map_outlined,
-                    hintText: 'Tu estado o región',
-                  ),
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                  decoration: _buildInputDecoration(icon: Icons.map_outlined, hintText: 'Tu estado o región', theme: theme),
                 ),
               ],
             ),
           ),
-
           const SizedBox(height: 24),
 
           // ========== INFORMACIÓN PRODUCTIVA ==========
           Container(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
+            decoration: _buildCardDecoration(theme),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    Container(
-                      width: 4,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryGreen,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
+                    Container(width: 4, height: 24, decoration: BoxDecoration(color: theme.colorScheme.secondary, borderRadius: BorderRadius.circular(2))),
                     const SizedBox(width: 12),
-                    const Text(
-                      'Información productiva',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.darkCoffee,
-                      ),
-                    ),
+                    Text('Información productiva', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
                   ],
                 ),
                 const SizedBox(height: 24),
-
-                // Años de experiencia
-                const Text(
-                  'Años de experiencia cultivando café',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.darkCoffee,
-                  ),
-                ),
+                Text('Años de experiencia cultivando café', style: labelStyle),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   value: _profile.yearsExperience.isEmpty ? null : _profile.yearsExperience,
-                  hint: const Text('Selecciona una opción'),
-                  decoration: _buildInputDecoration(
-                    icon: Icons.timer_outlined,
-                    hintText: 'Selecciona una opción',
-                  ),
-                  items: _yearsExperienceOptions.map((option) {
-                    return DropdownMenuItem(
-                      value: option,
-                      child: Text(option),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _profile.yearsExperience = value ?? '';
-                    });
-                  },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor selecciona tu experiencia';
-                    }
-                    return null;
-                  },
+                  dropdownColor: theme.colorScheme.surface,
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                  decoration: _buildInputDecoration(icon: Icons.timer_outlined, hintText: 'Selecciona una opción', theme: theme),
+                  items: _yearsExperienceOptions.map((option) => DropdownMenuItem(value: option, child: Text(option))).toList(),
+                  onChanged: (value) => setState(() => _profile.yearsExperience = value ?? ''),
+                  validator: (value) => (value == null || value.isEmpty) ? 'Por favor selecciona tu experiencia' : null,
                 ),
-
                 const SizedBox(height: 20),
-
-                // Hectáreas cultivadas
-                const Text(
-                  'Hectáreas cultivadas',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.darkCoffee,
-                  ),
-                ),
+                Text('Hectáreas cultivadas', style: labelStyle),
                 const SizedBox(height: 8),
                 TextFormField(
                   onChanged: (value) => _profile.hectares = value,
                   keyboardType: TextInputType.number,
-                  decoration: _buildInputDecoration(
-                    icon: Icons.landscape,
-                    hintText: 'Ej: 5.5',
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor ingresa las hectáreas';
-                    }
-                    return null;
-                  },
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                  decoration: _buildInputDecoration(icon: Icons.landscape, hintText: 'Ej: 5.5', theme: theme),
+                  validator: (value) => (value == null || value.isEmpty) ? 'Por favor ingresa las hectáreas' : null,
                 ),
-
                 const SizedBox(height: 20),
-
-                // Variedad principal de café
-                const Text(
-                  'Variedad principal de café',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.darkCoffee,
-                  ),
-                ),
+                Text('Variedad principal de café', style: labelStyle),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   value: _profile.coffeeVariety.isEmpty ? null : _profile.coffeeVariety,
-                  hint: const Text('Selecciona una variedad'),
-                  decoration: _buildInputDecoration(
-                    icon: Icons.emoji_nature,
-                    hintText: 'Selecciona una variedad',
-                  ),
-                  items: _coffeeVarietyOptions.map((option) {
-                    return DropdownMenuItem(
-                      value: option,
-                      child: Text(option),
-                    );
-                  }).toList(),
+                  dropdownColor: theme.colorScheme.surface,
+                  style: TextStyle(color: theme.colorScheme.onSurface),
+                  decoration: _buildInputDecoration(icon: Icons.emoji_nature, hintText: 'Selecciona una variedad', theme: theme),
+                  items: _coffeeVarietyOptions.map((option) => DropdownMenuItem(value: option, child: Text(option))).toList(),
                   onChanged: (value) {
-                    setState(() {
-                      _profile.coffeeVariety = value ?? '';
-                    });
-                    // ✅ Después de seleccionar la variedad, navegar automáticamente
+                    setState(() => _profile.coffeeVariety = value ?? '');
                     if (value != null && value.isNotEmpty) {
-                      // Validar que los campos requeridos estén llenos
-                      if (_formKey.currentState!.validate()) {
-                        // Guardar el perfil y navegar
-                        widget.onComplete(_profile);
-                        context.go(RouteNames.registerFarm);
-                      }
+                      submitForm(); // Ejecuta la validación nativa automática al seleccionar
                     }
                   },
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor selecciona una variedad';
-                    }
-                    return null;
-                  },
+                  validator: (value) => (value == null || value.isEmpty) ? 'Por favor selecciona una variedad' : null,
                 ),
-
                 const SizedBox(height: 20),
-
-                // ¿Pertenece a una cooperativa?
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      '¿Pertenece a una cooperativa?',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.darkCoffee,
-                      ),
-                    ),
+                    Text('¿Pertenece a una cooperativa?', style: labelStyle),
                     Switch(
                       value: _profile.belongsToCooperative,
-                      onChanged: (value) {
-                        setState(() {
-                          _profile.belongsToCooperative = value;
-                        });
-                      },
-                      activeColor: AppTheme.primaryGreen,
-                      activeTrackColor: AppTheme.primaryGreen.withOpacity(0.3),
+                      onChanged: (value) => setState(() => _profile.belongsToCooperative = value),
+                      activeColor: theme.colorScheme.secondary,
+                      activeTrackColor: theme.colorScheme.secondary.withOpacity(0.3),
                     ),
                   ],
                 ),
               ],
             ),
           ),
-
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
         ],
       ),
-    );
-  }
-
-  InputDecoration _buildInputDecoration({
-    required IconData icon,
-    required String hintText,
-  }) {
-    return InputDecoration(
-      prefixIcon: Icon(icon, color: AppTheme.primaryGreen),
-      hintText: hintText,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
-        borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
-        borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: AppTheme.primaryGreen, width: 2),
-      ),
-      filled: true,
-      fillColor: Colors.white,
     );
   }
 }

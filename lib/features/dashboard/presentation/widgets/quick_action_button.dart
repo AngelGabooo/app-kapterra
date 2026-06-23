@@ -1,50 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:kaabcafe/core/themes/app_theme.dart';
 
 class QuickActionButton extends StatelessWidget {
   final String title;
   final IconData icon;
   final VoidCallback onPressed;
 
-  const QuickActionButton({
-    super.key,
-    required this.title,
-    required this.icon,
-    required this.onPressed,
-  });
+  const QuickActionButton({super.key, required this.title, required this.icon, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: (MediaQuery.of(context).size.width - 80) / 3,
-      child: GestureDetector(
-        onTap: onPressed,
-        child: Column(
+    final theme = Theme.of(context);
+
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.08)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Icon(icon, size: 28, color: AppTheme.primaryGreen),
-            ),
-            const SizedBox(height: 8),
+            Icon(icon, size: 16, color: theme.colorScheme.primary),
+            const SizedBox(width: 8),
             Text(
               title,
-              style: TextStyle(
-                fontSize: 11,
-                color: AppTheme.darkCoffee.withOpacity(0.8),
-              ),
-              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withOpacity(0.85)),
             ),
           ],
         ),

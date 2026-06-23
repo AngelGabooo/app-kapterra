@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:kaabcafe/core/themes/app_theme.dart';
 
 class LoginLogo extends StatelessWidget {
   const LoginLogo({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
       children: [
-        // Logo
         Container(
           width: 100,
           height: 100,
@@ -16,7 +16,7 @@ class LoginLogo extends StatelessWidget {
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.primaryGreen.withOpacity(0.2),
+                color: theme.colorScheme.primary.withOpacity(0.15),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -29,11 +29,11 @@ class LoginLogo extends StatelessWidget {
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
                 return Container(
-                  color: AppTheme.primaryGreen.withOpacity(0.1),
-                  child: const Icon(
+                  color: theme.colorScheme.primary.withOpacity(0.1),
+                  child: Icon(
                     Icons.agriculture,
                     size: 50,
-                    color: AppTheme.primaryGreen,
+                    color: theme.colorScheme.primary,
                   ),
                 );
               },
@@ -41,37 +41,31 @@ class LoginLogo extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-
-        // Nombre de la app
-        const Text(
+        Text(
           'KAAB TERRA',
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: AppTheme.darkCoffee,
+            color: theme.colorScheme.onSurface,
             letterSpacing: 1.5,
           ),
         ),
         const SizedBox(height: 8),
-
-        // Título
-        const Text(
+        Text(
           'Bienvenido',
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: theme.colorScheme.onSurface.withOpacity(0.95),
           ),
         ),
         const SizedBox(height: 8),
-
-        // Subtítulo
         Text(
           'Inicia sesión para gestionar tu producción cafetalera.',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w400,
-            color: AppTheme.darkCoffee.withOpacity(0.7),
+            color: theme.colorScheme.onSurface.withOpacity(0.6),
           ),
           textAlign: TextAlign.center,
         ),

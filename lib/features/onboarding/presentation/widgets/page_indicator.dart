@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:kaabcafe/core/themes/app_theme.dart';
 
 class PageIndicator extends StatelessWidget {
   final int currentPage;
@@ -13,6 +12,8 @@ class PageIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(totalPages, (index) {
@@ -23,8 +24,8 @@ class PageIndicator extends StatelessWidget {
           height: 8,
           decoration: BoxDecoration(
             color: currentPage == index
-                ? AppTheme.primaryGreen
-                : AppTheme.primaryGreen.withOpacity(0.3),
+                ? theme.colorScheme.primary
+                : theme.colorScheme.primary.withOpacity(0.3),
             borderRadius: BorderRadius.circular(4),
           ),
         );

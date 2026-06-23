@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart'; // 🆕 Agregado para usar BlocProvider
 import 'package:go_router/go_router.dart';
 
-// ==================== SCREENS ====================
+// ==================== FEATURES SPLASH ====================
 import 'package:kaabcafe/features/splash/presentation/screens/splash_screen.dart';
+import 'package:kaabcafe/features/splash/presentation/cubit/splash_cubit.dart'; // 🆕 Agregado
+import 'package:kaabcafe/features/splash/data/datasources/splash_local_datasource.dart'; // 🆕 Agregado
+import 'package:kaabcafe/features/splash/data/repositories/splash_repository_impl.dart'; // 🆕 Agregado
+
+// ==================== SCREENS ====================
 import 'package:kaabcafe/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:kaabcafe/features/auth/presentation/screens/login_screen.dart';
 import 'package:kaabcafe/features/auth/presentation/screens/register_screen.dart';
@@ -46,11 +52,22 @@ class AppRouter {
     initialLocation: RouteNames.splash,
     debugLogDiagnostics: true,
     routes: [
+      // ── RUTA RAIZ: SPLASH CON INYECCIÓN DE NEGOCIO ─────────────────
       GoRoute(
         name: RouteNames.splash,
         path: RouteNames.splash,
-        builder: (context, state) => const SplashScreen(),
+        builder: (context, state) {
+          return BlocProvider<SplashCubit>(
+            create: (context) => SplashCubit(
+              splashRepository: SplashRepositoryImpl(
+                localDataSource: SplashLocalDataSource(),
+              ),
+            ),
+            child: const SplashScreen(),
+          );
+        },
       ),
+
       GoRoute(
         name: RouteNames.onboarding,
         path: RouteNames.onboarding,
@@ -105,7 +122,7 @@ class AppRouter {
         builder: (context, state) => const MyFarmsScreen(),
       ),
 
-      // ==================== RUTAS ====================
+      // ==================== RUTAS FINCAS ====================
       GoRoute(
         name: RouteNames.farmDetail,
         path: RouteNames.farmDetail,
@@ -226,7 +243,6 @@ class AppRouter {
         path: RouteNames.costs,
         builder: (context, state) => const CostsListScreen(),
       ),
-
     ],
     errorBuilder: (context, state) => const Scaffold(
       body: Center(child: Text('Ruta no encontrada')),

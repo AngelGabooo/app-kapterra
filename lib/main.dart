@@ -1,6 +1,6 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:kaabcafe/core/providers/farm_provider.dart';
 import 'package:kaabcafe/core/routes/app_router.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/activities/presentation/providers/activities_provider.dart';
@@ -16,15 +16,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (_) => ActivitiesProviderFactory.create(),
-        ),
+        ChangeNotifierProvider(create: (_) => ActivitiesProviderFactory.create()),
+        ChangeNotifierProvider(create: (_) => FarmProvider()),
       ],
       child: MaterialApp.router(
-        title: 'Kaab Terra',
-        theme: AppTheme.lightTheme,
         routerConfig: AppRouter.router,
-        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.system,
       ),
     );
   }

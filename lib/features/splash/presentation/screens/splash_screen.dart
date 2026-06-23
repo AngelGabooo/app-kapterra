@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:kaabcafe/core/constants/app_constants.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
+import 'package:kaabcafe/features/splash/presentation/cubit/splash_cubit.dart';
+import 'package:kaabcafe/features/splash/presentation/cubit/splash_state.dart';
 import 'package:kaabcafe/features/splash/presentation/widgets/loading_dots.dart';
+import 'package:kaabcafe/features/splash/presentation/widgets/golden_particles.dart';
+import 'package:kaabcafe/features/splash/presentation/widgets/coffee_scene_illustration.dart';
+import 'package:kaabcafe/features/splash/presentation/widgets/square_logo.dart';
+import 'package:kaabcafe/features/splash/presentation/widgets/title_section.dart';
+
+import '../widgets/neon_particles.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -12,147 +21,133 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _fadeController;
-  late Animation<double> _fadeAnimation;
+class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
+  late AnimationController _bgController;
+  late AnimationController _logoController;
+  late AnimationController _textController;
+  late AnimationController _dotsController;
 
-  bool _showDots = false;
+  late Animation<double> _bgFade;
+  late Animation<double> _logoScale;
+  late Animation<double> _logoFade;
+  late Animation<Offset> _textSlide;
+  late Animation<double> _textFade;
+  late Animation<double> _dotsFade;
 
   @override
   void initState() {
     super.initState();
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+    ));
     _initAnimations();
-    _navigateToNext();
   }
 
   void _initAnimations() {
-    _fadeController = AnimationController(
-      duration: AppConstants.fadeInDuration,
-      vsync: this,
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOut,
-    );
-    _fadeController.forward();
+    _bgController = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
+    _bgFade = CurvedAnimation(parent: _bgController, curve: Curves.easeIn);
 
-    Future.delayed(const Duration(milliseconds: 1000), () {
+    _logoController = AnimationController(duration: const Duration(milliseconds: 900), vsync: this);
+    _logoScale = Tween<double>(begin: 0.7, end: 1.0).animate(CurvedAnimation(parent: _logoController, curve: Curves.easeOutBack));
+    _logoFade = CurvedAnimation(parent: _logoController, curve: Curves.easeOut);
+
+    _textController = AnimationController(duration: const Duration(milliseconds: 700), vsync: this);
+    _textSlide = Tween<Offset>(begin: const Offset(0, 0.25), end: Offset.zero).animate(CurvedAnimation(parent: _textController, curve: Curves.easeOut));
+    _textFade = CurvedAnimation(parent: _textController, curve: Curves.easeOut);
+
+    _dotsController = AnimationController(duration: const Duration(milliseconds: 500), vsync: this);
+    _dotsFade = CurvedAnimation(parent: _dotsController, curve: Curves.easeIn);
+
+    _bgController.forward().then((_) {
+      _logoController.forward().then((_) {
+        _textController.forward();
+      });
+    });
+
+    Future.delayed(const Duration(milliseconds: 1400), () {
       if (mounted) {
-        setState(() {
-          _showDots = true;
+        _dotsController.forward().then((_) {
+          context.read<SplashCubit>().checkAppStatus();
         });
       }
     });
   }
 
-  void _navigateToNext() async {
-    await Future.delayed(AppConstants.splashDuration);
-    if (mounted) {
-      debugPrint('✅ Navegando al Onboarding...');
-      // ✅ Navegación usando GoRouter
-      context.go(RouteNames.onboarding);
-    }
-  }
-
   @override
   void dispose() {
-    _fadeController.dispose();
+    _bgController.dispose();
+    _logoController.dispose();
+    _textController.dispose();
+    _dotsController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.lightBeige,
-              AppTheme.primaryGreen.withOpacity(0.05),
-              AppTheme.lightBeige,
-            ],
-          ),
-        ),
-        child: SafeArea(
+      backgroundColor: AppTheme.coffeeDark,
+      body: BlocListener<SplashCubit, SplashState>(
+        listener: (context, state) {
+          if (state is NavigateToOnboarding) {
+            context.go(RouteNames.onboarding);
+          } else if (state is NavigateToHome) {
+            context.go(RouteNames.home);
+          } else if (state is NavigateToLogin) {
+            context.go(RouteNames.login);
+          }
+        },
+        child: FadeTransition(
+          opacity: _bgFade,
           child: Stack(
             children: [
-              // Contenido principal centrado vertical y horizontalmente
-              Center(
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Logo con esquinas redondeadas
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(30),
-                        child: Image.asset(
-                          'assets/img/logo_kaab_terra.png',
-                          width: 180,
-                          height: 180,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              width: 180,
-                              height: 180,
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryGreen.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              child: const Icon(
-                                Icons.agriculture,
-                                size: 80,
-                                color: AppTheme.primaryGreen,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-
-                      // Título
-                      const Text(
-                        'KAAB TERRA',
-                        style: TextStyle(
-                          fontSize: 34,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                          letterSpacing: 2,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Slogan
-                      const Text(
-                        'Cultiva datos, cosecha valor',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w400,
-                          color: AppTheme.darkCoffee,
-                          fontStyle: FontStyle.italic,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
+              Container(
+                width: double.infinity,
+                height: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [0.0, 0.45, 1.0],
+                    colors: [AppTheme.coffeeDark, AppTheme.coffeeMedium, AppTheme.coffeeDeep],
                   ),
                 ),
               ),
-
-              // Loading dots en la parte inferior
-              if (_showDots)
-                Positioned(
-                  bottom: 40,
-                  left: 0,
-                  right: 0,
-                  child: const LoadingDots(),
+              GoldenParticles(),
+              const Positioned(bottom: 0, left: 0, right: 0, child: CoffeeSceneIllustration()),
+              SafeArea(
+                child: Column(
+                  children: [
+                    const Spacer(flex: 2),
+                    ScaleTransition(
+                      scale: _logoScale,
+                      child: FadeTransition(opacity: _logoFade, child: const SquareLogo()),
+                    ),
+                    const SizedBox(height: 40),
+                    FadeTransition(
+                      opacity: _textFade,
+                      child: SlideTransition(position: _textSlide, child: const TitleSection()),
+                    ),
+                    const Spacer(flex: 3),
+                    FadeTransition(
+                      opacity: _dotsFade,
+                      child: const Padding(
+                        padding: EdgeInsets.only(bottom: 52),
+                        child: Column(
+                          children: [
+                            LoadingDots(),
+                            SizedBox(height: 20),
+                            Text(
+                              'v 1.0.0',
+                              style: TextStyle(color: Colors.white24, fontSize: 11, letterSpacing: 1.5),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+              ),
             ],
           ),
         ),

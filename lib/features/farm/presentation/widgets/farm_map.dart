@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:kaabcafe/core/themes/app_theme.dart';
 
 class FarmMap extends StatefulWidget {
   final Function(double lat, double lng) onLocationSelected;
@@ -25,8 +24,8 @@ class _FarmMapState extends State<FarmMap> {
   @override
   void initState() {
     super.initState();
-    _latitude = widget.initialLat ?? 19.4326; // Centro de México por defecto
-    _longitude = widget.initialLng ?? -99.1332;
+    _latitude = widget.initialLat ?? 16.7525; // Base Chiapas por defecto
+    _longitude = widget.initialLng ?? -93.1167;
   }
 
   void _updateLocation(double lat, double lng) {
@@ -39,13 +38,15 @@ class _FarmMapState extends State<FarmMap> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
       height: 280,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withOpacity(theme.brightness == Brightness.dark ? 0.3 : 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -55,7 +56,6 @@ class _FarmMapState extends State<FarmMap> {
         borderRadius: BorderRadius.circular(20),
         child: Stack(
           children: [
-            // Mapa simulado (en producción usar google_maps_flutter o mapbox)
             Container(
               width: double.infinity,
               height: 280,
@@ -64,143 +64,80 @@ class _FarmMapState extends State<FarmMap> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppTheme.primaryGreen.withOpacity(0.3),
-                    AppTheme.secondaryGreen.withOpacity(0.2),
+                    theme.colorScheme.primary.withOpacity(0.25),
+                    theme.colorScheme.secondary.withOpacity(0.15),
                   ],
                 ),
               ),
               child: Stack(
                 children: [
-                  // Cuadrícula simulando mapa
                   CustomPaint(
                     size: Size.infinite,
-                    painter: MapGridPainter(),
+                    painter: MapGridPainter(theme: theme),
                   ),
 
-                  // Marcador central
+                  // Marcador de Ubicación
                   Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
                           Icons.location_pin,
-                          color: AppTheme.goldCoffee,
+                          color: theme.colorScheme.tertiary,
                           size: 48,
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: theme.colorScheme.surface,
                             borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 8,
-                              ),
-                            ],
+                            border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.1)),
                           ),
                           child: Text(
                             '${_latitude.toStringAsFixed(4)}°, ${_longitude.toStringAsFixed(4)}°',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  // Controles de mapa
+                  // Controles de Mapa
                   Positioned(
                     top: 16,
                     right: 16,
                     child: Column(
                       children: [
-                        _buildMapControl(
-                          icon: Icons.add,
-                          onTap: () {
-                            // Zoom in
-                            setState(() {
-                              _latitude += 0.01;
-                              _longitude += 0.01;
-                            });
-                          },
-                        ),
+                        _buildMapControl(icon: Icons.add, theme: theme, onTap: () => setState(() { _latitude += 0.01; _longitude += 0.01; })),
                         const SizedBox(height: 8),
-                        _buildMapControl(
-                          icon: Icons.remove,
-                          onTap: () {
-                            // Zoom out
-                            setState(() {
-                              _latitude -= 0.01;
-                              _longitude -= 0.01;
-                            });
-                          },
-                        ),
+                        _buildMapControl(icon: Icons.remove, theme: theme, onTap: () => setState(() { _latitude -= 0.01; _longitude -= 0.01; })),
                         const SizedBox(height: 8),
-                        _buildMapControl(
-                          icon: _isSatelliteView
-                              ? Icons.map
-                              : Icons.satellite_alt,
-                          onTap: () {
-                            setState(() {
-                              _isSatelliteView = !_isSatelliteView;
-                            });
-                          },
-                        ),
+                        _buildMapControl(icon: _isSatelliteView ? Icons.map : Icons.satellite_alt, theme: theme, onTap: () => setState(() => _isSatelliteView = !_isSatelliteView)),
                       ],
                     ),
                   ),
 
-                  // Botón mi ubicación
                   Positioned(
                     bottom: 16,
                     right: 16,
-                    child: _buildMapControl(
-                      icon: Icons.my_location,
-                      onTap: () {
-                        // Simular obtener ubicación actual
-                        _updateLocation(19.4326, -99.1332);
-                      },
-                    ),
+                    child: _buildMapControl(icon: Icons.my_location, theme: theme, onTap: () => _updateLocation(16.7525, -93.1167)),
                   ),
                 ],
               ),
             ),
 
-            // Overlay de texto informativo
             Positioned(
               bottom: 16,
               left: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(20),
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(color: Colors.black.withOpacity(0.65), borderRadius: BorderRadius.circular(20)),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.touch_app,
-                      size: 14,
-                      color: Colors.white.withOpacity(0.8),
-                    ),
+                    Icon(Icons.touch_app, size: 14, color: Colors.white.withOpacity(0.9)),
                     const SizedBox(width: 4),
-                    Text(
-                      'Arrastra para ajustar ubicación',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.white.withOpacity(0.8),
-                      ),
-                    ),
+                    Text('Arrastra para ajustar ubicación', style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.9))),
                   ],
                 ),
               ),
@@ -211,50 +148,37 @@ class _FarmMapState extends State<FarmMap> {
     );
   }
 
-  Widget _buildMapControl({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildMapControl({required IconData icon, required ThemeData theme, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-            ),
-          ],
+          border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.1)),
         ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: AppTheme.primaryGreen,
-        ),
+        child: Icon(icon, size: 20, color: theme.colorScheme.secondary),
       ),
     );
   }
 }
 
-// CustomPainter para dibujar cuadrícula del mapa
 class MapGridPainter extends CustomPainter {
+  final ThemeData theme;
+  MapGridPainter({required this.theme});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.3)
+      ..color = theme.colorScheme.onSurface.withOpacity(0.12)
       ..strokeWidth = 0.5
       ..style = PaintingStyle.stroke;
 
-    // Líneas verticales
     for (double x = 0; x < size.width; x += 40) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
     }
-
-    // Líneas horizontales
     for (double y = 0; y < size.height; y += 40) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
     }

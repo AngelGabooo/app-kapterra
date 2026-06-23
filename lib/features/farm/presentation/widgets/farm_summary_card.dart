@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:kaabcafe/core/themes/app_theme.dart';
 
 class FarmSummaryCard extends StatelessWidget {
   const FarmSummaryCard({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -13,41 +14,35 @@ class FarmSummaryCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            AppTheme.primaryGreen.withOpacity(0.05),
-            AppTheme.goldCoffee.withOpacity(0.02),
+            theme.colorScheme.primary.withOpacity(0.08),
+            theme.colorScheme.tertiary.withOpacity(0.02),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppTheme.primaryGreen.withOpacity(0.1),
-        ),
+        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.info_outline, color: AppTheme.primaryGreen, size: 20),
+              Icon(Icons.info_outline, color: theme.colorScheme.primary, size: 20),
               const SizedBox(width: 8),
               Text(
                 'Tu finca será la base para:',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.darkCoffee,
-                ),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
               ),
             ],
           ),
           const SizedBox(height: 16),
           Wrap(
-            spacing: 16,
+            spacing: 12,
             runSpacing: 12,
             children: [
-              _buildSummaryItem(Icons.eco, 'Producción'),
-              _buildSummaryItem(Icons.analytics, 'Indicadores'),
-              _buildSummaryItem(Icons.qr_code, 'Trazabilidad'),
-              _buildSummaryItem(Icons.trending_up, 'Rentabilidad'),
+              _buildSummaryItem(Icons.eco, 'Producción', theme),
+              _buildSummaryItem(Icons.analytics, 'Indicadores', theme),
+              _buildSummaryItem(Icons.qr_code, 'Trazabilidad', theme),
+              _buildSummaryItem(Icons.trending_up, 'Rentabilidad', theme),
             ],
           ),
         ],
@@ -55,30 +50,22 @@ class FarmSummaryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryItem(IconData icon, String label) {
+  Widget _buildSummaryItem(IconData icon, String label, ThemeData theme) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 4,
-          ),
-        ],
+        border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.08)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: AppTheme.goldCoffee),
+          Icon(icon, size: 16, color: theme.colorScheme.tertiary),
           const SizedBox(width: 6),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 12,
-              color: AppTheme.darkCoffee,
-            ),
+            style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.8), fontWeight: FontWeight.w500),
           ),
         ],
       ),

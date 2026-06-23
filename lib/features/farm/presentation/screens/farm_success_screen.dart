@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
-import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/farm/presentation/widgets/success_animation.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_button.dart';
 
@@ -19,200 +18,141 @@ class FarmSuccessScreen extends StatefulWidget {
 
 class _FarmSuccessScreenState extends State<FarmSuccessScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _fadeController;
-  late Animation<double> _fadeAnimation;
+  late final AnimationController _entranceController;
 
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 600),
+    _entranceController = AnimationController(
+      duration: const Duration(milliseconds: 900),
       vsync: this,
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOut,
-    );
-    _fadeController.forward();
+    )..forward();
   }
 
   @override
   void dispose() {
-    _fadeController.dispose();
+    _entranceController.dispose();
     super.dispose();
   }
 
+  // Builds a staggered fade + gentle slide-up for a section of the screen,
+  // so content cascades in after the hero badge lands instead of just
+  // appearing all at once.
+  Widget _reveal(Widget child, double start, double end) {
+    final animation = CurvedAnimation(
+      parent: _entranceController,
+      curve: Interval(start, end, curve: Curves.easeOutCubic),
+    );
+    return FadeTransition(
+      opacity: animation,
+      child: SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, 0.12), end: Offset.zero).animate(animation),
+        child: child,
+      ),
+    );
+  }
+
   void _goToDashboard() {
-    debugPrint('Navegando al Dashboard');
-    // ✅ Navegar al dashboard correctamente
     context.go(RouteNames.dashboard);
   }
 
   void _registerAnotherFarm() {
-    debugPrint('Registrando otra finca');
     context.go(RouteNames.registerFarm);
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+
     return Scaffold(
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppTheme.lightBeige,
-              AppTheme.primaryGreen.withOpacity(0.05),
-              AppTheme.lightBeige,
+              theme.scaffoldBackgroundColor,
+              theme.colorScheme.primary.withOpacity(0.05),
+              theme.scaffoldBackgroundColor,
             ],
           ),
         ),
         child: SafeArea(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Column(
-                children: [
-                  const SizedBox(height: 40),
+            child: Column(
+              children: [
+                const SizedBox(height: 32),
 
-                  // Ilustración (placeholder)
-                  Container(
-                    width: 280,
-                    height: 200,
-                    margin: const EdgeInsets.symmetric(horizontal: 20),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(24),
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          AppTheme.primaryGreen.withOpacity(0.1),
-                          AppTheme.goldCoffee.withOpacity(0.05),
-                        ],
+                // Single hero: badge + orbiting feature icons + ripple.
+                const SuccessAnimation(),
+
+                const SizedBox(height: 8),
+
+                _reveal(
+                  Column(
+                    children: [
+                      Text(
+                        'REGISTRO COMPLETADO',
+                        style: textTheme.labelMedium?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 2.2,
+                        ),
                       ),
-                    ),
-                    child: Stack(
-                      children: [
-                        Positioned(
-                          top: 20,
-                          left: 20,
-                          child: Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryGreen.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: const Icon(
-                              Icons.agriculture,
-                              size: 32,
-                              color: AppTheme.primaryGreen,
-                            ),
+                      const SizedBox(height: 10),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 28),
+                        child: Text(
+                          '${widget.farmName} ya está en línea',
+                          textAlign: TextAlign.center,
+                          style: textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                            height: 1.2,
                           ),
                         ),
-                        Positioned(
-                          bottom: 20,
-                          right: 20,
-                          child: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: AppTheme.goldCoffee.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: const Icon(
-                              Icons.analytics,
-                              size: 28,
-                              color: AppTheme.goldCoffee,
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          top: 60,
-                          right: 50,
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: AppTheme.secondaryGreen.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(
-                              Icons.qr_code,
-                              size: 24,
-                              color: AppTheme.secondaryGreen,
-                            ),
-                          ),
-                        ),
-                        Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.emoji_emotions,
-                                size: 60,
-                                color: AppTheme.goldCoffee,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Productor Digital',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppTheme.darkCoffee.withOpacity(0.6),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
+                  0.0,
+                  0.6,
+                ),
 
-                  const SizedBox(height: 32),
+                const SizedBox(height: 14),
 
-                  const SuccessAnimation(),
-
-                  const SizedBox(height: 32),
-
-                  const Text(
-                    '¡Tu finca ha sido registrada!',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                      height: 1.2,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-
-                  const SizedBox(height: 16),
-
+                _reveal(
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: Text(
-                      'Ahora puedes comenzar a registrar lotes, actividades, costos y generar trazabilidad para tu producción cafetalera.',
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: AppTheme.darkCoffee.withOpacity(0.7),
-                        height: 1.4,
-                      ),
+                      'Ahora puedes registrar lotes, actividades y costos, además de generar trazabilidad para tu producción cafetalera.',
                       textAlign: TextAlign.center,
+                      style: textTheme.bodyLarge?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        height: 1.45,
+                      ),
                     ),
                   ),
+                  0.15,
+                  0.75,
+                ),
 
-                  const SizedBox(height: 32),
+                const SizedBox(height: 28),
 
+                _reveal(
                   Container(
                     margin: const EdgeInsets.symmetric(horizontal: 24),
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: theme.colorScheme.surface,
                       borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.08)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withOpacity(theme.brightness == Brightness.dark ? 0.2 : 0.04),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
                         ),
@@ -223,39 +163,39 @@ class _FarmSuccessScreenState extends State<FarmSuccessScreen>
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _buildFeatureItem(Icons.eco, 'Producción'),
-                            _buildFeatureItem(Icons.analytics, 'Indicadores'),
+                            _buildFeatureItem(Icons.eco, 'Producción', theme),
+                            _buildFeatureItem(Icons.analytics, 'Indicadores', theme),
                           ],
                         ),
                         const SizedBox(height: 20),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
-                            _buildFeatureItem(Icons.trending_up, 'Rentabilidad'),
-                            _buildFeatureItem(Icons.qr_code, 'Trazabilidad'),
+                            _buildFeatureItem(Icons.trending_up, 'Rentabilidad', theme),
+                            _buildFeatureItem(Icons.qr_code, 'Trazabilidad', theme),
                           ],
                         ),
                         const SizedBox(height: 20),
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppTheme.lightBeige,
+                            color: theme.scaffoldBackgroundColor,
                             borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.05)),
                           ),
                           child: Row(
                             children: [
                               Icon(
                                 Icons.check_circle_outline,
                                 size: 20,
-                                color: AppTheme.primaryGreen,
+                                color: theme.colorScheme.primary,
                               ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(
                                   'Kaab Terra ya está listo para ayudarte a gestionar tu finca con datos en tiempo real.',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    color: AppTheme.darkCoffee.withOpacity(0.8),
+                                  style: textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurface.withOpacity(0.8),
                                   ),
                                 ),
                               ),
@@ -265,12 +205,17 @@ class _FarmSuccessScreenState extends State<FarmSuccessScreen>
                       ],
                     ),
                   ),
+                  0.3,
+                  0.85,
+                ),
 
-                  const SizedBox(height: 32),
+                const SizedBox(height: 32),
 
+                _reveal(
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         LoginButton(
                           text: 'Ir al Dashboard',
@@ -278,31 +223,31 @@ class _FarmSuccessScreenState extends State<FarmSuccessScreen>
                           isLoading: false,
                         ),
                         const SizedBox(height: 16),
-                        OutlinedButton(
+                        OutlinedButton.icon(
                           onPressed: _registerAnotherFarm,
+                          icon: Icon(Icons.add, color: theme.colorScheme.secondary),
+                          label: const Text(
+                            'Registrar otra finca',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.primaryGreen,
-                            side: BorderSide(color: AppTheme.primaryGreen.withOpacity(0.5)),
+                            foregroundColor: theme.colorScheme.secondary,
+                            side: BorderSide(color: theme.colorScheme.secondary.withOpacity(0.5)),
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
-                            ),
-                          ),
-                          child: const Text(
-                            'Registrar otra finca',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
+                  0.45,
+                  1.0,
+                ),
 
-                  const SizedBox(height: 40),
-                ],
-              ),
+                const SizedBox(height: 40),
+              ],
             ),
           ),
         ),
@@ -310,20 +255,20 @@ class _FarmSuccessScreenState extends State<FarmSuccessScreen>
     );
   }
 
-  Widget _buildFeatureItem(IconData icon, String label) {
+  Widget _buildFeatureItem(IconData icon, String label, ThemeData theme) {
     return Column(
       children: [
         Container(
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: AppTheme.primaryGreen.withOpacity(0.1),
+            color: theme.colorScheme.primary.withOpacity(0.12),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Icon(
             icon,
             size: 28,
-            color: AppTheme.primaryGreen,
+            color: theme.colorScheme.primary,
           ),
         ),
         const SizedBox(height: 8),
@@ -332,7 +277,7 @@ class _FarmSuccessScreenState extends State<FarmSuccessScreen>
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: AppTheme.darkCoffee,
+            color: theme.colorScheme.onSurface,
           ),
         ),
       ],

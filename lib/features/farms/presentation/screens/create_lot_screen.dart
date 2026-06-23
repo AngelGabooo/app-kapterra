@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:kaabcafe/core/routes/route_names.dart';
+import 'package:provider/provider.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
+import 'package:kaabcafe/core/providers/farm_provider.dart';
 import 'package:kaabcafe/features/farms/data/models/farm_details_model.dart';
 import 'package:kaabcafe/features/farms/data/models/lot_model.dart';
 
@@ -68,25 +68,120 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
     super.dispose();
   }
 
-  void _createLot() async {
+  // Calcula el número estimado de árboles basado en el área y densidad
+  int _calculateTreesCount() {
+    final area = double.tryParse(_areaController.text) ?? 0.0;
+    final density = double.tryParse(_densityController.text) ?? 0.0;
+
+    if (area > 0 && density > 0) {
+      return (area * density).round();
+    }
+
+    // Densidad promedio de café: ~5000 plantas por hectárea
+    if (area > 0) {
+      return (area * 5000).round();
+    }
+
+    return 0;
+  }
+
+  // Calcula la producción estimada basada en el área y edad
+  double _calculateEstimatedProduction() {
+    final area = double.tryParse(_areaController.text) ?? 0.0;
+    final age = double.tryParse(_ageController.text) ?? 0.0;
+
+    if (area > 0) {
+      double productivityFactor = 1.0;
+      if (age > 20) {
+        productivityFactor = 0.7;
+      } else if (age > 10) {
+        productivityFactor = 0.85;
+      } else if (age >= 3) {
+        productivityFactor = 1.0;
+      } else if (age > 0) {
+        productivityFactor = 0.5;
+      }
+
+      return area * 25 * productivityFactor;
+    }
+
+    return 0.0;
+  }
+
+  void _createLot() {
+    // Validaciones
     if (_nameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor ingresa el nombre del lote')),
+        const SnackBar(
+          content: Text('Por favor ingresa el nombre del lote'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
 
-    setState(() {
-      _isSaving = true;
-    });
+    if (_areaController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor ingresa el área del lote'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
-    await Future.delayed(const Duration(seconds: 2));
+    setState(() => _isSaving = true);
 
-    setState(() {
-      _isSaving = false;
-    });
+    try {
+      final treesCount = _calculateTreesCount();
+      final estimatedProduction = _calculateEstimatedProduction();
+      final area = double.tryParse(_areaController.text) ?? 0.0;
 
-    _showSuccessDialog();
+      final newLot = LotModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: _nameController.text,
+        variety: _selectedVariety,
+        estimatedProduction: estimatedProduction,
+        area: area,
+        status: _mapStatusToEnum(_selectedStatus),
+        treesCount: treesCount,
+      );
+
+      final farmProvider = Provider.of<FarmProvider>(context, listen: false);
+      farmProvider.addLotToFarm(widget.farm.id, newLot);
+
+      setState(() => _isSaving = false);
+
+      if (mounted) {
+        _showSuccessDialog();
+      }
+    } catch (e) {
+      setState(() => _isSaving = false);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al crear el lote: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  LotStatus _mapStatusToEnum(String status) {
+    switch (status) {
+      case 'Excelente':
+        return LotStatus.healthy;
+      case 'Bueno':
+        return LotStatus.healthy;
+      case 'Atención':
+        return LotStatus.attention;
+      case 'Riesgo':
+        return LotStatus.risk;
+      default:
+        return LotStatus.healthy;
+    }
   }
 
   void _saveDraft() {
@@ -102,87 +197,93 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        contentPadding: const EdgeInsets.all(24),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppTheme.primaryGreen.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.check_circle,
-                color: AppTheme.primaryGreen,
-                size: 48,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              '¡Lote creado!',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.darkCoffee,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Ya puedes registrar actividades, costos y comenzar a construir la trazabilidad de este lote.',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppTheme.darkCoffee,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.pop(context);
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.primaryGreen,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: const Text('Ver detalle'),
-                  ),
+      builder: (context) {
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+        final isDark = theme.brightness == Brightness.dark;
+
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          contentPadding: const EdgeInsets.all(24),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryGreen.withOpacity(0.1),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _resetForm();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryGreen,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: const Text('Crear otro'),
-                  ),
+                child: const Icon(
+                  Icons.check_circle,
+                  color: AppTheme.primaryGreen,
+                  size: 48,
                 ),
-              ],
-            ),
-          ],
-        ),
-      ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                '¡Lote creado!',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Ya puedes registrar actividades, costos y comenzar a construir la trazabilidad de este lote.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: colorScheme.onSurface.withOpacity(0.7),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.pop(context);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primaryGreen,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text('Ver detalle'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _resetForm();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryGreen,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text('Crear otro'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -202,43 +303,47 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppTheme.lightBeige,
-              AppTheme.primaryGreen.withOpacity(0.03),
-              AppTheme.lightBeige,
+              colorScheme.surface,
+              colorScheme.primary.withOpacity(0.03),
+              colorScheme.surface,
             ],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // Barra superior
+              // Barra superior dinámica
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back),
-                      color: AppTheme.darkCoffee,
+                      icon: Icon(Icons.arrow_back, color: colorScheme.onSurface),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Nuevo Lote',
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.darkCoffee,
+                              color: colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -246,7 +351,7 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                             'Registra un nuevo lote dentro de tu finca.',
                             style: TextStyle(
                               fontSize: 12,
-                              color: AppTheme.darkCoffee.withOpacity(0.6),
+                              color: colorScheme.onSurface.withOpacity(0.6),
                             ),
                           ),
                         ],
@@ -267,7 +372,7 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colorScheme.surface,
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
@@ -280,12 +385,12 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Información básica',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: AppTheme.darkCoffee,
+                                color: colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 20),
@@ -319,7 +424,7 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colorScheme.surface,
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
@@ -332,12 +437,12 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Información agrícola',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: AppTheme.darkCoffee,
+                                color: colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 20),
@@ -383,6 +488,23 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                               suffix: 'plantas/ha',
                               keyboardType: TextInputType.number,
                             ),
+
+                            // Mostrar cálculos automáticos
+                            if (_areaController.text.isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              Divider(color: colorScheme.onSurface.withOpacity(0.1)),
+                              const SizedBox(height: 8),
+                              _buildCalculatedInfo(
+                                'Árboles estimados',
+                                _calculateTreesCount().toString(),
+                                Icons.nature,
+                              ),
+                              _buildCalculatedInfo(
+                                'Producción estimada',
+                                '${_calculateEstimatedProduction().toStringAsFixed(1)} qq',
+                                Icons.eco,
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -393,7 +515,7 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colorScheme.surface,
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
@@ -406,12 +528,12 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Ubicación del lote',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: AppTheme.darkCoffee,
+                                color: colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -436,7 +558,7 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                                       widget.farm.location,
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: AppTheme.darkCoffee,
+                                        color: colorScheme.onSurface,
                                       ),
                                     ),
                                   ],
@@ -469,7 +591,7 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colorScheme.surface,
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
@@ -482,12 +604,12 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Estado inicial',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: AppTheme.darkCoffee,
+                                color: colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -506,10 +628,14 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                                     duration: const Duration(milliseconds: 200),
                                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                     decoration: BoxDecoration(
-                                      color: isSelected ? _statusColors[status]?.withOpacity(0.1) : Colors.grey.withOpacity(0.05),
+                                      color: isSelected
+                                          ? _statusColors[status]?.withOpacity(0.1)
+                                          : colorScheme.onSurface.withOpacity(0.05),
                                       borderRadius: BorderRadius.circular(30),
                                       border: Border.all(
-                                        color: isSelected ? _statusColors[status]! : Colors.grey.withOpacity(0.2),
+                                        color: isSelected
+                                            ? _statusColors[status]!
+                                            : colorScheme.onSurface.withOpacity(0.2),
                                         width: isSelected ? 1.5 : 1,
                                       ),
                                     ),
@@ -519,7 +645,9 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                                         Icon(
                                           _statusIcons[status],
                                           size: 18,
-                                          color: isSelected ? _statusColors[status] : AppTheme.darkCoffee.withOpacity(0.5),
+                                          color: isSelected
+                                              ? _statusColors[status]
+                                              : colorScheme.onSurface.withOpacity(0.5),
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
@@ -527,7 +655,9 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                                           style: TextStyle(
                                             fontSize: 14,
                                             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                                            color: isSelected ? _statusColors[status] : AppTheme.darkCoffee,
+                                            color: isSelected
+                                                ? _statusColors[status]
+                                                : colorScheme.onSurface,
                                           ),
                                         ),
                                       ],
@@ -546,7 +676,7 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colorScheme.surface,
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
@@ -559,12 +689,12 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Evidencia fotográfica',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: AppTheme.darkCoffee,
+                                color: colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -655,22 +785,22 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                               children: [
                                 Icon(Icons.info_outline, color: AppTheme.primaryGreen),
                                 const SizedBox(width: 8),
-                                const Text(
+                                Text(
                                   'Información de trazabilidad',
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: AppTheme.darkCoffee,
+                                    color: colorScheme.onSurface,
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 12),
-                            const Text(
+                            Text(
                               'Al crear este lote se iniciará automáticamente su historial de trazabilidad, actividades, costos e indicadores.',
                               style: TextStyle(
                                 fontSize: 13,
-                                color: AppTheme.darkCoffee,
+                                color: colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -693,7 +823,7 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colorScheme.surface,
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
@@ -706,12 +836,12 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Resumen del lote',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: AppTheme.darkCoffee,
+                                color: colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -720,6 +850,10 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                             _buildSummaryRow(Icons.emoji_nature, 'Variedad', _selectedVariety),
                             _buildSummaryRow(Icons.landscape, 'Área', _areaController.text.isEmpty ? 'Sin especificar' : '${_areaController.text} ha'),
                             _buildSummaryRow(Icons.location_on, 'Ubicación', widget.farm.location),
+                            if (_areaController.text.isNotEmpty) ...[
+                              _buildSummaryRow(Icons.nature, 'Árboles', _calculateTreesCount().toString()),
+                              _buildSummaryRow(Icons.eco, 'Producción', '${_calculateEstimatedProduction().toStringAsFixed(1)} qq'),
+                            ],
                           ],
                         ),
                       ),
@@ -732,11 +866,20 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
-                              onPressed: _createLot,
-                              icon: const Icon(Icons.add_circle_outline, size: 22),
-                              label: const Text(
-                                'Crear Lote',
-                                style: TextStyle(
+                              onPressed: _isSaving ? null : _createLot,
+                              icon: _isSaving
+                                  ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                                  : const Icon(Icons.add_circle_outline, size: 22),
+                              label: Text(
+                                _isSaving ? 'Guardando...' : 'Crear Lote',
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -756,7 +899,7 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                           SizedBox(
                             width: double.infinity,
                             child: OutlinedButton.icon(
-                              onPressed: _saveDraft,
+                              onPressed: _isSaving ? null : _saveDraft,
                               icon: const Icon(Icons.save_outlined, size: 20),
                               label: const Text(
                                 'Guardar borrador',
@@ -799,15 +942,18 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
         int maxLines = 1,
         TextInputType keyboardType = TextInputType.text,
       }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: AppTheme.darkCoffee,
+            color: colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -821,18 +967,18 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
             suffixText: suffix,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+              borderSide: BorderSide(color: colorScheme.onSurface.withOpacity(0.3)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+              borderSide: BorderSide(color: colorScheme.onSurface.withOpacity(0.3)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: const BorderSide(color: AppTheme.primaryGreen),
             ),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: colorScheme.surface,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
         ),
@@ -841,15 +987,18 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
   }
 
   Widget _buildReadOnlyField(String label, String value, IconData icon) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: AppTheme.darkCoffee,
+            color: colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -857,8 +1006,8 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.withOpacity(0.3)),
-            color: Colors.grey.withOpacity(0.05),
+            border: Border.all(color: colorScheme.onSurface.withOpacity(0.3)),
+            color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
           ),
           child: Row(
             children: [
@@ -866,9 +1015,9 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
               const SizedBox(width: 12),
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
-                  color: AppTheme.darkCoffee,
+                  color: colorScheme.onSurface,
                 ),
               ),
             ],
@@ -878,16 +1027,24 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
     );
   }
 
-  Widget _buildDropdown(String label, String value, List<String> options, Function(String?) onChanged) {
+  Widget _buildDropdown(
+      String label,
+      String value,
+      List<String> options,
+      Function(String?) onChanged,
+      ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: AppTheme.darkCoffee,
+            color: colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -897,18 +1054,18 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
             prefixIcon: Icon(Icons.emoji_nature, size: 20, color: AppTheme.primaryGreen),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+              borderSide: BorderSide(color: colorScheme.onSurface.withOpacity(0.3)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+              borderSide: BorderSide(color: colorScheme.onSurface.withOpacity(0.3)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: const BorderSide(color: AppTheme.primaryGreen),
             ),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: colorScheme.surface,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           ),
           items: options.map((option) {
@@ -923,7 +1080,48 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
     );
   }
 
+  Widget _buildCalculatedInfo(String label, String value, IconData icon) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: AppTheme.primaryGreen),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          const Spacer(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryGreen.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryGreen,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTraceabilityIcon(IconData icon, String label) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -940,7 +1138,7 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
           label,
           style: TextStyle(
             fontSize: 12,
-            color: AppTheme.darkCoffee.withOpacity(0.7),
+            color: colorScheme.onSurface.withOpacity(0.7),
           ),
         ),
       ],
@@ -948,6 +1146,9 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
   }
 
   Widget _buildSummaryRow(IconData icon, String label, String value) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -960,17 +1161,17 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
               label,
               style: TextStyle(
                 fontSize: 13,
-                color: AppTheme.darkCoffee.withOpacity(0.6),
+                color: colorScheme.onSurface.withOpacity(0.6),
               ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: AppTheme.darkCoffee,
+                color: colorScheme.onSurface,
               ),
               overflow: TextOverflow.ellipsis,
             ),

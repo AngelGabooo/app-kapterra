@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
-import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/onboarding/data/models/onboarding_model.dart';
 import 'package:kaabcafe/features/onboarding/presentation/widgets/onboarding_item.dart';
 import 'package:kaabcafe/features/onboarding/presentation/widgets/onboarding_button.dart';
@@ -48,12 +47,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _completeOnboarding() {
     debugPrint('✅ Onboarding completado - Navegando al Login...');
-    // ✅ Navegar directamente al Login
     context.go(RouteNames.login);
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -61,16 +61,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppTheme.lightBeige,
-              AppTheme.primaryGreen.withOpacity(0.03),
-              AppTheme.lightBeige,
+              theme.scaffoldBackgroundColor,
+              theme.colorScheme.primary.withOpacity(0.04),
+              theme.scaffoldBackgroundColor,
             ],
           ),
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // Botón Omitir en la esquina superior derecha
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Align(
@@ -82,8 +81,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                 ),
               ),
-
-              // PageView con las páginas de onboarding
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,
@@ -96,8 +93,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   },
                 ),
               ),
-
-              // Indicador de página y botones
               Padding(
                 padding: const EdgeInsets.all(24.0),
                 child: Column(

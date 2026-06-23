@@ -3,7 +3,7 @@ class SplashEntity {
   final bool isLoggedIn;
   final String version;
 
-  SplashEntity({
+  const SplashEntity({
     required this.isFirstLaunch,
     required this.isLoggedIn,
     required this.version,

@@ -1,91 +1,46 @@
 import 'package:flutter/material.dart';
-import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/dashboard/data/models/farm_summary_model.dart';
 
 class FarmCard extends StatelessWidget {
   final FarmSummaryModel farm;
-
   const FarmCard({super.key, required this.farm});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: theme.colorScheme.onSurface.withOpacity(0.06)),
       ),
       child: Row(
         children: [
           Container(
-            width: 8,
-            height: 40,
+            width: 6,
+            height: 28,
             decoration: BoxDecoration(
               color: farm.statusColor,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(3),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(farm.name, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: theme.colorScheme.onSurface, letterSpacing: -0.3)),
+                const SizedBox(height: 1),
                 Text(
-                  farm.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.darkCoffee,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${farm.hectares} ha • ${farm.production} kg',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.darkCoffee.withOpacity(0.6),
-                  ),
-                ),
-              ],
+                  '${farm.hectares} HA  •  ${farm.production} KG',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: theme.colorScheme.onSurface.withOpacity(0.35), letterSpacing: 0.2), // 🚀 Corregido w900
+                ),              ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: farm.statusColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: farm.statusColor,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  farm.statusText,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: farm.statusColor,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          Icon(Icons.north_east_rounded, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.25)),
         ],
       ),
     );
