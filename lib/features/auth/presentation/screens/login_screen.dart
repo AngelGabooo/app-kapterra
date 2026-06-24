@@ -1,9 +1,33 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import 'package:kaabcafe/core/constants/app_constants.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_logo.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_form.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/social_login_button.dart';
+
+// Definición local del modelo para evitar conflictos de importación
+class LoginModel {
+  final String email;
+  final String password;
+  final bool rememberMe;
+
+  LoginModel({
+    required this.email,
+    required this.password,
+    this.rememberMe = false,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'email': email,
+      'password': password,
+      'rememberMe': rememberMe,
+    };
+  }
+}
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -20,15 +44,40 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    debugPrint('Login intentado con: $email');
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      final url = Uri.parse('${AppConstants.apiBaseUrl}/api/auth/login');
 
-    setState(() {
-      _isLoading = false;
-    });
+      final loginData = LoginModel(email: email, password: password, rememberMe: true);
 
-    if (mounted) {
-      context.go(RouteNames.dashboard);
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(loginData.toJson()),
+      );
+
+      if (response.statusCode == 200) {
+        final responseBody = jsonDecode(response.body);
+        final token = responseBody['access_token'];
+
+        debugPrint('¡Login exitoso! Token recibido: $token');
+        // TODO: Aquí puedes guardar el token localmente (ej: SharedPreferences)
+
+        if (mounted) {
+          context.go(RouteNames.dashboard);
+        }
+      } else {
+        final errorBody = jsonDecode(response.body);
+        _showErrorSnackBar(errorBody['detail'] ?? 'Credenciales incorrectas');
+      }
+    } catch (e) {
+      debugPrint('Error de red en Login: $e');
+      _showErrorSnackBar('No se pudo conectar al servidor. Inténtalo de nuevo.');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -52,6 +101,15 @@ class _LoginScreenState extends State<LoginScreen> {
   void _handleRegister() => context.go(RouteNames.register);
   void _handleForgotPassword() => context.go(RouteNames.forgotPassword);
 
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -72,31 +130,27 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
         child: SafeArea(
-          // Eliminamos el Stack para que no haya elementos flotantes rígidos
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             physics: const BouncingScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ── CONTROL DE CAÍDA INICIAL ───
-                // Mantengo los 140 píxeles para que empiece bien abajo en la pantalla
                 const SizedBox(height: 140),
-
-                // Logo y títulos de Kaab Terra
                 const LoginLogo(),
-
                 const SizedBox(height: 36),
 
-                // Formulario (Inputs de Email, Password y botón Iniciar Sesión)
-                LoginForm(
+                _isLoading
+                    ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24.0),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+                    : LoginForm(
                   onLogin: _handleLogin,
                   onForgotPassword: _handleForgotPassword,
                 ),
 
                 const SizedBox(height: 24),
-
-                // Separador "o continuar con"
                 Row(
                   children: [
                     Expanded(
@@ -117,19 +171,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 24),
-
-                // Botón de Google (Ahora se moverá perfectamente con el scroll general)
                 SocialLoginButton(
                   text: 'Continuar con Google',
-                  imageAsset: 'assets/img/google_logo.png', // 🚀 Pásale la ruta de tu PNG oficial
-                  onPressed: _handleGoogleLogin,
+                  imageAsset: 'assets/img/google_logo.png',
+                  onPressed: () {
+                    if (!_isLoading) _handleGoogleLogin();
+                  },
                 ),
-
-                const SizedBox(height: 48), // Separación elegante antes del cierre
-
-                // ── ENLACE A REGISTRO INTEGRADO AL SCROLL ───
+                const SizedBox(height: 48),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -138,11 +188,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(
                         color: theme.colorScheme.onSurface.withOpacity(0.7),
                         fontSize: 14,
-                        fontWeight: FontWeight.normal,
                       ),
                     ),
                     TextButton(
-                      onPressed: _handleRegister,
+                      onPressed: _isLoading ? () {} : _handleRegister,
                       style: TextButton.styleFrom(
                         foregroundColor: theme.colorScheme.tertiary,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -157,8 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 32), // Colchón de espacio final para que respire al scrollear
+                const SizedBox(height: 32),
               ],
             ),
           ),

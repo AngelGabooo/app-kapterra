@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
+import 'package:kaabcafe/core/constants/app_constants.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/register_form.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/social_login_button.dart';
@@ -12,10 +15,48 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  bool _isLoading = false;
+
   void _handleRegister(RegisterData data) async {
-    // La lógica de negocio la maneja tu vista de forma asíncrona
-    if (mounted) {
-      context.go(RouteNames.selectUserType);
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final url = Uri.parse('${AppConstants.apiBaseUrl}/api/auth/register');
+
+      final bodyMap = {
+        'fullName': data.fullName,
+        'email': data.email,
+        'phoneNumber': data.phoneNumber,
+        'password': data.password,
+        'acceptTerms': data.acceptTerms,
+      };
+
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(bodyMap),
+      );
+
+      if (response.statusCode == 201) {
+        debugPrint('Usuario registrado con éxito en la nube.');
+        if (mounted) {
+          context.go(RouteNames.selectUserType);
+        }
+      } else {
+        final errorBody = jsonDecode(response.body);
+        _showSnackBar(errorBody['detail'] ?? 'Error al registrar el usuario', isError: true);
+      }
+    } catch (e) {
+      debugPrint('Error de red en Registro: $e');
+      _showSnackBar('Error de conexión con el servidor', isError: true);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -40,6 +81,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   void _goToLogin() {
     context.go(RouteNames.login);
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Theme.of(context).colorScheme.error : Colors.green,
+      ),
+    );
   }
 
   @override
@@ -73,17 +123,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                     child: IconButton(
-                      onPressed: _goToLogin,
+                      onPressed: _isLoading ? () {} : _goToLogin,
                       icon: const Icon(Icons.arrow_back),
                       color: theme.colorScheme.onSurface,
                     ),
                   ),
                 ),
-
-                // 🚨 CAÍDA CONTROLADA DE ALTURA
-                // Alineado perfectamente con la distribución baja de tu LoginScreen
                 const SizedBox(height: 24),
-
                 Text(
                   'Crea tu cuenta',
                   style: TextStyle(
@@ -100,13 +146,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     color: theme.colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
-
                 const SizedBox(height: 36),
 
-                // Formulario desacoplado de colores fijos
-                RegisterForm(onRegister: _handleRegister),
+                _isLoading
+                    ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24.0),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+                    : RegisterForm(onRegister: _handleRegister),
 
-                // Separador dinámico
+                const SizedBox(height: 24),
                 Row(
                   children: [
                     Expanded(
@@ -127,19 +176,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 24),
-
-                // Botón Google Oficial (Usa la firma optimizada de 'imageAsset')
                 SocialLoginButton(
                   text: 'Continuar con Google',
                   imageAsset: 'assets/img/google_logo.png',
-                  onPressed: _handleGoogleRegister,
+                  onPressed: () {
+                    if (!_isLoading) _handleGoogleRegister();
+                  },
                 ),
-
                 const SizedBox(height: 36),
-
-                // Footer de navegación enlazado al árbol del scroll
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -148,11 +193,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: TextStyle(
                         color: theme.colorScheme.onSurface.withOpacity(0.7),
                         fontSize: 14,
-                        fontWeight: FontWeight.normal,
                       ),
                     ),
                     TextButton(
-                      onPressed: _goToLogin,
+                      onPressed: _isLoading ? () {} : _goToLogin,
                       style: TextButton.styleFrom(
                         foregroundColor: theme.colorScheme.tertiary,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -167,7 +211,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 40),
               ],
             ),
