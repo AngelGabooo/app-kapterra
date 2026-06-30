@@ -7,10 +7,9 @@ class SetupProfileForm extends StatefulWidget {
   const SetupProfileForm({super.key, required this.onComplete});
 
   @override
-  State<SetupProfileForm> createState() => SetupProfileFormState(); // 🚀 Cambiado a público (sin guion bajo)
+  State<SetupProfileForm> createState() => SetupProfileFormState();
 }
 
-// 🚀 Cambiado a público (sin guion bajo) para que la GlobalKey pueda leer sus métodos internos
 class SetupProfileFormState extends State<SetupProfileForm> {
   final _formKey = GlobalKey<FormState>();
   late SetupProfileModel _profile;
@@ -24,7 +23,6 @@ class SetupProfileFormState extends State<SetupProfileForm> {
     _profile = SetupProfileModel();
   }
 
-  // 🚨 NUEVA FUNCIÓN PÚBLICA: Vincula la acción del botón de la pantalla con la validación del form
   void submitForm() {
     if (_formKey.currentState!.validate()) {
       widget.onComplete(_profile);

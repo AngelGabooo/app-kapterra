@@ -1,11 +1,16 @@
+// lib/features/farm/presentation/screens/register_farm_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:kaabcafe/core/providers/farm_provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/features/farm/data/models/farm_model.dart';
 import 'package:kaabcafe/features/farm/presentation/widgets/farm_form.dart';
 import 'package:kaabcafe/features/farm/presentation/widgets/farm_map.dart';
 import 'package:kaabcafe/features/farm/presentation/widgets/farm_summary_card.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_button.dart';
+import 'package:kaabcafe/features/farms/data/models/farm_details_model.dart';
 
 class RegisterFarmScreen extends StatefulWidget {
   const RegisterFarmScreen({super.key});
@@ -21,15 +26,34 @@ class _RegisterFarmScreenState extends State<RegisterFarmScreen> {
   FarmModel? _farm;
   final GlobalKey<FarmFormState> _formKey = GlobalKey<FarmFormState>();
 
-  // 🚀 LÓGICA DE GUARDADO CORREGIDA
+  // ✅ LÓGICA DE GUARDADO CORREGIDA
   void _handleSave(FarmModel farm) async {
     setState(() => _isLoading = true);
     await Future.delayed(const Duration(seconds: 1));
     setState(() => _isLoading = false);
 
     if (mounted) {
-      // Usamos .go() para ir a la nueva pantalla y limpiar la pila de registro
-      // Esto evita el error de "nothing to pop"
+      // ✅ 1. Guardar la finca en el Provider
+      final farmProvider = Provider.of<FarmProvider>(context, listen: false);
+
+      // Crear el FarmDetailsModel a partir del FarmModel
+      final newFarm = FarmDetailsModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: farm.name,
+        location: farm.location.isNotEmpty ? farm.location : 'Ubicación registrada',
+        hectares: farm.surface,
+        lots: 0, // Inicialmente sin lotes
+        productivity: 0, // Inicialmente sin producción
+        status: FarmHealthStatus.healthy,
+        imageUrl: 'assets/img/default_farm.png',
+        latitude: farm.latitude ?? 19.4326, // Coordenadas por defecto
+        longitude: farm.longitude ?? -99.1332,
+      );
+
+      // Agregar al provider
+      farmProvider.addFarm(newFarm);
+
+      // ✅ 2. Navegar al Dashboard con la nueva finca
       context.go(RouteNames.dashboard);
     }
   }
@@ -54,7 +78,6 @@ class _RegisterFarmScreenState extends State<RegisterFarmScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              // Cambiamos context.pop(false) por context.go para ir a la home
               context.go(RouteNames.dashboard);
             },
             child: const Text('Continuar'),
@@ -64,7 +87,7 @@ class _RegisterFarmScreenState extends State<RegisterFarmScreen> {
     );
   }
 
-  void _goBack() => context.pop(); // Mejor usar pop que go para navegación hacia atrás
+  void _goBack() => context.pop();
   void _submitForm() => _formKey.currentState?.submitForm();
 
   @override

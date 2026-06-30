@@ -31,15 +31,14 @@ class SocialLoginButton extends StatelessWidget {
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min, // 🟢 Compacta el contenido al centro
+          mainAxisSize: MainAxisSize.min,
           children: [
             Image.asset(
               imageAsset,
-              width: 22, // Tamaño ideal estándar para el logo de Google
+              width: 22,
               height: 22,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
-                // Si ves este ícono de advertencia, es la señal de que la ruta sigue mal declarada
                 return Icon(
                   Icons.warning_amber_rounded,
                   color: theme.colorScheme.error,

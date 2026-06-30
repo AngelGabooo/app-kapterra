@@ -17,7 +17,6 @@ class PasswordStrengthIndicator extends StatelessWidget {
     final score = _calculateStrength();
     if (score <= 2) return Colors.red;
     if (score <= 3) return Colors.orange;
-    // Si la contraseña es buena, usa el color secundario o primario del tema activo (Café/Verde)
     if (score <= 4) return theme.colorScheme.secondary;
     return theme.colorScheme.primary;
   }
