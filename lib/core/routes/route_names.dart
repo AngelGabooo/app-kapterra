@@ -9,6 +9,17 @@ class RouteNames {
   static const String registerFarm = '/register-farm';
   static const String farmSuccess = '/farm-success';
   static const String dashboard = '/dashboard';
+  static const String cooperativeDashboard = '/cooperative-dashboard';
+  static const String cooperativeProfile = '/cooperative-profile'; // ✅ Cambiado
+  static const String marketplace = '/marketplace';
+  static const String explore = '/explore';
+  static const String marketplaceLotDetail = '/marketplace-lot-detail';
+  static const String makeOffer = '/make-offer';
+  static const String negotiation = '/negotiation';
+  static const String digitalPassport = '/digital-passport';
+  static const String buyerProfile = '/buyer-profile';
+  static const String producers = '/producers';
+  static const String acopio = '/acopio';
   static const String myFarms = '/my-farms';
   static const String farmDetail = '/farm-detail';
   static const String editFarm = '/edit-farm';
@@ -23,5 +34,5 @@ class RouteNames {
   static const String activities = '/activities';
   static const String editActivity = '/edit-activity';
   static const String costs = '/costs';
-
+  static const String reports = '/reports';
 }

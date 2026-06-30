@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:kaabcafe/core/providers/user_provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
+import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/auth/data/models/user_type_model.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/user_type_card.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_button.dart';
@@ -57,14 +60,24 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
     final selectedType = _userTypes.firstWhere((type) => type.isSelected);
     debugPrint('Tipo de usuario seleccionado: ${selectedType.type.title}');
 
+    // ✅ Guardar el tipo de usuario en el Provider
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    userProvider.setUserType(selectedType.type);
+
+    // ✅ Navegación según el tipo de usuario seleccionado
     if (selectedType.type == UserType.producer) {
       context.go(RouteNames.setupProfile);
+    } else if (selectedType.type == UserType.cooperative) {
+      context.go(RouteNames.cooperativeDashboard);
+    } else if (selectedType.type == UserType.buyer) {
+      context.go(RouteNames.marketplace);
     } else {
+      // Técnico → Próximamente
       final theme = Theme.of(context);
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
           backgroundColor: theme.colorScheme.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -73,27 +86,36 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
             children: [
               Icon(
                 Icons.info_outline,
-                color: theme.colorScheme.tertiary,
+                color: AppTheme.goldCoffee,
                 size: 28,
               ),
               const SizedBox(width: 12),
               Text(
                 'Próximamente',
-                style: TextStyle(color: theme.colorScheme.onSurface),
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),
           content: Text(
-            'El perfil de ${selectedType.type.title} estará disponible próximamente.\n\nPor ahora, puedes continuar con el flujo de productor.',
-            style: TextStyle(fontSize: 16, color: theme.colorScheme.onSurface.withOpacity(0.9)),
+            'El perfil de ${selectedType.type.title} estará disponible próximamente.\n\nPor ahora, puedes continuar como productor.',
+            style: TextStyle(
+              fontSize: 16,
+              color: theme.colorScheme.onSurface.withOpacity(0.9),
+            ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                context.go(RouteNames.setupProfile);
+              },
               style: TextButton.styleFrom(
-                foregroundColor: theme.colorScheme.secondary,
+                foregroundColor: AppTheme.primaryGreen,
               ),
-              child: const Text('Entendido'),
+              child: const Text('Continuar como productor'),
             ),
           ],
         ),
@@ -129,7 +151,7 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
         child: SafeArea(
           child: Column(
             children: [
-              // Barra superior responsiva
+              // Barra superior
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
@@ -166,7 +188,7 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                 ),
               ),
 
-              // Cuerpo con scroll unificado y control de caída de altura
+              // Contenido principal
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -176,7 +198,6 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // 🚨 CONTROL DE ALTURA SEGURO: Empuja el contenido hacia abajo de forma equilibrada
                         const SizedBox(height: 36),
 
                         Text(
@@ -200,7 +221,7 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
 
                         const SizedBox(height: 32),
 
-                        // Listado adaptativo de tarjetas
+                        // Listado de tarjetas
                         ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
@@ -220,7 +241,7 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                 ),
               ),
 
-              // Botón inferior perfectamente anclado a la base del scroll
+              // Botón continuar
               Container(
                 padding: const EdgeInsets.all(24.0),
                 color: Colors.transparent,

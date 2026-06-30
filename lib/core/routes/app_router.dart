@@ -46,6 +46,19 @@ import 'package:kaabcafe/core/themes/app_theme.dart';
 
 import '../../features/activities/data/models/activity_model.dart';
 import '../../features/activities/presentation/screens/edit_activity_screen.dart';
+import 'package:kaabcafe/features/buyer/presentation/screens/cooperative_dashboard_screen.dart';
+import 'package:kaabcafe/features/buyer/presentation/screens/producers_screen.dart';
+import 'package:kaabcafe/features/marketplace/presentation/screens/marketplace_screen.dart';
+import 'package:kaabcafe/features/marketplace/presentation/screens/explore_screen.dart';
+import 'package:kaabcafe/features/marketplace/presentation/screens/lot_detail_screen.dart' as marketplace;
+import 'package:kaabcafe/features/marketplace/data/models/lot_model.dart'; // ✅ Agregar este import
+import 'package:kaabcafe/features/marketplace/presentation/screens/make_offer_screen.dart';
+import 'package:kaabcafe/features/marketplace/presentation/screens/negotiation_screen.dart';
+import 'package:kaabcafe/features/marketplace/presentation/screens/digital_passport_screen.dart';
+import 'package:kaabcafe/features/marketplace/presentation/screens/buyer_profile_screen.dart';
+import 'package:kaabcafe/features/buyer/presentation/screens/acopio_screen.dart';
+import 'package:kaabcafe/features/buyer/presentation/screens/cooperative_profile_screen.dart';
+
 
 class AppRouter {
   static final router = GoRouter(
@@ -242,6 +255,71 @@ class AppRouter {
         name: RouteNames.costs,
         path: RouteNames.costs,
         builder: (context, state) => const CostsListScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.cooperativeDashboard,
+        path: RouteNames.cooperativeDashboard,
+        builder: (context, state) => const CooperativeDashboardScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.producers,
+        path: RouteNames.producers,
+        builder: (context, state) => const ProducersScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.marketplace,
+        path: RouteNames.marketplace,
+        builder: (context, state) => const MarketplaceScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.explore,
+        path: RouteNames.explore,
+        builder: (context, state) => const ExploreScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.marketplaceLotDetail,
+        path: RouteNames.marketplaceLotDetail,
+        builder: (context, state) {
+          final args = state.extra as Map<String, dynamic>? ?? {};
+          final lot = args['lot'] as MarketplaceLotModel;
+          return marketplace.LotDetailScreen(lot: lot);
+        },
+      ),
+      GoRoute(
+        name: RouteNames.makeOffer,
+        path: RouteNames.makeOffer,
+        builder: (context, state) {
+          final lot = state.extra as MarketplaceLotModel;
+          return MakeOfferScreen(lot: lot);
+        },
+      ),
+      GoRoute(
+        name: RouteNames.negotiation,
+        path: RouteNames.negotiation,
+        builder: (context, state) => const NegotiationScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.digitalPassport,
+        path: RouteNames.digitalPassport,
+        builder: (context, state) {
+          final lot = state.extra as MarketplaceLotModel;
+          return DigitalPassportScreen(lot: lot);
+        },
+      ),
+      GoRoute(
+        name: RouteNames.buyerProfile,
+        path: RouteNames.buyerProfile,
+        builder: (context, state) => const BuyerProfileScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.acopio,
+        path: RouteNames.acopio,
+        builder: (context, state) => const AcopioScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.cooperativeProfile,
+        path: RouteNames.cooperativeProfile,
+        builder: (context, state) => const CooperativeProfileScreen(),
       ),
     ],
     errorBuilder: (context, state) => const Scaffold(

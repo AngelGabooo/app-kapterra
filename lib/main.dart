@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kaabcafe/core/providers/farm_provider.dart';
+import 'package:kaabcafe/core/providers/user_provider.dart'; // ✅ Agregar este import
 import 'package:kaabcafe/core/routes/app_router.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/activities/presentation/providers/activities_provider.dart';
@@ -18,6 +19,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ActivitiesProviderFactory.create()),
         ChangeNotifierProvider(create: (_) => FarmProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider()), // ✅ Agregar UserProvider
       ],
       child: MaterialApp.router(
         routerConfig: AppRouter.router,
@@ -25,6 +27,7 @@ class MyApp extends StatelessWidget {
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system,
         debugShowCheckedModeBanner: false,
+        title: 'Kaab Terra',
       ),
     );
   }

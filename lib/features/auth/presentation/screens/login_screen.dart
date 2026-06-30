@@ -1,33 +1,14 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:http/http.dart' as http;
-import 'package:kaabcafe/core/constants/app_constants.dart';
+import 'package:provider/provider.dart';
+import 'package:kaabcafe/core/providers/user_provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
+import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_logo.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_form.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/social_login_button.dart';
 
-// Definición local del modelo para evitar conflictos de importación
-class LoginModel {
-  final String email;
-  final String password;
-  final bool rememberMe;
-
-  LoginModel({
-    required this.email,
-    required this.password,
-    this.rememberMe = false,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'email': email,
-      'password': password,
-      'rememberMe': rememberMe,
-    };
-  }
-}
+import '../../data/models/user_type_model.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -44,40 +25,53 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    try {
-      final url = Uri.parse('${AppConstants.apiBaseUrl}/api/auth/login');
+    debugPrint('Login intentado con: $email');
 
-      final loginData = LoginModel(email: email, password: password, rememberMe: true);
+    // Simular proceso de login
+    await Future.delayed(const Duration(seconds: 2));
 
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(loginData.toJson()),
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (mounted) {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+      // ✅ Buscar el rol guardado para este email específico
+      final userType = await userProvider.loadSavedUserTypeForEmail(email);
+
+      // ✅ Si no tiene rol, usar el rol general
+      final type = userType ?? userProvider.selectedUserType;
+
+      // ✅ Si aún no hay rol, ir a seleccionar perfil
+      if (type == null) {
+        context.go(RouteNames.selectUserType);
+        return;
+      }
+
+      // ✅ Guardar información del usuario
+      userProvider.setUserInfo(
+        type: type,
+        email: email,
+        name: 'Usuario', // Puedes obtener el nombre del backend
       );
 
-      if (response.statusCode == 200) {
-        final responseBody = jsonDecode(response.body);
-        final token = responseBody['access_token'];
-
-        debugPrint('¡Login exitoso! Token recibido: $token');
-        // TODO: Aquí puedes guardar el token localmente (ej: SharedPreferences)
-
-        if (mounted) {
-          context.go(RouteNames.dashboard);
-        }
-      } else {
-        final errorBody = jsonDecode(response.body);
-        _showErrorSnackBar(errorBody['detail'] ?? 'Credenciales incorrectas');
+      // ✅ Navegar según el rol
+      String destinationRoute;
+      switch (type) {
+        case UserType.producer:
+          destinationRoute = RouteNames.dashboard;
+          break;
+        case UserType.cooperative:
+          destinationRoute = RouteNames.cooperativeDashboard;
+          break;
+        case UserType.buyer:
+          destinationRoute = RouteNames.marketplace;
+          break;
+        default:
+          destinationRoute = RouteNames.dashboard;
       }
-    } catch (e) {
-      debugPrint('Error de red en Login: $e');
-      _showErrorSnackBar('No se pudo conectar al servidor. Inténtalo de nuevo.');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      context.go(destinationRoute);
     }
   }
 
@@ -86,7 +80,6 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    debugPrint('Google login intentado');
     await Future.delayed(const Duration(seconds: 2));
 
     setState(() {
@@ -94,20 +87,38 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     if (mounted) {
-      context.go(RouteNames.dashboard);
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final userType = userProvider.selectedUserType;
+
+      if (userType == null) {
+        context.go(RouteNames.selectUserType);
+        return;
+      }
+
+      String destinationRoute;
+      switch (userType) {
+        case UserType.producer:
+          destinationRoute = RouteNames.dashboard;
+          break;
+        case UserType.cooperative:
+          destinationRoute = RouteNames.cooperativeDashboard;
+          break;
+        case UserType.buyer:
+          destinationRoute = RouteNames.marketplace;
+          break;
+        default:
+          destinationRoute = RouteNames.dashboard;
+      }
+      context.go(destinationRoute);
     }
   }
 
-  void _handleRegister() => context.go(RouteNames.register);
-  void _handleForgotPassword() => context.go(RouteNames.forgotPassword);
+  void _handleRegister() {
+    context.go(RouteNames.register);
+  }
 
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
+  void _handleForgotPassword() {
+    context.go(RouteNames.forgotPassword);
   }
 
   @override
@@ -116,15 +127,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
     return Scaffold(
       body: Container(
-        width: double.infinity,
-        height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
               theme.scaffoldBackgroundColor,
-              theme.colorScheme.primary.withOpacity(0.04),
+              theme.colorScheme.primary.withOpacity(0.03),
               theme.scaffoldBackgroundColor,
             ],
           ),
@@ -136,25 +145,18 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 140),
+                const SizedBox(height: 40),
                 const LoginLogo(),
-                const SizedBox(height: 36),
-
-                _isLoading
-                    ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24.0),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-                    : LoginForm(
+                const SizedBox(height: 48),
+                LoginForm(
                   onLogin: _handleLogin,
                   onForgotPassword: _handleForgotPassword,
                 ),
-
                 const SizedBox(height: 24),
                 Row(
                   children: [
                     Expanded(
-                      child: Divider(color: theme.colorScheme.onSurface.withOpacity(0.15), thickness: 1),
+                      child: Divider(color: theme.colorScheme.onSurface.withOpacity(0.15)),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -167,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     Expanded(
-                      child: Divider(color: theme.colorScheme.onSurface.withOpacity(0.15), thickness: 1),
+                      child: Divider(color: theme.colorScheme.onSurface.withOpacity(0.15)),
                     ),
                   ],
                 ),
@@ -175,11 +177,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 SocialLoginButton(
                   text: 'Continuar con Google',
                   imageAsset: 'assets/img/google_logo.png',
-                  onPressed: () {
-                    if (!_isLoading) _handleGoogleLogin();
-                  },
+                  onPressed: _handleGoogleLogin,
                 ),
-                const SizedBox(height: 48),
+                const SizedBox(height: 32),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -191,10 +191,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     TextButton(
-                      onPressed: _isLoading ? () {} : _handleRegister,
+                      onPressed: _handleRegister,
                       style: TextButton.styleFrom(
                         foregroundColor: theme.colorScheme.tertiary,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       child: const Text(
                         'Crear cuenta',
@@ -206,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 40),
               ],
             ),
           ),
