@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ActivitiesProviderFactory.create()),
         ChangeNotifierProvider(create: (_) => FarmProvider()),
-        ChangeNotifierProvider(create: (_) => UserProvider()), // ✅ Agregar UserProvider
+        ChangeNotifierProvider(create: (_) => UserProvider()),
       ],
       child: MaterialApp.router(
         routerConfig: AppRouter.router,
