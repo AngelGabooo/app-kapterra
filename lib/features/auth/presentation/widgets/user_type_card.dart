@@ -20,10 +20,12 @@ class UserTypeCard extends StatelessWidget {
     final Color cardBackground;
     final Color borderColors;
     if (userType.isSelected) {
-      cardBackground = isDark ? theme.colorScheme.surface : Colors.white;
+      cardBackground = isDark ? theme.colorScheme.surface : const Color(0xFFE8E0D5); // ✅ Crema más oscuro
       borderColors = theme.colorScheme.secondary;
     } else {
-      cardBackground = isDark ? theme.colorScheme.surface.withOpacity(0.5) : Colors.white.withOpacity(0.9);
+      cardBackground = isDark
+          ? theme.colorScheme.surface.withOpacity(0.5)
+          : const Color(0xFFE8E0D5).withOpacity(0.7); // ✅ Crema más oscuro
       borderColors = theme.colorScheme.onSurface.withOpacity(0.12);
     }
 
@@ -38,22 +40,8 @@ class UserTypeCard extends StatelessWidget {
           color: borderColors,
           width: userType.isSelected ? 2.5 : 1,
         ),
-        boxShadow: userType.isSelected
-            ? [
-          BoxShadow(
-            color: theme.colorScheme.secondary.withOpacity(isDark ? 0.15 : 0.25),
-            blurRadius: 16,
-            spreadRadius: 2,
-            offset: const Offset(0, 8),
-          ),
-        ]
-            : [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        // ✅ SIN SOMBRAS - Eliminadas completamente
+        boxShadow: const [],
       ),
       child: Material(
         color: Colors.transparent,
@@ -76,15 +64,8 @@ class UserTypeCard extends StatelessWidget {
                       width: 2,
                     )
                         : null,
-                    boxShadow: userType.isSelected
-                        ? [
-                      BoxShadow(
-                        color: theme.colorScheme.secondary.withOpacity(0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ]
-                        : null,
+                    // ✅ SIN SOMBRAS - Eliminadas
+                    boxShadow: const [],
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(24),

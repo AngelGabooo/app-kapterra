@@ -1,8 +1,9 @@
-// lib/features/costs/presentation/screens/costs_list_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
+import 'package:kaabcafe/core/widgets/aurora_background.dart';
+import 'package:kaabcafe/core/widgets/neumorphic_widgets.dart';
 import 'package:kaabcafe/features/costs/data/models/cost_model.dart';
 import 'package:kaabcafe/features/costs/presentation/widgets/cost_card.dart';
 import 'package:kaabcafe/features/costs/presentation/widgets/cost_compact_card.dart';
@@ -144,7 +145,10 @@ class _CostsListScreenState extends State<CostsListScreen> {
 
   void _navigateToRegisterCost() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Próximamente: Registro de Costos'), backgroundColor: AppTheme.primaryGreen),
+      const SnackBar(
+        content: Text('Próximamente: Registro de Costos'),
+        backgroundColor: AppTheme.primaryGreen,
+      ),
     );
   }
 
@@ -153,7 +157,7 @@ class _CostsListScreenState extends State<CostsListScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _ModernCostDetailSheet(cost: cost),
+      builder: (context) => _ModernCostDetailSheet(cost: cost, isDark: Theme.of(context).brightness == Brightness.dark),
     );
   }
 
@@ -163,98 +167,112 @@ class _CostsListScreenState extends State<CostsListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final filteredCosts = _filteredCosts;
     final distribution = _categoryDistribution;
 
     return Scaffold(
-      backgroundColor: AppTheme.lightBeige,
-      body: SafeArea(
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            // Header Sliver
-            SliverToBoxAdapter(
-              child: _buildHeader(),
-            ),
-
-            // KPIs Sliver
-            SliverToBoxAdapter(
-              child: _buildModernKPIs(),
-            ),
-
-            // Category Chart Sliver
-            if (distribution.isNotEmpty)
+      backgroundColor: Colors.transparent,
+      extendBody: true,
+      body: AuroraBackground(
+        isDark: isDark,
+        child: SafeArea(
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // Header Sliver
               SliverToBoxAdapter(
-                child: _buildCategoryChart(distribution),
+                child: _buildHeader(isDark),
               ),
 
-            // Search Section Sliver
-            SliverToBoxAdapter(
-              child: _buildSearchSection(),
-            ),
-
-            // Filter Chips Sliver
-            SliverToBoxAdapter(
-              child: _buildFilterSection(),
-            ),
-
-            // Lot Filter & View Toggle Sliver
-            SliverToBoxAdapter(
-              child: _buildLotFilterAndViewToggle(),
-            ),
-
-            // Cost List Sliver
-            filteredCosts.isEmpty
-                ? SliverToBoxAdapter(
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.4,
-                child: CostEmptyState(onRegister: _navigateToRegisterCost),
+              // KPIs Sliver
+              SliverToBoxAdapter(
+                child: _buildModernKPIs(isDark),
               ),
-            )
-                : SliverPadding(
-              padding: const EdgeInsets.all(16),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                    final cost = filteredCosts[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: AnimatedContainer(
-                        duration: Duration(milliseconds: 200 + (index * 50)),
-                        curve: Curves.easeOut,
-                        child: _isCompactView
-                            ? CostCompactCard(
-                          cost: cost,
-                          onTap: () => _showCostDetail(cost),
-                          onEdit: () => _editCost(cost),
-                        )
-                            : CostCard(
-                          cost: cost,
-                          onTap: () => _showCostDetail(cost),
-                          onEdit: () => _editCost(cost),
+
+              // Category Chart Sliver
+              if (distribution.isNotEmpty)
+                SliverToBoxAdapter(
+                  child: _buildCategoryChart(distribution, isDark),
+                ),
+
+              // Search Section Sliver
+              SliverToBoxAdapter(
+                child: _buildSearchSection(isDark),
+              ),
+
+              // Filter Chips Sliver
+              SliverToBoxAdapter(
+                child: _buildFilterSection(isDark),
+              ),
+
+              // Lot Filter & View Toggle Sliver
+              SliverToBoxAdapter(
+                child: _buildLotFilterAndViewToggle(isDark),
+              ),
+
+              // Cost List Sliver
+              filteredCosts.isEmpty
+                  ? SliverToBoxAdapter(
+                child: SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.4,
+                  child: CostEmptyState(
+                    onRegister: _navigateToRegisterCost,
+                    isDark: isDark,
+                  ),
+                ),
+              )
+                  : SliverPadding(
+                padding: const EdgeInsets.all(16),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                      final cost = filteredCosts[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: AnimatedContainer(
+                          duration: Duration(milliseconds: 200 + (index * 50)),
+                          curve: Curves.easeOut,
+                          child: _isCompactView
+                              ? CostCompactCard(
+                            cost: cost,
+                            isDark: isDark,
+                            onTap: () => _showCostDetail(cost),
+                            onEdit: () => _editCost(cost),
+                          )
+                              : CostCard(
+                            cost: cost,
+                            isDark: isDark,
+                            onTap: () => _showCostDetail(cost),
+                            onEdit: () => _editCost(cost),
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  childCount: filteredCosts.length,
+                      );
+                    },
+                    childCount: filteredCosts.length,
+                  ),
                 ),
               ),
-            ),
 
-            // Bottom padding
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 80),
-            ),
-          ],
+              // ✅ Padding inferior para que no se superponga con la barra
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 90),
+              ),
+            ],
+          ),
         ),
       ),
-      floatingActionButton: _buildModernFAB(),
-      bottomNavigationBar: _buildBottomNavigationBar(),
+      floatingActionButton: _buildModernFAB(isDark),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      bottomNavigationBar: _buildBottomNavigationBar(isDark),
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
+  Widget _buildHeader(bool isDark) {
+    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
+
+    return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Row(
         children: [
@@ -262,12 +280,12 @@ class _CostsListScreenState extends State<CostsListScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Costos',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.darkCoffee,
+                    color: textColor,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -275,35 +293,26 @@ class _CostsListScreenState extends State<CostsListScreen> {
                   'Control financiero de tu producción',
                   style: TextStyle(
                     fontSize: 13,
-                    color: AppTheme.darkCoffee.withOpacity(0.6),
+                    color: textColor.withOpacity(0.6),
                   ),
                 ),
               ],
             ),
           ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: IconButton(
-              onPressed: () => _showFilterDialog(),
-              icon: Icon(Icons.filter_list, color: AppTheme.primaryGreen),
-            ),
+          NeumorphicIconButton(
+            icon: Icons.filter_list,
+            isDark: isDark,
+            onPressed: () => _showFilterDialog(isDark),
+            size: 48,
+            iconSize: 22,
+            color: AppTheme.primaryGreen,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildModernKPIs() {
+  Widget _buildModernKPIs(bool isDark) {
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -316,13 +325,8 @@ class _CostsListScreenState extends State<CostsListScreen> {
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryGreen.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        // ✅ SIN SOMBRAS EN AMBOS MODOS
+        boxShadow: const [],
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -443,26 +447,31 @@ class _CostsListScreenState extends State<CostsListScreen> {
     );
   }
 
-  Widget _buildCategoryChart(Map<CostCategory, double> distribution) {
+  Widget _buildCategoryChart(Map<CostCategory, double> distribution, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: CostCategoryChart(distribution: distribution),
+      child: CostCategoryChart(
+        distribution: distribution,
+        isDark: isDark,
+      ),
     );
   }
 
-  Widget _buildSearchSection() {
+  Widget _buildSearchSection(bool isDark) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: CostSearchBar(
+        isDark: isDark,
         onSearchChanged: (query) => setState(() => _searchQuery = query),
       ),
     );
   }
 
-  Widget _buildFilterSection() {
+  Widget _buildFilterSection(bool isDark) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       child: CostFilterChips(
+        isDark: isDark,
         selectedCategory: _selectedCategory,
         onCategorySelected: (category) => setState(() => _selectedCategory = category),
         onClearFilters: () => setState(() => _selectedCategory = null),
@@ -470,166 +479,172 @@ class _CostsListScreenState extends State<CostsListScreen> {
     );
   }
 
-  Widget _buildLotFilterAndViewToggle() {
+  Widget _buildLotFilterAndViewToggle(bool isDark) {
+    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
           Expanded(
-            child: Container(
+            child: NeumorphicBox(
+              isDark: isDark,
+              borderRadius: 16,
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              height: 48,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.withOpacity(0.2)),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedLot,
-                  isExpanded: true,
-                  icon: Icon(Icons.expand_more, color: AppTheme.primaryGreen),
-                  style: TextStyle(color: AppTheme.darkCoffee, fontSize: 14),
-                  items: _availableLots.map((lot) {
-                    return DropdownMenuItem(
-                      value: lot,
-                      child: Text(lot),
-                    );
-                  }).toList(),
-                  onChanged: (value) => setState(() => _selectedLot = value!),
+              child: SizedBox(
+                height: 48,
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedLot,
+                    isExpanded: true,
+                    icon: Icon(Icons.expand_more, color: AppTheme.primaryGreen),
+                    style: TextStyle(color: textColor, fontSize: 14),
+                    dropdownColor: isDark ? AppTheme.coffeeDeep : Colors.white,
+                    items: _availableLots.map((lot) {
+                      return DropdownMenuItem(
+                        value: lot,
+                        child: Text(lot),
+                      );
+                    }).toList(),
+                    onChanged: (value) => setState(() => _selectedLot = value!),
+                  ),
                 ),
               ),
             ),
           ),
           const SizedBox(width: 12),
-          Container(
-            height: 48,
-            width: 48,
-            decoration: BoxDecoration(
-              color: _isCompactView ? AppTheme.primaryGreen : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: _isCompactView ? AppTheme.primaryGreen : Colors.grey.withOpacity(0.2),
-              ),
-            ),
-            child: IconButton(
-              onPressed: () => setState(() => _isCompactView = !_isCompactView),
-              icon: Icon(
-                _isCompactView ? Icons.view_module : Icons.view_list,
-                size: 22,
-                color: _isCompactView ? Colors.white : AppTheme.darkCoffee,
-              ),
-            ),
+          NeumorphicIconButton(
+            icon: _isCompactView ? Icons.view_module : Icons.view_list,
+            isDark: isDark,
+            onPressed: () => setState(() => _isCompactView = !_isCompactView),
+            size: 48,
+            iconSize: 22,
+            color: _isCompactView ? AppTheme.primaryGreen : textColor,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildModernFAB() {
-    return FloatingActionButton(
+  Widget _buildModernFAB(bool isDark) {
+    return NeumorphicActionButton(
+      label: 'Registrar Costo',
+      icon: Icons.add,
+      isDark: isDark,
       onPressed: _navigateToRegisterCost,
-      backgroundColor: AppTheme.primaryGreen,
-      foregroundColor: Colors.white,
-      elevation: 4,
-      child: const Icon(Icons.add, size: 24),
+      accentColor: AppTheme.primaryGreen,
     );
   }
 
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: const Offset(0, -3),
-          ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() => _currentIndex = index);
-          switch (index) {
-            case 0:
-              context.go(RouteNames.dashboard);
-              break;
-            case 1:
-              context.go(RouteNames.myFarms);
-              break;
-            case 2:
-              break;
-            case 3:
-              context.go(RouteNames.activities);
-              break;
-            case 4:
-              context.go(RouteNames.profile);
-              break;
-          }
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: AppTheme.primaryGreen,
-        unselectedItemColor: AppTheme.darkCoffee.withOpacity(0.5),
-        elevation: 0,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Inicio'),
-          BottomNavigationBarItem(icon: Icon(Icons.landscape_outlined), label: 'Fincas'),
-          BottomNavigationBarItem(icon: Icon(Icons.attach_money_outlined), label: 'Costos'),
-          BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), label: 'Actividades'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Perfil'),
-        ],
-      ),
+  Widget _buildBottomNavigationBar(bool isDark) {
+    return NeumorphicBottomNav(
+      isDark: isDark,
+      currentIndex: _currentIndex,
+      items: const [
+        Icons.home_outlined,
+        Icons.landscape_outlined,
+        Icons.attach_money_outlined,
+        Icons.assignment_outlined,
+        Icons.person_outline,
+      ],
+      onTap: (index) {
+        setState(() => _currentIndex = index);
+        switch (index) {
+          case 0:
+            context.go(RouteNames.dashboard);
+            break;
+          case 1:
+            context.go(RouteNames.myFarms);
+            break;
+          case 2:
+            break;
+          case 3:
+            context.go(RouteNames.activities);
+            break;
+          case 4:
+            context.go(RouteNames.profile);
+            break;
+        }
+      },
     );
   }
 
-  void _showFilterDialog() {
+  void _showFilterDialog(bool isDark) {
+    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
+    final cardColor = isDark
+        ? AppTheme.coffeeDeep.withOpacity(0.9)
+        : Colors.white;
+
     showModalBottomSheet(
       context: context,
+      backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Filtros Avanzados',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
             ),
             const SizedBox(height: 16),
-            const Text('Rango de fechas'),
+            Text('Rango de fechas', style: TextStyle(color: textColor.withOpacity(0.7))),
             const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {},
-                    child: const Text('Inicio'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: textColor,
+                      side: BorderSide(color: textColor.withOpacity(0.2)),
+                    ),
+                    child: Text('Inicio', style: TextStyle(color: textColor)),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {},
-                    child: const Text('Fin'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: textColor,
+                      side: BorderSide(color: textColor.withOpacity(0.2)),
+                    ),
+                    child: Text('Fin', style: TextStyle(color: textColor)),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            const Text('Monto mínimo'),
+            Text('Monto mínimo', style: TextStyle(color: textColor.withOpacity(0.7))),
             const SizedBox(height: 8),
-            const TextField(
+            TextField(
+              style: TextStyle(color: textColor),
               decoration: InputDecoration(
                 prefixText: '\$ ',
-                border: OutlineInputBorder(),
+                prefixStyle: TextStyle(color: textColor),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: textColor.withOpacity(0.2)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: textColor.withOpacity(0.2)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppTheme.primaryGreen),
+                ),
                 isDense: true,
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
               ),
             ),
             const SizedBox(height: 20),
@@ -638,7 +653,11 @@ class _CostsListScreenState extends State<CostsListScreen> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancelar'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: textColor,
+                      side: BorderSide(color: textColor.withOpacity(0.2)),
+                    ),
+                    child: Text('Cancelar', style: TextStyle(color: textColor)),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -647,6 +666,8 @@ class _CostsListScreenState extends State<CostsListScreen> {
                     onPressed: () => Navigator.pop(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryGreen,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
                     ),
                     child: const Text('Aplicar'),
                   ),
@@ -663,14 +684,20 @@ class _CostsListScreenState extends State<CostsListScreen> {
 // Modern Bottom Sheet para detalle de costo
 class _ModernCostDetailSheet extends StatelessWidget {
   final CostModel cost;
+  final bool isDark;
 
-  const _ModernCostDetailSheet({required this.cost});
+  const _ModernCostDetailSheet({required this.cost, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
+    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
+    final cardColor = isDark
+        ? AppTheme.coffeeDeep.withOpacity(0.95)
+        : Colors.white;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
@@ -682,7 +709,7 @@ class _ModernCostDetailSheet extends StatelessWidget {
               height: 4,
               margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.3),
+                color: textColor.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -710,10 +737,10 @@ class _ModernCostDetailSheet extends StatelessWidget {
                         children: [
                           Text(
                             cost.concept,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.darkCoffee,
+                              color: textColor,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -736,17 +763,18 @@ class _ModernCostDetailSheet extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                    color: AppTheme.primaryGreen.withOpacity(isDark ? 0.2 : 0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Monto Total',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
+                          color: textColor,
                         ),
                       ),
                       Text(
@@ -763,17 +791,17 @@ class _ModernCostDetailSheet extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 // Details
-                _buildDetailRow(Icons.landscape, 'Lote', cost.lotName),
+                _buildDetailRow(Icons.landscape, 'Lote', cost.lotName, textColor),
                 const SizedBox(height: 12),
-                _buildDetailRow(Icons.calendar_today, 'Fecha', '${cost.date.day}/${cost.date.month}/${cost.date.year}'),
+                _buildDetailRow(Icons.calendar_today, 'Fecha', '${cost.date.day}/${cost.date.month}/${cost.date.year}', textColor),
                 const SizedBox(height: 12),
                 if (cost.provider != null) ...[
-                  _buildDetailRow(Icons.business, 'Proveedor', cost.provider!),
+                  _buildDetailRow(Icons.business, 'Proveedor', cost.provider!, textColor),
                   const SizedBox(height: 12),
                 ],
-                _buildDetailRow(Icons.person, 'Responsable', cost.responsible),
+                _buildDetailRow(Icons.person, 'Responsable', cost.responsible, textColor),
                 const SizedBox(height: 12),
-                _buildDetailRow(Icons.receipt, 'Comprobante', cost.hasInvoice ? 'Disponible' : 'No disponible'),
+                _buildDetailRow(Icons.receipt, 'Comprobante', cost.hasInvoice ? 'Disponible' : 'No disponible', textColor),
 
                 const SizedBox(height: 20),
 
@@ -783,13 +811,14 @@ class _ModernCostDetailSheet extends StatelessWidget {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close, size: 18),
-                        label: const Text('Cerrar'),
+                        icon: Icon(Icons.close, size: 18, color: textColor),
+                        label: Text('Cerrar', style: TextStyle(color: textColor)),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
+                          side: BorderSide(color: textColor.withOpacity(0.2)),
                         ),
                       ),
                     ),
@@ -803,10 +832,12 @@ class _ModernCostDetailSheet extends StatelessWidget {
                         label: const Text('Editar'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryGreen,
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
+                          elevation: 0,
                         ),
                       ),
                     ),
@@ -820,7 +851,7 @@ class _ModernCostDetailSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
+  Widget _buildDetailRow(IconData icon, String label, String value, Color textColor) {
     return Row(
       children: [
         Icon(icon, size: 18, color: AppTheme.primaryGreen),
@@ -831,17 +862,17 @@ class _ModernCostDetailSheet extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 13,
-              color: AppTheme.darkCoffee.withOpacity(0.6),
+              color: textColor.withOpacity(0.6),
             ),
           ),
         ),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: AppTheme.darkCoffee,
+              color: textColor,
             ),
             textAlign: TextAlign.end,
           ),

@@ -1,38 +1,49 @@
-// lib/features/costs/presentation/widgets/cost_category_chart.dart
 import 'package:flutter/material.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
+import 'package:kaabcafe/core/widgets/neumorphic_widgets.dart';
 import 'package:kaabcafe/features/costs/data/models/cost_model.dart';
 
 class CostCategoryChart extends StatelessWidget {
   final Map<CostCategory, double> distribution;
+  final bool isDark;
 
-  const CostCategoryChart({super.key, required this.distribution});
+  const CostCategoryChart({
+    super.key,
+    required this.distribution,
+    this.isDark = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final entries = distribution.entries.toList();
+    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
+
     if (entries.isEmpty) return const SizedBox.shrink();
 
-    return Container(
+    return NeumorphicBox(
+      isDark: isDark,
+      borderRadius: 20,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Distribución de gastos', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.darkCoffee)),
+          Text(
+            'Distribución de gastos',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
           const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: _buildPieChart(entries),
+                child: _buildPieChart(entries, textColor),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildLegend(entries),
+                child: _buildLegend(entries, textColor),
               ),
             ],
           ),
@@ -41,7 +52,7 @@ class CostCategoryChart extends StatelessWidget {
     );
   }
 
-  Widget _buildPieChart(List<MapEntry<CostCategory, double>> entries) {
+  Widget _buildPieChart(List<MapEntry<CostCategory, double>> entries, Color textColor) {
     return SizedBox(
       height: 100,
       child: Stack(
@@ -61,7 +72,11 @@ class CostCategoryChart extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 '${entries.fold(0.0, (sum, e) => sum + e.value).toStringAsFixed(0)}%',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.darkCoffee),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
               ),
             ],
           ),
@@ -70,7 +85,7 @@ class CostCategoryChart extends StatelessWidget {
     );
   }
 
-  Widget _buildLegend(List<MapEntry<CostCategory, double>> entries) {
+  Widget _buildLegend(List<MapEntry<CostCategory, double>> entries, Color textColor) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: entries.take(4).map((entry) {
@@ -78,17 +93,34 @@ class CostCategoryChart extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 6),
           child: Row(
             children: [
-              Container(width: 10, height: 10, decoration: BoxDecoration(color: entry.key.color, shape: BoxShape.circle)),
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: entry.key.color,
+                  shape: BoxShape.circle,
+                ),
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   entry.key.title,
-                  style: TextStyle(fontSize: 10, color: AppTheme.darkCoffee.withOpacity(0.7)),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: textColor.withOpacity(0.7),
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Text('${entry.value.toStringAsFixed(0)}%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: AppTheme.darkCoffee)),
+              Text(
+                '${entry.value.toStringAsFixed(0)}%',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  color: textColor,
+                ),
+              ),
             ],
           ),
         );

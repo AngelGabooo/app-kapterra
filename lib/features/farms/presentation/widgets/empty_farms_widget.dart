@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/neumorphic_widgets.dart';
+
+const Color _kCreamLight = Color(0xFFFBF3E6);
 
 class EmptyFarmsWidget extends StatelessWidget {
   final VoidCallback onRegister;
@@ -7,6 +10,8 @@ class EmptyFarmsWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    const accent = Color(0xFFFF6B00);
 
     return Center(
       child: Padding(
@@ -14,16 +19,21 @@ class EmptyFarmsWidget extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 160,
-              height: 160,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [theme.colorScheme.primary.withOpacity(0.12), const Color(0xFFFF6B00).withOpacity(0.04)],
+            NeumorphicBox(
+              borderRadius: 80,
+              intensity: 7,
+              color: isDark ? null : _kCreamLight,
+              child: Container(
+                width: 160,
+                height: 160,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [theme.colorScheme.primary.withOpacity(0.12), accent.withOpacity(0.05)],
+                  ),
+                  shape: BoxShape.circle,
                 ),
-                shape: BoxShape.circle,
+                child: Icon(Icons.grid_view_rounded, size: 60, color: theme.colorScheme.primary.withOpacity(0.6)),
               ),
-              child: Icon(Icons.grid_view_rounded, size: 60, color: theme.colorScheme.primary.withOpacity(0.6)),
             ),
             const SizedBox(height: 24),
             Text(
@@ -37,16 +47,22 @@ class EmptyFarmsWidget extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: onRegister,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF6B00),
-                foregroundColor: Colors.white,
+            GestureDetector(
+              onTap: onRegister,
+              child: NeumorphicBox(
+                borderRadius: 20,
+                intensity: 5,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [accent, theme.colorScheme.tertiary],
+                ),
                 padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                elevation: 0,
+                child: const Text(
+                  'Registrar mi primera finca',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Colors.white),
+                ),
               ),
-              child: const Text('Registrar mi primera finca', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900)),
             ),
           ],
         ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class LoginButton extends StatelessWidget {
+class LoginButton extends StatefulWidget {
   final String text;
   final VoidCallback onPressed;
   final bool isLoading;
@@ -15,40 +15,88 @@ class LoginButton extends StatelessWidget {
   });
 
   @override
+  State<LoginButton> createState() => _LoginButtonState();
+}
+
+class _LoginButtonState extends State<LoginButton> {
+  bool _pressed = false;
+
+  bool get _active => widget.isEnabled && !widget.isLoading;
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final onColor = isDark ? Colors.black : Colors.white;
 
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: isEnabled && !isLoading ? onPressed : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: theme.colorScheme.primary,
-          foregroundColor: theme.brightness == Brightness.dark ? Colors.black : Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+    // Degradado "aurora": combina primary -> tertiary, se apaga cuando
+    // el botón está deshabilitado.
+    final gradientColors = _active
+        ? [theme.colorScheme.primary, theme.colorScheme.tertiary]
+        : [
+      theme.colorScheme.primary.withOpacity(0.35),
+      theme.colorScheme.tertiary.withOpacity(0.35),
+    ];
+
+    final darkShadow = isDark
+        ? Colors.black.withOpacity(0.55)
+        : theme.colorScheme.primary.withOpacity(0.30);
+    final lightShadow = isDark
+        ? Colors.white.withOpacity(0.05)
+        : Colors.white.withOpacity(0.7);
+
+    return GestureDetector(
+      onTapDown: _active ? (_) => setState(() => _pressed = true) : null,
+      onTapCancel: () => setState(() => _pressed = false),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTap: _active ? widget.onPressed : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        curve: Curves.easeOut,
+        width: double.infinity,
+        height: 56,
+        transform: Matrix4.identity()..scale(_pressed ? 0.98 : 1.0),
+        transformAlignment: Alignment.center,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: gradientColors,
           ),
-          elevation: isLoading ? 0 : 2,
-          disabledBackgroundColor: theme.colorScheme.primary.withOpacity(0.4),
-        ),
-        child: isLoading
-            ? SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(
-              theme.brightness == Brightness.dark ? Colors.black : Colors.white,
+          boxShadow: _pressed || !_active
+              ? []
+              : [
+            BoxShadow(
+              color: darkShadow,
+              offset: const Offset(0, 8),
+              blurRadius: 20,
             ),
-          ),
-        )
-            : Text(
-          text,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+            BoxShadow(
+              color: lightShadow,
+              offset: const Offset(-4, -4),
+              blurRadius: 12,
+            ),
+          ],
+        ),
+        child: Center(
+          child: widget.isLoading
+              ? SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(onColor),
+            ),
+          )
+              : Text(
+            widget.text,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: onColor,
+              letterSpacing: 0.3,
+            ),
           ),
         ),
       ),

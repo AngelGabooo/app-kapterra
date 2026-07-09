@@ -1,9 +1,13 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
+import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/auth/data/models/setup_profile_model.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/setup_profile_form.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_button.dart';
+import '../../../../core/widgets/neumorphic_widgets.dart';
 
 class SetupProfileScreen extends StatefulWidget {
   const SetupProfileScreen({super.key});
@@ -13,7 +17,6 @@ class SetupProfileScreen extends StatefulWidget {
 }
 
 class _SetupProfileScreenState extends State<SetupProfileScreen> {
-  // 🚨 CLAVE GLOBAL NUEVA: Permite controlar el formulario desde fuera
   final GlobalKey<SetupProfileFormState> _formKey = GlobalKey<SetupProfileFormState>();
 
   final int _currentStep = 1;
@@ -73,105 +76,261 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final progress = (_currentStep / _totalSteps) * 100;
+    final isDark = theme.brightness == Brightness.dark;
+    final progress = (_currentStep / _totalSteps);
+
+    // ✅ Color crema - consistente con el login
+    final creamColor = isDark
+        ? AppTheme.coffeeDeep
+        : const Color(0xFFF0E8D8);
 
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              theme.scaffoldBackgroundColor,
-              theme.colorScheme.primary.withOpacity(0.04),
-              theme.scaffoldBackgroundColor,
-            ],
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Container(
+              color: creamColor, // ✅ Fondo crema
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Barra superior
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: _goBack,
-                      icon: const Icon(Icons.arrow_back),
-                      color: theme.colorScheme.onSurface,
-                    ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: _handleSkip,
-                      style: TextButton.styleFrom(foregroundColor: theme.colorScheme.tertiary),
-                      child: const Text('Omitir', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Contenido con scroll
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                  physics: const BouncingScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          Positioned.fill(
+            child: _AuroraBackground(theme: theme),
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                // ── Barra superior ──────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
                     children: [
-                      const SizedBox(height: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Paso $_currentStep de $_totalSteps',
-                            style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface.withOpacity(0.6), fontWeight: FontWeight.w500),
-                          ),
-                          const SizedBox(height: 8),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: progress / 100,
-                              backgroundColor: theme.colorScheme.onSurface.withOpacity(0.12),
-                              valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.secondary),
-                              minHeight: 6,
+                      // ✅ Botón de regreso corregido - SIN BRILLO
+                      GestureDetector(
+                        onTap: _goBack,
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? AppTheme.coffeeDeep.withOpacity(0.7)
+                                : const Color(0xFFE8E0D5).withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.white.withOpacity(0.06)
+                                  : AppTheme.darkCoffee.withOpacity(0.06),
+                              width: 0.5,
                             ),
+                            boxShadow: const [], // ✅ SIN SOMBRAS
                           ),
-                        ],
+                          child: Icon(
+                            Icons.arrow_back,
+                            color: isDark ? Colors.white : AppTheme.darkCoffee,
+                            size: 20,
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 28),
-                      Text('Completa tu perfil', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
-                      const SizedBox(height: 8),
-                      Text('Queremos conocer un poco más sobre ti para personalizar tu experiencia.', style: TextStyle(fontSize: 15, color: theme.colorScheme.onSurface.withOpacity(0.7), height: 1.4)),
-                      const SizedBox(height: 32),
-
-                      // 🚨 ENLAZAMOS LA LLAVE AQUÍ:
-                      SetupProfileForm(
-                        key: _formKey,
-                        onComplete: _handleComplete,
+                      const Spacer(),
+                      TextButton(
+                        onPressed: _handleSkip,
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.goldCoffee,
+                        ),
+                        child: const Text(
+                          'Omitir',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ),
 
-              // Botón continuar funcional
-              Container(
-                padding: const EdgeInsets.all(24.0),
-                color: Colors.transparent,
-                child: LoginButton(
-                  text: 'Continuar',
-                  onPressed: () {
-                    // 🚨 LLAMADA CLAVE: Acciona el guardado interno del formulario de forma externa
-                    _formKey.currentState?.submitForm();
-                  },
-                  isLoading: _isLoading,
+                // ── Contenido con scroll ──────────────────────────
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Paso $_currentStep de $_totalSteps',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: (isDark ? Colors.white : AppTheme.darkCoffee).withOpacity(0.6),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            _ProgressGroove(
+                              progress: progress,
+                              theme: theme,
+                              isDark: isDark,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 28),
+                        ShaderMask(
+                          shaderCallback: (bounds) => LinearGradient(
+                            colors: [AppTheme.primaryGreen, AppTheme.goldCoffee],
+                          ).createShader(bounds),
+                          child: const Text(
+                            'Completa tu perfil',
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Queremos conocer un poco más sobre ti para personalizar tu experiencia.',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: (isDark ? Colors.white : AppTheme.darkCoffee).withOpacity(0.7),
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+
+                        SetupProfileForm(
+                          key: _formKey,
+                          onComplete: _handleComplete,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
+
+                // ── Botón continuar ──────────────────────────────────
+                Container(
+                  padding: const EdgeInsets.all(24.0),
+                  color: Colors.transparent,
+                  child: LoginButton(
+                    text: 'Continuar',
+                    onPressed: () {
+                      _formKey.currentState?.submitForm();
+                    },
+                    isLoading: _isLoading,
+                    isEnabled: true,
+                  ),
+                ),
+              ],
+            ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Barra de progreso "hundida" (groove neumórfico) - SIN BRILLO
+class _ProgressGroove extends StatelessWidget {
+  final double progress;
+  final ThemeData theme;
+  final bool isDark;
+
+  const _ProgressGroove({
+    required this.progress,
+    required this.theme,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppTheme.coffeeDeep.withOpacity(0.7)
+            : const Color(0xFFE8E0D5).withOpacity(0.9),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.06)
+              : AppTheme.darkCoffee.withOpacity(0.06),
+          width: 0.5,
+        ),
+        boxShadow: const [], // ✅ SIN SOMBRAS
+      ),
+      child: SizedBox(
+        height: 10,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return Stack(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: constraints.maxWidth * progress.clamp(0.0, 1.0),
+                  height: 10,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(6),
+                    gradient: LinearGradient(
+                      colors: [AppTheme.primaryGreen, AppTheme.goldCoffee],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// Fondo tipo "aurora / espacial" - igual que en Login y Register.
+class _AuroraBackground extends StatelessWidget {
+  final ThemeData theme;
+  const _AuroraBackground({required this.theme});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = theme.brightness == Brightness.dark;
+
+    return ClipRect(
+      child: Stack(
+        children: [
+          Positioned(
+            top: -120,
+            left: -100,
+            child: _blob(AppTheme.primaryGreen, 260, isDark ? 0.20 : 0.26),
+          ),
+          Positioned(
+            top: 100,
+            right: -110,
+            child: _blob(AppTheme.goldCoffee, 220, isDark ? 0.15 : 0.20),
+          ),
+          Positioned(
+            bottom: -150,
+            left: -60,
+            child: _blob(AppTheme.secondaryGreen, 280, isDark ? 0.12 : 0.16),
+          ),
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 85, sigmaY: 85),
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _blob(Color color, double size, double opacity) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [color.withOpacity(opacity), color.withOpacity(0)],
         ),
       ),
     );

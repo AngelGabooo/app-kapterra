@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_button.dart';
+import 'neumorphic_box.dart';
 
 class LoginForm extends StatefulWidget {
   final Function(String email, String password) onLogin;
@@ -34,6 +35,32 @@ class _LoginFormState extends State<LoginForm> {
     }
   }
 
+  InputDecoration _decoration(ThemeData theme, {
+    required String hint,
+    required IconData icon,
+    Widget? suffix,
+  }) {
+    return InputDecoration(
+      prefixIcon: Icon(icon, color: theme.colorScheme.secondary),
+      suffixIcon: suffix,
+      hintText: hint,
+      hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.4)),
+      border: InputBorder.none,
+      enabledBorder: InputBorder.none,
+      focusedBorder: InputBorder.none,
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: BorderSide(color: theme.colorScheme.error, width: 1.4),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: BorderSide(color: theme.colorScheme.error, width: 1.4),
+      ),
+      filled: false,
+      contentPadding: const EdgeInsets.symmetric(vertical: 18),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -52,35 +79,25 @@ class _LoginFormState extends State<LoginForm> {
             ),
           ),
           const SizedBox(height: 8),
-          TextFormField(
-            controller: _emailController,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.next,
-            style: TextStyle(color: theme.colorScheme.onSurface),
-            decoration: InputDecoration(
-              prefixIcon: Icon(Icons.email_outlined, color: theme.colorScheme.secondary),
-              hintText: 'ejemplo@kaabterra.com',
-              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.4)),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(20),
-                borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.15)),
+          NeumorphicBox.inset(
+            borderRadius: 20,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: TextFormField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              style: TextStyle(color: theme.colorScheme.onSurface),
+              decoration: _decoration(
+                theme,
+                hint: 'ejemplo@kaabterra.com',
+                icon: Icons.email_outlined,
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(20),
-                borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.15)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(20),
-                borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
-              ),
-              filled: true,
-              fillColor: theme.colorScheme.surface,
+              validator: (value) {
+                if (value == null || value.isEmpty) return 'Por favor ingresa tu correo';
+                if (!value.contains('@') || !value.contains('.')) return 'Ingresa un correo válido';
+                return null;
+              },
             ),
-            validator: (value) {
-              if (value == null || value.isEmpty) return 'Por favor ingresa tu correo';
-              if (!value.contains('@') || !value.contains('.')) return 'Ingresa un correo válido';
-              return null;
-            },
           ),
           const SizedBox(height: 20),
           Text(
@@ -92,47 +109,37 @@ class _LoginFormState extends State<LoginForm> {
             ),
           ),
           const SizedBox(height: 8),
-          TextFormField(
-            controller: _passwordController,
-            obscureText: _obscurePassword,
-            textInputAction: TextInputAction.done,
-            onFieldSubmitted: (_) => _handleSubmit(),
-            style: TextStyle(color: theme.colorScheme.onSurface),
-            decoration: InputDecoration(
-              prefixIcon: Icon(Icons.lock_outline, color: theme.colorScheme.secondary),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                  color: theme.colorScheme.onSurface.withOpacity(0.4),
+          NeumorphicBox.inset(
+            borderRadius: 20,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: TextFormField(
+              controller: _passwordController,
+              obscureText: _obscurePassword,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _handleSubmit(),
+              style: TextStyle(color: theme.colorScheme.onSurface),
+              decoration: _decoration(
+                theme,
+                hint: '••••••••',
+                icon: Icons.lock_outline,
+                suffix: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    color: theme.colorScheme.onSurface.withOpacity(0.4),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
                 ),
-                onPressed: () {
-                  setState(() {
-                    _obscurePassword = !_obscurePassword;
-                  });
-                },
               ),
-              hintText: '••••••••',
-              hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.4)),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(20),
-                borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.15)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(20),
-                borderSide: BorderSide(color: theme.colorScheme.onSurface.withOpacity(0.15)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(20),
-                borderSide: BorderSide(color: theme.colorScheme.secondary, width: 2),
-              ),
-              filled: true,
-              fillColor: theme.colorScheme.surface,
+              validator: (value) {
+                if (value == null || value.isEmpty) return 'Por favor ingresa tu contraseña';
+                if (value.length < 6) return 'La contraseña debe tener al menos 6 caracteres';
+                return null;
+              },
             ),
-            validator: (value) {
-              if (value == null || value.isEmpty) return 'Por favor ingresa tu contraseña';
-              if (value.length < 6) return 'La contraseña debe tener al menos 6 caracteres';
-              return null;
-            },
           ),
           const SizedBox(height: 12),
           Align(

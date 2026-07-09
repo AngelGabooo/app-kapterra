@@ -58,6 +58,12 @@ import 'package:kaabcafe/features/marketplace/presentation/screens/digital_passp
 import 'package:kaabcafe/features/marketplace/presentation/screens/buyer_profile_screen.dart';
 import 'package:kaabcafe/features/buyer/presentation/screens/acopio_screen.dart';
 import 'package:kaabcafe/features/buyer/presentation/screens/cooperative_profile_screen.dart';
+import 'package:kaabcafe/features/technician/presentation/screens/technician_dashboard_screen.dart';
+import 'package:kaabcafe/features/technician/presentation/screens/technician_agenda_screen.dart';
+import 'package:kaabcafe/features/technician/presentation/screens/technician_visit_registration_screen.dart';
+import 'package:kaabcafe/features/technician/presentation/screens/technician_lot_inspection_screen.dart';
+import 'package:kaabcafe/features/technician/presentation/screens/technician_crop_diagnosis_screen.dart';
+import 'package:kaabcafe/features/technician/presentation/screens/technician_lot_certification_screen.dart';
 
 
 class AppRouter {
@@ -320,6 +326,69 @@ class AppRouter {
         name: RouteNames.cooperativeProfile,
         path: RouteNames.cooperativeProfile,
         builder: (context, state) => const CooperativeProfileScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.technicianDashboard,
+        path: RouteNames.technicianDashboard,
+        builder: (context, state) => const TechnicianDashboardScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.technicianAgenda,
+        path: RouteNames.technicianAgenda,
+        builder: (context, state) => const TechnicianAgendaScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.technicianVisitRegistration,
+        path: RouteNames.technicianVisitRegistration,
+        builder: (context, state) {
+          final args = state.extra as Map<String, dynamic>?;
+          return TechnicianVisitRegistrationScreen(
+            producerName: args?['producerName'] as String?,
+            farmName: args?['farmName'] as String?,
+            lotName: args?['lotName'] as String?,
+            location: args?['location'] as String?,
+          );
+        },
+      ),
+      GoRoute(
+        name: RouteNames.technicianLotInspection,
+        path: RouteNames.technicianLotInspection,
+        builder: (context, state) {
+          final args = state.extra as Map<String, dynamic>?;
+          return TechnicianLotInspectionScreen(
+            lotName: args?['lotName'] as String?,
+            farmName: args?['farmName'] as String?,
+            producerName: args?['producerName'] as String?,
+            location: args?['location'] as String?,
+          );
+        },
+      ),
+      GoRoute(
+        name: RouteNames.technicianCropDiagnosis,
+        path: RouteNames.technicianCropDiagnosis,
+        builder: (context, state) {
+          final args = state.extra as Map<String, dynamic>?;
+          return TechnicianCropDiagnosisScreen(
+            lotName: args?['lotName'] as String?,
+            farmName: args?['farmName'] as String?,
+            producerName: args?['producerName'] as String?,
+            location: args?['location'] as String?,
+          );
+        },
+      ),
+      GoRoute(
+        name: RouteNames.technicianLotCertification,
+        path: RouteNames.technicianLotCertification,
+        builder: (context, state) {
+          final args = state.extra as Map<String, dynamic>?;
+          return TechnicianLotCertificationScreen(
+            lotName: args?['lotName'] as String?,
+            farmName: args?['farmName'] as String?,
+            producerName: args?['producerName'] as String?,
+            location: args?['location'] as String?,
+            variety: args?['variety'] as String?,
+          );
+        },
       ),
     ],
     errorBuilder: (context, state) => const Scaffold(

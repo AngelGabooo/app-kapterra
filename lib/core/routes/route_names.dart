@@ -35,4 +35,11 @@ class RouteNames {
   static const String editActivity = '/edit-activity';
   static const String costs = '/costs';
   static const String reports = '/reports';
+  static const String technicianDashboard = '/technician-dashboard';
+  static const String technicianAgenda = '/technician-agenda';
+  static const String technicianVisitRegistration = '/technician/visit-registration';
+  static const String technicianLotInspection = '/technician/lot-inspection';
+  static const String technicianCropDiagnosis = '/technician/crop-diagnosis';
+  static const String technicianLotCertification = '/technician/lot-certification';
+
 }

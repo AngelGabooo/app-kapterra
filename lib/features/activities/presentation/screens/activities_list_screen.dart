@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
+import 'package:kaabcafe/core/widgets/aurora_background.dart';
+import 'package:kaabcafe/core/widgets/neumorphic_widgets.dart';
 import 'package:kaabcafe/features/activities/data/models/activity_model.dart';
 import 'package:kaabcafe/features/activities/presentation/providers/activities_provider.dart';
 import 'package:kaabcafe/features/activities/presentation/widgets/activity_card.dart';
@@ -111,6 +113,7 @@ class _ActivitiesListScreenState extends State<ActivitiesListScreen> {
       builder: (context) => _ActivityDetailSheet(
         activity: activity,
         lotName: lotName,
+        isDark: Theme.of(context).brightness == Brightness.dark,
       ),
     );
   }
@@ -183,55 +186,88 @@ class _ActivitiesListScreenState extends State<ActivitiesListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppTheme.lightBeige,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildKPIs(),
-            ActivitySearchBar(
-              onSearchChanged: (query) {
-                setState(() => _searchQuery = query);
-                final provider = Provider.of<ActivitiesProvider>(context, listen: false);
-                provider.setSearchQuery(query);
-              },
-            ),
-            ActivityFilterChips(
-              selectedType: _selectedType,
-              selectedStatus: _selectedStatus,
-              onTypeSelected: (type) => setState(() => _selectedType = type),
-              onStatusSelected: (status) => setState(() => _selectedStatus = status),
-              onClearFilters: () => setState(() {
-                _selectedType = null;
-                _selectedStatus = null;
-                _selectedLot = 'Todos los lotes';
-                final provider = Provider.of<ActivitiesProvider>(context, listen: false);
-                provider.clearFilters();
-              }),
-            ),
-            _buildLotFilterAndViewToggle(),
-            Expanded(
-              child: Consumer<ActivitiesProvider>(
+      backgroundColor: Colors.transparent,
+      extendBody: true,
+      body: AuroraBackground(
+        isDark: isDark,
+        child: SafeArea(
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // ── Header ──────────────────────────────────────────
+              SliverToBoxAdapter(
+                child: _buildHeader(isDark),
+              ),
+
+              // ── KPIs ────────────────────────────────────────────
+              SliverToBoxAdapter(
+                child: _buildKPIs(isDark),
+              ),
+
+              // ── Search Bar ──────────────────────────────────────
+              SliverToBoxAdapter(
+                child: ActivitySearchBar(
+                  isDark: isDark,
+                  onSearchChanged: (query) {
+                    setState(() => _searchQuery = query);
+                    final provider = Provider.of<ActivitiesProvider>(context, listen: false);
+                    provider.setSearchQuery(query);
+                  },
+                ),
+              ),
+
+              // ── Filter Chips ────────────────────────────────────
+              SliverToBoxAdapter(
+                child: ActivityFilterChips(
+                  isDark: isDark,
+                  selectedType: _selectedType,
+                  selectedStatus: _selectedStatus,
+                  onTypeSelected: (type) => setState(() => _selectedType = type),
+                  onStatusSelected: (status) => setState(() => _selectedStatus = status),
+                  onClearFilters: () => setState(() {
+                    _selectedType = null;
+                    _selectedStatus = null;
+                    _selectedLot = 'Todos los lotes';
+                    final provider = Provider.of<ActivitiesProvider>(context, listen: false);
+                    provider.clearFilters();
+                  }),
+                ),
+              ),
+
+              // ── Lot Filter & View Toggle ───────────────────────
+              SliverToBoxAdapter(
+                child: _buildLotFilterAndViewToggle(isDark),
+              ),
+
+              // ── Activity List ──────────────────────────────────
+              Consumer<ActivitiesProvider>(
                 builder: (context, provider, child) {
                   if (provider.isLoading) {
-                    return const Center(child: CircularProgressIndicator());
+                    return SliverFillRemaining(
+                      child: Center(child: CircularProgressIndicator()),
+                    );
                   }
 
                   if (provider.error != null) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                          const SizedBox(height: 16),
-                          Text('Error: ${provider.error}'),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: () => provider.loadActivities(),
-                            child: const Text('Reintentar'),
-                          ),
-                        ],
+                    return SliverFillRemaining(
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                            const SizedBox(height: 16),
+                            Text('Error: ${provider.error}'),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => provider.loadActivities(),
+                              child: const Text('Reintentar'),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   }
@@ -239,7 +275,12 @@ class _ActivitiesListScreenState extends State<ActivitiesListScreen> {
                   final activities = provider.activities;
 
                   if (activities.isEmpty) {
-                    return ActivityEmptyState(onRegister: _navigateToRegisterActivity);
+                    return SliverFillRemaining(
+                      child: ActivityEmptyState(
+                        onRegister: _navigateToRegisterActivity,
+                        isDark: isDark,
+                      ),
+                    );
                   }
 
                   var filtered = List<ActivityEntity>.from(activities);
@@ -259,75 +300,88 @@ class _ActivitiesListScreenState extends State<ActivitiesListScreen> {
                     ).toList();
                   }
 
-                  return ListView.builder(
+                  return SliverPadding(
                     padding: const EdgeInsets.all(16),
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: filtered.length,
-                    itemBuilder: (context, index) {
-                      final activityEntity = filtered[index];
-                      final activityModel = _entityToModel(activityEntity);
-                      final lotModel = _createLotModel(activityEntity);
-                      final farmModel = _createFarmModel(activityEntity);
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                          final activityEntity = filtered[index];
+                          final activityModel = _entityToModel(activityEntity);
+                          final lotModel = _createLotModel(activityEntity);
+                          final farmModel = _createFarmModel(activityEntity);
 
-                      return AnimatedContainer(
-                        duration: Duration(milliseconds: 200 + (index * 50)),
-                        curve: Curves.easeOut,
-                        child: _isCompactView
-                            ? ActivityCompactCard(
-                          activity: activityModel,
-                          lotName: activityEntity.lotName,
-                          lot: lotModel,
-                          farm: farmModel,
-                          onTap: () => _showActivityDetail(activityModel, activityEntity.lotName),
-                        )
-                            : ActivityCard(
-                          activity: activityModel,
-                          lotName: activityEntity.lotName,
-                          lot: lotModel,
-                          farm: farmModel,
-                          onTap: () => _showActivityDetail(activityModel, activityEntity.lotName),
-                        ),
-                      );
-                    },
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: AnimatedContainer(
+                              duration: Duration(milliseconds: 200 + (index * 50)),
+                              curve: Curves.easeOut,
+                              child: _isCompactView
+                                  ? ActivityCompactCard(
+                                activity: activityModel,
+                                lotName: activityEntity.lotName,
+                                lot: lotModel,
+                                farm: farmModel,
+                                isDark: isDark,
+                                onTap: () => _showActivityDetail(activityModel, activityEntity.lotName),
+                              )
+                                  : ActivityCard(
+                                activity: activityModel,
+                                lotName: activityEntity.lotName,
+                                lot: lotModel,
+                                farm: farmModel,
+                                isDark: isDark,
+                                onTap: () => _showActivityDetail(activityModel, activityEntity.lotName),
+                              ),
+                            ),
+                          );
+                        },
+                        childCount: filtered.length,
+                      ),
+                    ),
                   );
                 },
               ),
-            ),
-          ],
+
+              // ── Bottom Padding ──────────────────────────────────
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 90),
+              ),
+            ],
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _navigateToRegisterActivity,
-        backgroundColor: AppTheme.primaryGreen,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Registrar Actividad'),
-        elevation: 4,
-      ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
+      floatingActionButton: _buildModernFAB(isDark),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      bottomNavigationBar: _buildBottomNavigationBar(isDark),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isDark) {
+    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
+
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(12, 20, 12, 0),
       child: Row(
         children: [
-          IconButton(
+          NeumorphicIconButton(
+            icon: Icons.arrow_back,
+            isDark: isDark,
             onPressed: _goBack,
-            icon: Icon(Icons.arrow_back, color: AppTheme.darkCoffee),
+            size: 44,
+            iconSize: 20,
+            color: textColor,
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Actividades',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.darkCoffee,
+                    color: textColor,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -335,31 +389,42 @@ class _ActivitiesListScreenState extends State<ActivitiesListScreen> {
                   'Gestiona las actividades realizadas en tus lotes.',
                   style: TextStyle(
                     fontSize: 13,
-                    color: AppTheme.darkCoffee.withOpacity(0.6),
+                    color: textColor.withOpacity(0.6),
                   ),
                 ),
               ],
             ),
           ),
-          IconButton(
+          NeumorphicIconButton(
+            icon: Icons.search,
+            isDark: isDark,
             onPressed: () {},
-            icon: Icon(Icons.search, color: AppTheme.darkCoffee),
+            size: 44,
+            iconSize: 20,
+            color: textColor,
           ),
-          IconButton(
-            onPressed: () => _showFilterDialog(),
-            icon: Icon(Icons.filter_list, color: AppTheme.darkCoffee),
+          const SizedBox(width: 4),
+          NeumorphicIconButton(
+            icon: Icons.filter_list,
+            isDark: isDark,
+            onPressed: () => _showFilterDialog(isDark),
+            size: 44,
+            iconSize: 20,
+            color: AppTheme.primaryGreen,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildKPIs() {
+  Widget _buildKPIs(bool isDark) {
+    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
+
     return Consumer<ActivitiesProvider>(
       builder: (context, provider, child) {
         final summary = provider.summary;
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
               Expanded(
@@ -368,6 +433,7 @@ class _ActivitiesListScreenState extends State<ActivitiesListScreen> {
                   value: '${summary?.totalActivities ?? 0}',
                   icon: Icons.assignment,
                   color: AppTheme.primaryGreen,
+                  isDark: isDark,
                 ),
               ),
               const SizedBox(width: 12),
@@ -377,6 +443,7 @@ class _ActivitiesListScreenState extends State<ActivitiesListScreen> {
                   value: '${provider.activities.map((a) => a.lotId).toSet().length}',
                   icon: Icons.landscape,
                   color: AppTheme.goldCoffee,
+                  isDark: isDark,
                 ),
               ),
             ],
@@ -386,108 +453,110 @@ class _ActivitiesListScreenState extends State<ActivitiesListScreen> {
     );
   }
 
-  Widget _buildLotFilterAndViewToggle() {
+  Widget _buildLotFilterAndViewToggle(bool isDark) {
+    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
           Expanded(
-            child: Container(
+            child: NeumorphicBox(
+              isDark: isDark,
+              borderRadius: 16,
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.withOpacity(0.2)),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  value: _selectedLot,
-                  isExpanded: true,
-                  icon: Icon(Icons.expand_more, color: AppTheme.primaryGreen),
-                  items: _availableLots.map((lot) {
-                    return DropdownMenuItem(
-                      value: lot,
-                      child: Text(lot, style: const TextStyle(color: AppTheme.darkCoffee)),
-                    );
-                  }).toList(),
-                  onChanged: (value) => setState(() => _selectedLot = value!),
+              child: SizedBox(
+                height: 48,
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedLot,
+                    isExpanded: true,
+                    icon: Icon(Icons.expand_more, color: AppTheme.primaryGreen),
+                    style: TextStyle(color: textColor, fontSize: 14),
+                    dropdownColor: isDark ? AppTheme.coffeeDeep : Colors.white,
+                    items: _availableLots.map((lot) {
+                      return DropdownMenuItem(
+                        value: lot,
+                        child: Text(lot, style: TextStyle(color: textColor)),
+                      );
+                    }).toList(),
+                    onChanged: (value) => setState(() => _selectedLot = value!),
+                  ),
                 ),
               ),
             ),
           ),
           const SizedBox(width: 12),
-          Container(
-            decoration: BoxDecoration(
-              color: _isCompactView ? AppTheme.primaryGreen : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: _isCompactView ? AppTheme.primaryGreen : Colors.grey.withOpacity(0.2),
-              ),
-            ),
-            child: IconButton(
-              onPressed: () => setState(() => _isCompactView = !_isCompactView),
-              icon: Icon(
-                _isCompactView ? Icons.view_module : Icons.view_list,
-                color: _isCompactView ? Colors.white : AppTheme.darkCoffee,
-              ),
-            ),
+          NeumorphicIconButton(
+            icon: _isCompactView ? Icons.view_module : Icons.view_list,
+            isDark: isDark,
+            onPressed: () => setState(() => _isCompactView = !_isCompactView),
+            size: 48,
+            iconSize: 22,
+            color: _isCompactView ? AppTheme.primaryGreen : textColor,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() => _currentIndex = index);
-          switch (index) {
-            case 0:
-              context.go(RouteNames.dashboard);
-              break;
-            case 1:
-              context.go(RouteNames.myFarms);
-              break;
-            case 2:
-              break;
-            case 4:
-              context.go(RouteNames.profile);
-              break;
-          }
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: AppTheme.primaryGreen,
-        unselectedItemColor: AppTheme.darkCoffee.withOpacity(0.5),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
-          BottomNavigationBarItem(icon: Icon(Icons.landscape), label: 'Fincas'),
-          BottomNavigationBarItem(icon: Icon(Icons.assignment), label: 'Actividades'),
-          BottomNavigationBarItem(icon: Icon(Icons.analytics), label: 'Indicadores'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
-        ],
-      ),
+  Widget _buildModernFAB(bool isDark) {
+    return NeumorphicActionButton(
+      label: 'Registrar Actividad',
+      icon: Icons.add,
+      isDark: isDark,
+      onPressed: _navigateToRegisterActivity,
+      accentColor: AppTheme.primaryGreen,
     );
   }
 
-  void _showFilterDialog() {
+  Widget _buildBottomNavigationBar(bool isDark) {
+    return NeumorphicBottomNav(
+      isDark: isDark,
+      currentIndex: _currentIndex,
+      items: const [
+        Icons.home_outlined,
+        Icons.landscape_outlined,
+        Icons.assignment_outlined,
+        Icons.analytics_outlined,
+        Icons.person_outline,
+      ],
+      onTap: (index) {
+        setState(() => _currentIndex = index);
+        switch (index) {
+          case 0:
+            context.go(RouteNames.dashboard);
+            break;
+          case 1:
+            context.go(RouteNames.myFarms);
+            break;
+          case 2:
+            break;
+          case 4:
+            context.go(RouteNames.profile);
+            break;
+        }
+      },
+    );
+  }
+
+  void _showFilterDialog(bool isDark) {
+    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
+    final cardColor = isDark
+        ? AppTheme.coffeeDeep.withOpacity(0.9)
+        : Colors.white;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Filtros avanzados'),
+        backgroundColor: cardColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        title: Text(
+          'Filtros avanzados',
+          style: TextStyle(color: textColor),
+        ),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           children: [],
@@ -495,12 +564,17 @@ class _ActivitiesListScreenState extends State<ActivitiesListScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            style: TextButton.styleFrom(
+              foregroundColor: textColor,
+            ),
+            child: Text('Cancelar', style: TextStyle(color: textColor)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryGreen,
+              foregroundColor: Colors.white,
+              elevation: 0,
             ),
             child: const Text('Aplicar'),
           ),
@@ -514,29 +588,38 @@ class _ActivitiesListScreenState extends State<ActivitiesListScreen> {
 class _ActivityDetailSheet extends StatelessWidget {
   final ActivityModel activity;
   final String lotName;
+  final bool isDark;
 
   const _ActivityDetailSheet({
     required this.activity,
     required this.lotName,
+    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
+    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
+    final cardColor = isDark
+        ? AppTheme.coffeeDeep.withOpacity(0.95)
+        : Colors.white;
+
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(2),
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: textColor.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
           Padding(
@@ -561,17 +644,17 @@ class _ActivityDetailSheet extends StatelessWidget {
                         children: [
                           Text(
                             activity.type.title,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.darkCoffee,
+                              color: textColor,
                             ),
                           ),
                           Text(
                             lotName,
                             style: TextStyle(
                               fontSize: 14,
-                              color: AppTheme.darkCoffee.withOpacity(0.6),
+                              color: textColor.withOpacity(0.6),
                             ),
                           ),
                         ],
@@ -580,16 +663,16 @@ class _ActivityDetailSheet extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 20),
-                _buildDetailRow(Icons.person, 'Responsable', activity.responsible),
+                _buildDetailRow(Icons.person, 'Responsable', activity.responsible, textColor),
                 const SizedBox(height: 12),
-                _buildDetailRow(Icons.description, 'Descripción', activity.description),
+                _buildDetailRow(Icons.description, 'Descripción', activity.description, textColor),
                 if (activity.quantity > 0) ...[
                   const SizedBox(height: 12),
-                  _buildDetailRow(Icons.abc, 'Cantidad', '${activity.quantity} ${activity.quantityUnit}'),
+                  _buildDetailRow(Icons.abc, 'Cantidad', '${activity.quantity} ${activity.quantityUnit}', textColor),
                 ],
                 if (activity.cost > 0) ...[
                   const SizedBox(height: 12),
-                  _buildDetailRow(Icons.attach_money, 'Costo', '\$${activity.cost.toStringAsFixed(2)} MXN'),
+                  _buildDetailRow(Icons.attach_money, 'Costo', '\$${activity.cost.toStringAsFixed(2)} MXN', textColor),
                 ],
                 const SizedBox(height: 20),
                 SizedBox(
@@ -603,6 +686,7 @@ class _ActivityDetailSheet extends StatelessWidget {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
+                      elevation: 0,
                     ),
                     child: const Text('Cerrar'),
                   ),
@@ -615,7 +699,7 @@ class _ActivityDetailSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
+  Widget _buildDetailRow(IconData icon, String label, String value, Color textColor) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -625,13 +709,20 @@ class _ActivityDetailSheet extends StatelessWidget {
           width: 80,
           child: Text(
             label,
-            style: TextStyle(fontSize: 13, color: AppTheme.darkCoffee.withOpacity(0.6)),
+            style: TextStyle(
+              fontSize: 13,
+              color: textColor.withOpacity(0.6),
+            ),
           ),
         ),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppTheme.darkCoffee),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: textColor,
+            ),
           ),
         ),
       ],

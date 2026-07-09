@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:kaabcafe/core/providers/user_provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
+import 'package:kaabcafe/core/widgets/glass_widgets.dart';
 import 'package:kaabcafe/features/auth/data/models/user_type_model.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/user_type_card.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_button.dart';
@@ -56,23 +57,63 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
     });
   }
 
-  void _continue() {
+  Future<void> _continue() async {
     final selectedType = _userTypes.firstWhere((type) => type.isSelected);
     debugPrint('Tipo de usuario seleccionado: ${selectedType.type.title}');
 
-    // ✅ Guardar el tipo de usuario en el Provider
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    userProvider.setUserType(selectedType.type);
 
-    // ✅ Navegación según el tipo de usuario seleccionado
+    String? email = userProvider.userEmail;
+
+    if (email == null || email.isEmpty) {
+      final result = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text('Ingresa tu correo'),
+          content: TextField(
+            decoration: const InputDecoration(
+              hintText: 'correo@ejemplo.com',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) {},
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context, 'usuario@ejemplo.com');
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        ),
+      );
+
+      if (result != null && result.isNotEmpty) {
+        email = result;
+      } else {
+        email = 'usuario_${DateTime.now().millisecondsSinceEpoch}@ejemplo.com';
+      }
+    }
+
+    await userProvider.setUserType(selectedType.type, email: email);
+
     if (selectedType.type == UserType.producer) {
       context.go(RouteNames.setupProfile);
     } else if (selectedType.type == UserType.cooperative) {
       context.go(RouteNames.cooperativeDashboard);
     } else if (selectedType.type == UserType.buyer) {
       context.go(RouteNames.marketplace);
+    } else if (selectedType.type == UserType.technician) {
+      context.go(RouteNames.technicianDashboard);
     } else {
-      // Técnico → Próximamente
       final theme = Theme.of(context);
       showDialog(
         context: context,
@@ -132,34 +173,34 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // ✅ Color crema - consistente con el login
+    final creamColor = isDark
+        ? AppTheme.coffeeDeep
+        : const Color(0xFFF0E8D8);
 
     return Scaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              theme.scaffoldBackgroundColor,
-              theme.colorScheme.primary.withOpacity(0.04),
-              theme.scaffoldBackgroundColor,
-            ],
-          ),
+          color: creamColor, // ✅ Fondo crema
         ),
         child: SafeArea(
           child: Column(
             children: [
-              // Barra superior
+              // ── Barra superior ──────────────────────────────────
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
                   children: [
-                    IconButton(
+                    // ✅ Botón de regreso sin brillo
+                    GlowIconButton(
+                      icon: Icons.arrow_back,
+                      isDark: isDark,
                       onPressed: _goBack,
-                      icon: const Icon(Icons.arrow_back),
-                      color: theme.colorScheme.onSurface,
+                      size: 46,
                     ),
                     const Spacer(),
                     Container(
@@ -167,7 +208,7 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                       height: 40,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
-                        color: theme.colorScheme.primary.withOpacity(0.12),
+                        color: AppTheme.primaryGreen.withOpacity(0.12),
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
@@ -178,7 +219,7 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                             return Icon(
                               Icons.agriculture,
                               size: 24,
-                              color: theme.colorScheme.primary,
+                              color: AppTheme.primaryGreen,
                             );
                           },
                         ),
@@ -188,7 +229,7 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                 ),
               ),
 
-              // Contenido principal
+              // ── Contenido principal ──────────────────────────────
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -205,7 +246,7 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                           style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurface,
+                            color: isDark ? Colors.white : AppTheme.darkCoffee,
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -214,14 +255,14 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                           'Personalizaremos tu experiencia según tu rol dentro de la cadena productiva del café.',
                           style: TextStyle(
                             fontSize: 15,
-                            color: theme.colorScheme.onSurface.withOpacity(0.7),
+                            color: (isDark ? Colors.white : AppTheme.darkCoffee).withOpacity(0.7),
                             height: 1.4,
                           ),
                         ),
 
                         const SizedBox(height: 32),
 
-                        // Listado de tarjetas
+                        // ── Listado de tarjetas ──────────────────
                         ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
@@ -241,7 +282,7 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                 ),
               ),
 
-              // Botón continuar
+              // ── Botón continuar ──────────────────────────────────
               Container(
                 padding: const EdgeInsets.all(24.0),
                 color: Colors.transparent,
