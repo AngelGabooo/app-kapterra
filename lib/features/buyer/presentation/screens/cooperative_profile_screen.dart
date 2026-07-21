@@ -1,3 +1,4 @@
+// lib/features/buyer/presentation/screens/cooperative_profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
@@ -16,28 +17,22 @@ class CooperativeProfileScreen extends StatefulWidget {
 class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
   int _currentIndex = 4;
 
-  // ✅ Datos editables
-  String _cooperativeName = 'Cooperativa Sierra Verde';
-  String _representative = 'María González';
-  String _rfc = 'CSV-2024-001';
-  String _location = 'Chiapas, México';
-  String _email = 'info@cooperativasierraverde.com';
-  String _phone = '+52 961 123 4567';
-  String _certifications = 'Orgánico, Comercio Justo, Rainforest Alliance';
+  // ✅ TODOS LOS DATOS VACÍOS
+  String _cooperativeName = '---';
+  String _representative = '---';
+  String _rfc = '---';
+  String _location = '---';
+  String _email = '---';
+  String _phone = '---';
+  String _certifications = 'Sin certificaciones registradas';
 
-  bool _notificationsEnabled = true;
-  bool _marketingEmails = true;
+  bool _notificationsEnabled = false;
+  bool _marketingEmails = false;
 
-  final List<Map<String, dynamic>> _documents = [
-    {'emoji': '📄', 'label': 'Acta constitutiva', 'status': 'Válida'},
-    {'emoji': '📑', 'label': 'Certificado de cooperativa', 'status': 'Renovar en 2025'},
-    {'emoji': '📊', 'label': 'Registro de productores', 'status': 'Actualizado'},
-  ];
+  // ✅ Listas vacías
+  final List<Map<String, dynamic>> _documents = [];
 
-  final List<Map<String, dynamic>> _bankAccounts = [
-    {'bank': 'Banco Santander', 'account': '1234-5678-9012', 'type': 'Principal'},
-    {'bank': 'Banco Azteca', 'account': '9876-5432-1098', 'type': 'Secundario'},
-  ];
+  final List<Map<String, dynamic>> _bankAccounts = [];
 
   void _showEditDialog(String title, String initialValue, Function(String) onSave) {
     showDialog(
@@ -124,7 +119,9 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
                     ),
                     child: Center(
                       child: Text(
-                        _cooperativeName.split(' ').map((e) => e[0]).take(2).join().toUpperCase(),
+                        _cooperativeName.isNotEmpty && _cooperativeName != '---'
+                            ? _cooperativeName.split(' ').map((e) => e[0]).take(2).join().toUpperCase()
+                            : 'C',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -168,7 +165,7 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    // Estadísticas
+                    // ✅ Estadísticas - TODOS EN 0
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -240,7 +237,7 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
 
                     const SizedBox(height: 20),
 
-                    // Información de la cooperativa
+                    // ✅ Información de la cooperativa - VACÍA
                     Container(
                       decoration: BoxDecoration(
                         color: isDark
@@ -381,9 +378,7 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
 
                     const SizedBox(height: 20),
 
-                    const SizedBox(height: 20),
-
-                    // Certificaciones
+                    // ✅ Certificaciones - VACÍAS
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -447,7 +442,7 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
 
                     const SizedBox(height: 20),
 
-                    // Documentos
+                    // ✅ Documentos - VACÍO
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -481,12 +476,29 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          ..._documents.map((doc) => _buildDocumentItem(
-                            doc['emoji'],
-                            doc['label'],
-                            doc['status'],
-                            isDark,
-                          )),
+                          // ✅ Mensaje de vacío
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: (isDark ? AppTheme.coffeeDark : AppTheme.lightBeige).withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.description_outlined, color: textColor.withOpacity(0.3)),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Sin documentos registrados',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: textColor.withOpacity(0.4),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           const SizedBox(height: 12),
                           OutlinedButton.icon(
                             onPressed: () {},
@@ -509,7 +521,86 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
 
                     const SizedBox(height: 20),
 
-                    // Configuración
+                    // ✅ Cuentas bancarias - VACÍO
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppTheme.coffeeDeep.withOpacity(0.8)
+                            : Colors.white.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(isDark ? 0.05 : 0.1),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.account_balance,
+                                color: AppTheme.primaryGreen,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Cuentas bancarias',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          // ✅ Mensaje de vacío
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: (isDark ? AppTheme.coffeeDark : AppTheme.lightBeige).withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.account_balance_outlined, color: textColor.withOpacity(0.3)),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Sin cuentas bancarias registradas',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: textColor.withOpacity(0.4),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          OutlinedButton.icon(
+                            onPressed: () {},
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text('Agregar cuenta'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.primaryGreen,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              side: BorderSide(
+                                color: AppTheme.primaryGreen.withOpacity(0.3),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // ✅ Configuración - TODOS DESACTIVADOS
                     Container(
                       decoration: BoxDecoration(
                         color: isDark

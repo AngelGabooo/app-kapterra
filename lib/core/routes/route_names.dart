@@ -1,3 +1,4 @@
+// lib/core/routes/route_names.dart
 class RouteNames {
   static const String splash = '/';
   static const String onboarding = '/onboarding';
@@ -10,7 +11,7 @@ class RouteNames {
   static const String farmSuccess = '/farm-success';
   static const String dashboard = '/dashboard';
   static const String cooperativeDashboard = '/cooperative-dashboard';
-  static const String cooperativeProfile = '/cooperative-profile'; // ✅ Cambiado
+  static const String cooperativeProfile = '/cooperative-profile';
   static const String marketplace = '/marketplace';
   static const String explore = '/explore';
   static const String marketplaceLotDetail = '/marketplace-lot-detail';
@@ -30,6 +31,7 @@ class RouteNames {
   static const String registerActivity = '/register-activity';
   static const String notifications = '/notifications';
   static const String profile = '/profile';
+  static const String profileDashboard = '/profile-dashboard';  // ✅ NUEVO: Perfil del dashboard
   static const String home = '/home';
   static const String activities = '/activities';
   static const String editActivity = '/edit-activity';
@@ -42,4 +44,6 @@ class RouteNames {
   static const String technicianCropDiagnosis = '/technician/crop-diagnosis';
   static const String technicianLotCertification = '/technician/lot-certification';
 
+  // ✅ NUEVA RUTA PARA PIN DE SEGURIDAD
+  static const String pinSecurity = '/pin-security';
 }

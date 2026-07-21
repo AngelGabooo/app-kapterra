@@ -35,7 +35,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     MarketplaceLotModel(
       id: '1',
       name: 'Lote Geisha Premium',
-      producerName: 'Juan Pérez',
+      producerName: 'Juaqqqn Pérez',
       location: 'Motozintla, Chiapas',
       price: 95,
       availableQuantity: 420,

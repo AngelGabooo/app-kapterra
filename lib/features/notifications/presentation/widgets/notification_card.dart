@@ -1,3 +1,4 @@
+// lib/features/notifications/presentation/widgets/notification_card.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
@@ -7,12 +8,14 @@ class NotificationCard extends StatelessWidget {
   final NotificationModel notification;
   final VoidCallback onTap;
   final VoidCallback onMarkAsRead;
+  final bool isDark;
 
   const NotificationCard({
     super.key,
     required this.notification,
     required this.onTap,
     required this.onMarkAsRead,
+    this.isDark = false,
   });
 
   String _getTimeAgo() {
@@ -34,6 +37,11 @@ class NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
+    final cardColor = isDark
+        ? AppTheme.coffeeDeep.withOpacity(0.7)
+        : Colors.white.withOpacity(0.9);
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       margin: const EdgeInsets.only(bottom: 12),
@@ -45,15 +53,13 @@ class NotificationCard extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: notification.isRead
-                  ? Colors.white.withOpacity(0.7)
-                  : Colors.white,
+              color: cardColor,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: notification.priority.color.withOpacity(0.3),
                 width: notification.isRead ? 1 : 2,
               ),
-              boxShadow: [
+              boxShadow: isDark ? const [] : [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.04),
                   blurRadius: 8,
@@ -94,7 +100,7 @@ class NotificationCard extends StatelessWidget {
                                 fontWeight: notification.isRead
                                     ? FontWeight.w500
                                     : FontWeight.w700,
-                                color: AppTheme.darkCoffee,
+                                color: textColor,
                               ),
                             ),
                           ),
@@ -114,7 +120,7 @@ class NotificationCard extends StatelessWidget {
                         notification.description,
                         style: TextStyle(
                           fontSize: 13,
-                          color: AppTheme.darkCoffee.withOpacity(0.7),
+                          color: textColor.withOpacity(0.7),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -140,7 +146,7 @@ class NotificationCard extends StatelessWidget {
                             _getTimeAgo(),
                             style: TextStyle(
                               fontSize: 11,
-                              color: AppTheme.darkCoffee.withOpacity(0.4),
+                              color: textColor.withOpacity(0.4),
                             ),
                           ),
                         ],

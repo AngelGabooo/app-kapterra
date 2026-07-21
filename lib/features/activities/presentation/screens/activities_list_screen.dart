@@ -40,13 +40,8 @@ class _ActivitiesListScreenState extends State<ActivitiesListScreen> {
   String _selectedLot = 'Todos los lotes';
   bool _isCompactView = false;
 
-  final List<String> _availableLots = [
-    'Todos los lotes',
-    'Lote Norte',
-    'Lote Sur',
-    'Lote Río',
-    'Lote Geisha',
-  ];
+  // ✅ Lista vacía inicialmente, se llena desde el provider
+  List<String> _availableLots = ['Todos los lotes'];
 
   @override
   void initState() {
@@ -56,6 +51,23 @@ class _ActivitiesListScreenState extends State<ActivitiesListScreen> {
       provider.loadActivities();
       provider.loadSummary();
     });
+  }
+
+  // ✅ Método para actualizar los lotes disponibles - AHORA SIN setState
+  void _updateAvailableLots(List<ActivityEntity> activities) {
+    final lotNames = activities.map((a) => a.lotName).toSet().toList();
+    final newLots = ['Todos los lotes', ...lotNames];
+
+    // Solo actualizar si hay cambios
+    if (_availableLots.length != newLots.length ||
+        _availableLots.any((lot) => !newLots.contains(lot))) {
+      setState(() {
+        _availableLots = newLots;
+        if (_selectedLot != 'Todos los lotes' && !lotNames.contains(_selectedLot)) {
+          _selectedLot = 'Todos los lotes';
+        }
+      });
+    }
   }
 
   void _navigateToRegisterActivity() {
@@ -93,13 +105,7 @@ class _ActivitiesListScreenState extends State<ActivitiesListScreen> {
 
   void _goBack() {
     if (widget.initialLot != null && widget.initialFarm != null) {
-      context.go(
-        RouteNames.lotHistory,
-        extra: {
-          'lot': widget.initialLot,
-          'farm': widget.initialFarm,
-        },
-      );
+      Navigator.pop(context);
     } else {
       context.go(RouteNames.myFarms);
     }
@@ -195,112 +201,156 @@ class _ActivitiesListScreenState extends State<ActivitiesListScreen> {
       body: AuroraBackground(
         isDark: isDark,
         child: SafeArea(
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // ── Header ──────────────────────────────────────────
-              SliverToBoxAdapter(
-                child: _buildHeader(isDark),
-              ),
+          child: Consumer<ActivitiesProvider>(
+            builder: (context, provider, child) {
+              final activities = provider.activities;
 
-              // ── KPIs ────────────────────────────────────────────
-              SliverToBoxAdapter(
-                child: _buildKPIs(isDark),
-              ),
+              // ✅ Actualizar lista de lotes disponibles - Usando addPostFrameCallback
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  _updateAvailableLots(activities);
+                }
+              });
 
-              // ── Search Bar ──────────────────────────────────────
-              SliverToBoxAdapter(
-                child: ActivitySearchBar(
+              // ✅ Manejar estados de carga y error fuera del CustomScrollView
+              if (provider.isLoading && activities.isEmpty) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (provider.error != null && activities.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                      const SizedBox(height: 16),
+                      Text('Error: ${provider.error}'),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () => provider.loadActivities(),
+                        child: const Text('Reintentar'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              // ✅ Si no hay actividades, mostrar estado vacío
+              if (activities.isEmpty) {
+                return ActivityEmptyState(
+                  onRegister: _navigateToRegisterActivity,
                   isDark: isDark,
-                  onSearchChanged: (query) {
-                    setState(() => _searchQuery = query);
-                    final provider = Provider.of<ActivitiesProvider>(context, listen: false);
-                    provider.setSearchQuery(query);
-                  },
-                ),
-              ),
+                );
+              }
 
-              // ── Filter Chips ────────────────────────────────────
-              SliverToBoxAdapter(
-                child: ActivityFilterChips(
-                  isDark: isDark,
-                  selectedType: _selectedType,
-                  selectedStatus: _selectedStatus,
-                  onTypeSelected: (type) => setState(() => _selectedType = type),
-                  onStatusSelected: (status) => setState(() => _selectedStatus = status),
-                  onClearFilters: () => setState(() {
-                    _selectedType = null;
-                    _selectedStatus = null;
-                    _selectedLot = 'Todos los lotes';
-                    final provider = Provider.of<ActivitiesProvider>(context, listen: false);
-                    provider.clearFilters();
-                  }),
-                ),
-              ),
+              // ✅ Filtrar actividades
+              var filtered = List<ActivityEntity>.from(activities);
 
-              // ── Lot Filter & View Toggle ───────────────────────
-              SliverToBoxAdapter(
-                child: _buildLotFilterAndViewToggle(isDark),
-              ),
+              if (_selectedLot != 'Todos los lotes') {
+                filtered = filtered.where((a) => a.lotName == _selectedLot).toList();
+              }
 
-              // ── Activity List ──────────────────────────────────
-              Consumer<ActivitiesProvider>(
-                builder: (context, provider, child) {
-                  if (provider.isLoading) {
-                    return SliverFillRemaining(
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
+              if (_searchQuery.isNotEmpty) {
+                final query = _searchQuery.toLowerCase();
+                filtered = filtered.where((a) =>
+                a.type.title.toLowerCase().contains(query) ||
+                    a.responsible.toLowerCase().contains(query) ||
+                    a.description.toLowerCase().contains(query)
+                ).toList();
+              }
 
-                  if (provider.error != null) {
-                    return SliverFillRemaining(
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                            const SizedBox(height: 16),
-                            Text('Error: ${provider.error}'),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: () => provider.loadActivities(),
-                              child: const Text('Reintentar'),
-                            ),
-                          ],
+              if (_selectedType != null) {
+                filtered = filtered.where((a) =>
+                    a.type.toString().contains(_selectedType!.toString().split('.').last)
+                ).toList();
+              }
+
+              // ✅ Si después de filtrar no hay resultados, mostrar mensaje
+              if (filtered.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.search_off, size: 64, color: isDark ? Colors.white.withOpacity(0.3) : AppTheme.darkCoffee.withOpacity(0.3)),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No se encontraron actividades',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: isDark ? Colors.white.withOpacity(0.5) : AppTheme.darkCoffee.withOpacity(0.5),
                         ),
                       ),
-                    );
-                  }
-
-                  final activities = provider.activities;
-
-                  if (activities.isEmpty) {
-                    return SliverFillRemaining(
-                      child: ActivityEmptyState(
-                        onRegister: _navigateToRegisterActivity,
-                        isDark: isDark,
+                      const SizedBox(height: 8),
+                      Text(
+                        'Prueba con otros filtros',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isDark ? Colors.white.withOpacity(0.3) : AppTheme.darkCoffee.withOpacity(0.3),
+                        ),
                       ),
-                    );
-                  }
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _searchQuery = '';
+                            _selectedType = null;
+                            _selectedLot = 'Todos los lotes';
+                          });
+                        },
+                        child: const Text('Limpiar filtros'),
+                      ),
+                    ],
+                  ),
+                );
+              }
 
-                  var filtered = List<ActivityEntity>.from(activities);
+              // ✅ Mostrar lista de actividades con CustomScrollView
+              return CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  // ── Header ──────────────────────────────────────────
+                  SliverToBoxAdapter(
+                    child: _buildHeader(isDark),
+                  ),
 
-                  if (_searchQuery.isNotEmpty) {
-                    final query = _searchQuery.toLowerCase();
-                    filtered = filtered.where((a) =>
-                    a.type.title.toLowerCase().contains(query) ||
-                        a.responsible.toLowerCase().contains(query) ||
-                        a.description.toLowerCase().contains(query)
-                    ).toList();
-                  }
+                  // ── KPIs ────────────────────────────────────────────
+                  SliverToBoxAdapter(
+                    child: _buildKPIs(isDark, filtered),
+                  ),
 
-                  if (_selectedType != null) {
-                    filtered = filtered.where((a) =>
-                        a.type.toString().contains(_selectedType!.toString().split('.').last)
-                    ).toList();
-                  }
+                  // ── Search Bar ──────────────────────────────────────
+                  SliverToBoxAdapter(
+                    child: ActivitySearchBar(
+                      isDark: isDark,
+                      onSearchChanged: (query) {
+                        setState(() => _searchQuery = query);
+                      },
+                    ),
+                  ),
 
-                  return SliverPadding(
+                  // ── Filter Chips ────────────────────────────────────
+                  SliverToBoxAdapter(
+                    child: ActivityFilterChips(
+                      isDark: isDark,
+                      selectedType: _selectedType,
+                      selectedStatus: _selectedStatus,
+                      onTypeSelected: (type) => setState(() => _selectedType = type),
+                      onStatusSelected: (status) => setState(() => _selectedStatus = status),
+                      onClearFilters: () => setState(() {
+                        _selectedType = null;
+                        _selectedStatus = null;
+                        _selectedLot = 'Todos los lotes';
+                      }),
+                    ),
+                  ),
+
+                  // ── Lot Filter & View Toggle ───────────────────────
+                  SliverToBoxAdapter(
+                    child: _buildLotFilterAndViewToggle(isDark),
+                  ),
+
+                  // ── Activity List ──────────────────────────────────
+                  SliverPadding(
                     padding: const EdgeInsets.all(16),
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
@@ -338,26 +388,35 @@ class _ActivitiesListScreenState extends State<ActivitiesListScreen> {
                         childCount: filtered.length,
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
 
-              // ── Bottom Padding ──────────────────────────────────
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 90),
-              ),
-            ],
+                  // ── Bottom Padding ──────────────────────────────────
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 90),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
-      floatingActionButton: _buildModernFAB(isDark),
+      floatingActionButton: _buildModernFAB(),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: _buildBottomNavigationBar(isDark),
+      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
   Widget _buildHeader(bool isDark) {
     final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
+
+    // Determinar el título según si hay un lote inicial
+    String title = 'Actividades';
+    String subtitle = 'Gestiona las actividades realizadas en tus lotes.';
+
+    if (widget.initialLot != null) {
+      title = 'Actividades del Lote';
+      subtitle = 'Actividades realizadas en ${widget.initialLot!.name}';
+    }
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 20, 12, 0),
@@ -377,18 +436,18 @@ class _ActivitiesListScreenState extends State<ActivitiesListScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Actividades',
+                  title,
                   style: TextStyle(
-                    fontSize: 28,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: textColor,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
-                  'Gestiona las actividades realizadas en tus lotes.',
+                  subtitle,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     color: textColor.withOpacity(0.6),
                   ),
                 ),
@@ -417,44 +476,42 @@ class _ActivitiesListScreenState extends State<ActivitiesListScreen> {
     );
   }
 
-  Widget _buildKPIs(bool isDark) {
-    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
-
-    return Consumer<ActivitiesProvider>(
-      builder: (context, provider, child) {
-        final summary = provider.summary;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Expanded(
-                child: ActivityKPICard(
-                  title: 'Actividades registradas',
-                  value: '${summary?.totalActivities ?? 0}',
-                  icon: Icons.assignment,
-                  color: AppTheme.primaryGreen,
-                  isDark: isDark,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ActivityKPICard(
-                  title: 'Lotes con actividad',
-                  value: '${provider.activities.map((a) => a.lotId).toSet().length}',
-                  icon: Icons.landscape,
-                  color: AppTheme.goldCoffee,
-                  isDark: isDark,
-                ),
-              ),
-            ],
+  Widget _buildKPIs(bool isDark, List<ActivityEntity> filteredActivities) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: ActivityKPICard(
+              title: 'Actividades',
+              value: '${filteredActivities.length}',
+              icon: Icons.assignment,
+              color: AppTheme.primaryGreen,
+              isDark: isDark,
+            ),
           ),
-        );
-      },
+          const SizedBox(width: 12),
+          Expanded(
+            child: ActivityKPICard(
+              title: 'Lotes',
+              value: '${filteredActivities.map((a) => a.lotId).toSet().length}',
+              icon: Icons.landscape,
+              color: AppTheme.goldCoffee,
+              isDark: isDark,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildLotFilterAndViewToggle(bool isDark) {
     final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
+
+    // Si hay un lote inicial, ocultar el filtro de lotes
+    if (widget.initialLot != null) {
+      return const SizedBox.shrink();
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -500,17 +557,24 @@ class _ActivitiesListScreenState extends State<ActivitiesListScreen> {
     );
   }
 
-  Widget _buildModernFAB(bool isDark) {
+  Widget _buildModernFAB() {
     return NeumorphicActionButton(
       label: 'Registrar Actividad',
       icon: Icons.add,
-      isDark: isDark,
+      isDark: Theme.of(context).brightness == Brightness.dark,
       onPressed: _navigateToRegisterActivity,
       accentColor: AppTheme.primaryGreen,
     );
   }
 
-  Widget _buildBottomNavigationBar(bool isDark) {
+  Widget _buildBottomNavigationBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Si hay un lote inicial (viniendo de lot_detail), no mostrar la barra de navegación
+    if (widget.initialLot != null && widget.initialFarm != null) {
+      return const SizedBox.shrink();
+    }
+
     return NeumorphicBottomNav(
       isDark: isDark,
       currentIndex: _currentIndex,

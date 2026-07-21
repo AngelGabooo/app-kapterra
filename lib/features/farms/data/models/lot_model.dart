@@ -19,7 +19,7 @@ class LotModel {
     required this.estimatedProduction,
     required this.area,
     required this.status,
-    required this.treesCount, // ✅ Eliminada la 'a' extra
+    required this.treesCount,
   });
 
   Color get statusColor {

@@ -20,6 +20,7 @@ import 'package:kaabcafe/features/farm/presentation/screens/register_farm_screen
 import 'package:kaabcafe/features/farm/presentation/screens/farm_success_screen.dart';
 
 import 'package:kaabcafe/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:kaabcafe/features/dashboard/presentation/screens/profile_dashboard_screen.dart'; // ✅ NUEVO
 
 import 'package:kaabcafe/features/farms/presentation/screens/my_farms_screen.dart';
 import 'package:kaabcafe/features/farms/presentation/screens/farm_detail_screen.dart';
@@ -64,6 +65,7 @@ import 'package:kaabcafe/features/technician/presentation/screens/technician_vis
 import 'package:kaabcafe/features/technician/presentation/screens/technician_lot_inspection_screen.dart';
 import 'package:kaabcafe/features/technician/presentation/screens/technician_crop_diagnosis_screen.dart';
 import 'package:kaabcafe/features/technician/presentation/screens/technician_lot_certification_screen.dart';
+import 'package:kaabcafe/features/auth/presentation/screens/pin_security_screen.dart'; // ✅ NUEVO
 
 
 class AppRouter {
@@ -389,6 +391,16 @@ class AppRouter {
             variety: args?['variety'] as String?,
           );
         },
+      ),
+      GoRoute(
+        path: RouteNames.pinSecurity,
+        name: RouteNames.pinSecurity,
+        builder: (context, state) => const PinSecurityScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.profileDashboard,
+        path: RouteNames.profileDashboard,
+        builder: (context, state) => const ProfileDashboardScreen(),
       ),
     ],
     errorBuilder: (context, state) => const Scaffold(

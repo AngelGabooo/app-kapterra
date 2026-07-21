@@ -4,122 +4,15 @@ import 'package:kaabcafe/features/activities/data/repositories/activity_reposito
 import 'package:kaabcafe/features/activities/domain/entities/activity_entity.dart';
 import 'package:kaabcafe/features/activities/domain/usecases/get_activities_usecase.dart';
 
-// Implementación mock del repositorio (para desarrollo)
+// ✅ Implementación mock del repositorio - COMPLETAMENTE VACÍO
 class MockActivityRepository implements ActivityRepository {
+  // ✅ Lista vacía
   final List<ActivityEntity> _mockActivities = [];
 
   MockActivityRepository() {
-    _loadMockData();
-  }
-
-  void _loadMockData() {
-    _mockActivities.addAll([
-      ActivityEntity(
-        id: '1',
-        lotId: '1',
-        lotName: 'Lote Norte',
-        farmId: '1',
-        farmName: 'Finca El Mirador',
-        type: ActivityTypeEntity.fertilization,
-        status: ActivityStatusEntity.completed,
-        date: DateTime(2026, 6, 15),
-        scheduledDate: null,
-        responsible: 'Juan Pérez',
-        description: 'Aplicación de fertilizante foliar en todo el lote.',
-        quantity: 50,
-        quantityUnit: 'kg',
-        cost: 1250,
-        evidenceUrls: ['img1', 'img2', 'img3'],
-        observations: '',
-        metadata: null,
-        createdAt: DateTime(2026, 6, 15),
-        updatedAt: DateTime(2026, 6, 15),
-      ),
-      ActivityEntity(
-        id: '2',
-        lotId: '2',
-        lotName: 'Lote Sur',
-        farmId: '1',
-        farmName: 'Finca El Mirador',
-        type: ActivityTypeEntity.pruning,
-        status: ActivityStatusEntity.completed,
-        date: DateTime(2026, 6, 10),
-        scheduledDate: null,
-        responsible: 'Pedro López',
-        description: 'Poda de renovación en sector este.',
-        quantity: 0,
-        quantityUnit: '',
-        cost: 800,
-        evidenceUrls: [],
-        observations: '',
-        metadata: null,
-        createdAt: DateTime(2026, 6, 10),
-        updatedAt: DateTime(2026, 6, 10),
-      ),
-      ActivityEntity(
-        id: '3',
-        lotId: '4',
-        lotName: 'Lote Geisha',
-        farmId: '2',
-        farmName: 'Finca La Esperanza',
-        type: ActivityTypeEntity.pestControl,
-        status: ActivityStatusEntity.pending,
-        date: DateTime(2026, 6, 10),
-        scheduledDate: DateTime(2026, 6, 18),
-        responsible: 'María Gómez',
-        description: 'Aplicación preventiva contra broca.',
-        quantity: 20,
-        quantityUnit: 'litros',
-        cost: 2500,
-        evidenceUrls: [],
-        observations: 'Programada para mañana',
-        metadata: null,
-        createdAt: DateTime(2026, 6, 10),
-        updatedAt: DateTime(2026, 6, 10),
-      ),
-      ActivityEntity(
-        id: '4',
-        lotId: '1',
-        lotName: 'Lote Norte',
-        farmId: '1',
-        farmName: 'Finca El Mirador',
-        type: ActivityTypeEntity.irrigation,
-        status: ActivityStatusEntity.completed,
-        date: DateTime(2026, 6, 5),
-        scheduledDate: null,
-        responsible: 'Carlos Ruiz',
-        description: 'Riego por goteo en temporada seca.',
-        quantity: 10000,
-        quantityUnit: 'litros',
-        cost: 500,
-        evidenceUrls: ['img1'],
-        observations: '',
-        metadata: null,
-        createdAt: DateTime(2026, 6, 5),
-        updatedAt: DateTime(2026, 6, 5),
-      ),
-      ActivityEntity(
-        id: '5',
-        lotId: '3',
-        lotName: 'Lote Río',
-        farmId: '1',
-        farmName: 'Finca El Mirador',
-        type: ActivityTypeEntity.harvest,
-        status: ActivityStatusEntity.inProgress,
-        date: DateTime(2026, 6, 1),
-        scheduledDate: null,
-        responsible: 'Equipo cosecha',
-        description: 'Primera cosecha selectiva del año.',
-        quantity: 250,
-        quantityUnit: 'kg',
-        cost: 5000,
-        evidenceUrls: ['img1', 'img2'],
-        observations: '',
-        metadata: null,
-        createdAt: DateTime(2026, 6, 1),
-        updatedAt: DateTime(2026, 6, 1),
-      ),
-    ]);
+    // ❌ NO cargar datos de ejemplo
+    // ✅ Inicia con lista vacía
+    debugPrint('📦 MockActivityRepository inicializado con 0 actividades');
   }
 
   @override
@@ -131,7 +24,8 @@ class MockActivityRepository implements ActivityRepository {
     DateTime? startDate,
     DateTime? endDate,
   }) async {
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Simular delay de red
+    await Future.delayed(const Duration(milliseconds: 300));
 
     var result = List<ActivityEntity>.from(_mockActivities);
 
@@ -154,13 +48,18 @@ class MockActivityRepository implements ActivityRepository {
       result = result.where((a) => a.date.isBefore(endDate)).toList();
     }
 
+    debugPrint('📊 getActivities retorna ${result.length} actividades');
     return result;
   }
 
   @override
   Future<ActivityEntity?> getActivityById(String id) async {
     await Future.delayed(const Duration(milliseconds: 300));
-    return _mockActivities.firstWhere((a) => a.id == id);
+    try {
+      return _mockActivities.firstWhere((a) => a.id == id);
+    } catch (e) {
+      return null;
+    }
   }
 
   @override
@@ -195,6 +94,7 @@ class MockActivityRepository implements ActivityRepository {
   Future<ActivityEntity> createActivity(ActivityEntity activity) async {
     await Future.delayed(const Duration(milliseconds: 500));
     _mockActivities.add(activity);
+    debugPrint('✅ Actividad creada: ${activity.id} - Total: ${_mockActivities.length}');
     return activity;
   }
 
@@ -204,6 +104,7 @@ class MockActivityRepository implements ActivityRepository {
     final index = _mockActivities.indexWhere((a) => a.id == activity.id);
     if (index != -1) {
       _mockActivities[index] = activity;
+      debugPrint('🔄 Actividad actualizada: ${activity.id}');
     }
     return activity;
   }
@@ -212,6 +113,7 @@ class MockActivityRepository implements ActivityRepository {
   Future<void> deleteActivity(String id) async {
     await Future.delayed(const Duration(milliseconds: 500));
     _mockActivities.removeWhere((a) => a.id == id);
+    debugPrint('🗑️ Actividad eliminada: $id - Total: ${_mockActivities.length}');
   }
 
   @override
@@ -270,6 +172,7 @@ class ActivitiesProvider extends ChangeNotifier {
         _createActivityUseCase = createActivityUseCase,
         _updateActivityUseCase = updateActivityUseCase,
         _deleteActivityUseCase = deleteActivityUseCase {
+    // ✅ Cargar actividades al iniciar
     loadActivities();
     loadSummary();
   }
@@ -325,9 +228,11 @@ class ActivitiesProvider extends ChangeNotifier {
 
     try {
       _activities = await _getActivitiesUseCase.execute();
+      debugPrint('📊 ActivitiesProvider: ${_activities.length} actividades cargadas');
       notifyListeners();
     } catch (e) {
       _error = e.toString();
+      debugPrint('❌ Error cargando actividades: $e');
       notifyListeners();
     } finally {
       _setLoading(false);
@@ -337,9 +242,10 @@ class ActivitiesProvider extends ChangeNotifier {
   Future<void> loadSummary() async {
     try {
       _summary = await _getActivitySummaryUseCase.execute();
+      debugPrint('📊 Summary: ${_summary?.totalActivities} actividades totales');
       notifyListeners();
     } catch (e) {
-      debugPrint('Error loading summary: $e');
+      debugPrint('❌ Error loading summary: $e');
     }
   }
 
@@ -445,6 +351,7 @@ class ActivitiesProvider extends ChangeNotifier {
 class ActivitiesProviderFactory {
   static ActivitiesProvider create() {
     final repository = MockActivityRepository();
+    debugPrint('🏭 Creando ActivitiesProvider con repositorio vacío');
     return ActivitiesProvider(
       getActivitiesUseCase: GetActivitiesUseCase(repository),
       getActivitySummaryUseCase: GetActivitySummaryUseCase(repository),

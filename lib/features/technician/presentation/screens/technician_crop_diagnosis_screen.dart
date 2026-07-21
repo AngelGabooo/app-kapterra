@@ -36,62 +36,26 @@ class _TechnicianCropDiagnosisScreenState
     extends State<TechnicianCropDiagnosisScreen> {
   int _currentIndex = 3;
 
-  final List<Map<String, dynamic>> _categories = [
-    {'label': '🌱 Estado vegetativo', 'value': 88, 'color': AppTheme.primaryGreen},
-    {'label': '🍃 Estado foliar', 'value': 76, 'color': AppTheme.goldCoffee},
-    {'label': '🍒 Fructificación', 'value': 91, 'color': AppTheme.primaryGreen},
-    {'label': '🌳 Manejo del cultivo', 'value': 84, 'color': AppTheme.primaryGreen},
-    {'label': '💧 Humedad', 'value': 73, 'color': AppTheme.goldCoffee},
-  ];
+  // ✅ TODOS LOS DATOS VACÍOS
+  final List<Map<String, dynamic>> _categories = [];
 
-  final List<Map<String, dynamic>> _issues = [
-    {
-      'title': '🦠 Posible roya inicial',
-      'level': 'Bajo',
-      'priority': 'Media',
-      'priorityColor': AppTheme.alertOrange,
-    },
-    {
-      'title': '🍃 Deficiencia leve de nitrógeno',
-      'level': 'Leve',
-      'priority': 'Baja',
-      'priorityColor': AppTheme.goldCoffee,
-    },
-    {
-      'title': '🌧 Humedad superior a la recomendada',
-      'level': 'Moderado',
-      'priority': 'Media',
-      'priorityColor': AppTheme.alertOrange,
-    },
-  ];
+  final List<Map<String, dynamic>> _issues = [];
 
-  final List<Map<String, dynamic>> _risks = [
-    {'label': '🦠 Enfermedades', 'level': 'Medio', 'color': AppTheme.alertOrange},
-    {'label': '🐛 Plagas', 'level': 'Bajo', 'color': AppTheme.primaryGreen},
-    {'label': '💧 Humedad', 'level': 'Alta', 'color': AppTheme.berryRed},
-    {'label': '🌦 Clima', 'level': 'Favorable', 'color': AppTheme.primaryGreen},
-  ];
+  final List<Map<String, dynamic>> _risks = [];
 
-  final List<String> _recommendations = [
-    '✔ Aplicar monitoreo preventivo de roya.',
-    '✔ Mejorar el manejo de humedad en el lote.',
-    '✔ Incrementar fertilización nitrogenada.',
-    '✔ Programar nueva inspección en 15 días.',
-  ];
+  final List<String> _recommendations = [];
 
-  final List<String> _evidenceImages = [
-    '📷', '📷', '📷', '📷', '📷'
-  ];
+  final List<String> _evidenceImages = [];
 
   // ── Navegación a Certificación ──────────────────────────────
   void _navigateToCertification() {
     context.push(
       RouteNames.technicianLotCertification,
       extra: {
-        'lotName': widget.lotName ?? 'Lote Norte',
-        'farmName': widget.farmName ?? 'El Mirador',
-        'producerName': widget.producerName ?? 'Juan Pérez',
-        'location': widget.location ?? 'Motozintla, Chiapas',
+        'lotName': widget.lotName ?? 'Lote',
+        'farmName': widget.farmName ?? 'Finca',
+        'producerName': widget.producerName ?? 'Productor',
+        'location': widget.location ?? 'Ubicación',
         'variety': 'Bourbon',
       },
     );
@@ -129,11 +93,11 @@ class _TechnicianCropDiagnosisScreenState
                   delegate: SliverChildListDelegate([
                     DiagnosisSummaryCard(
                       isDark: isDark,
-                      status: 'Regular',
-                      statusColor: AppTheme.goldCoffee,
-                      score: 82,
+                      status: 'Sin evaluar',
+                      statusColor: Colors.grey,
+                      score: 0,
                       description:
-                      'El cultivo presenta buenas condiciones generales, aunque se identificaron factores que requieren atención preventiva.',
+                      'Aún no se ha realizado un diagnóstico completo del cultivo. Se recomienda programar una evaluación técnica.',
                     ),
                     const SizedBox(height: 20),
                   ]),
@@ -143,7 +107,12 @@ class _TechnicianCropDiagnosisScreenState
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                    _buildExecutiveSummary(isDark, textColor),
+                    _buildEmptyState(
+                      icon: Icons.analytics_outlined,
+                      title: 'Sin datos de diagnóstico',
+                      message: 'No se han registrado evaluaciones técnicas para este lote.',
+                      isDark: isDark,
+                    ),
                     const SizedBox(height: 20),
                   ]),
                 ),
@@ -154,15 +123,18 @@ class _TechnicianCropDiagnosisScreenState
                   delegate: SliverChildListDelegate([
                     _buildSectionTitle('Análisis por categorías', isDark),
                     const SizedBox(height: 12),
-                    ..._categories.map((cat) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: DiagnosisCategoryCard(
-                        isDark: isDark,
-                        label: cat['label'] as String,
-                        value: cat['value'] as int,
-                        color: cat['color'] as Color,
-                      ),
-                    )),
+                    if (_categories.isEmpty)
+                      _buildEmptyMessage('Sin categorías evaluadas', isDark)
+                    else
+                      ..._categories.map((cat) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: DiagnosisCategoryCard(
+                          isDark: isDark,
+                          label: cat['label'] as String,
+                          value: cat['value'] as int,
+                          color: cat['color'] as Color,
+                        ),
+                      )),
                     const SizedBox(height: 20),
                   ]),
                 ),
@@ -173,17 +145,20 @@ class _TechnicianCropDiagnosisScreenState
                   delegate: SliverChildListDelegate([
                     _buildSectionTitle('Problemas detectados', isDark),
                     const SizedBox(height: 12),
-                    ..._issues.map((issue) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: DiagnosisIssueCard(
-                        isDark: isDark,
-                        title: issue['title'] as String,
-                        level: issue['level'] as String,
-                        priority: issue['priority'] as String,
-                        priorityColor: issue['priorityColor'] as Color,
-                        onTap: () {},
-                      ),
-                    )),
+                    if (_issues.isEmpty)
+                      _buildEmptyMessage('Sin problemas detectados', isDark)
+                    else
+                      ..._issues.map((issue) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: DiagnosisIssueCard(
+                          isDark: isDark,
+                          title: issue['title'] as String,
+                          level: issue['level'] as String,
+                          priority: issue['priority'] as String,
+                          priorityColor: issue['priorityColor'] as Color,
+                          onTap: () {},
+                        ),
+                      )),
                     const SizedBox(height: 20),
                   ]),
                 ),
@@ -194,9 +169,9 @@ class _TechnicianCropDiagnosisScreenState
                   delegate: SliverChildListDelegate([
                     DiagnosisAICard(
                       isDark: isDark,
-                      confidence: 95,
+                      confidence: 0,
                       description:
-                      'Con base en las fotografías, condiciones ambientales y registros históricos, existe una probabilidad del 89% de que el cultivo responda favorablemente si se aplican las recomendaciones en los próximos 15 días.',
+                      'No hay suficientes datos para realizar un análisis predictivo. Se recomienda completar al menos 3 evaluaciones técnicas.',
                       onExplain: () {},
                     ),
                     const SizedBox(height: 20),
@@ -209,16 +184,19 @@ class _TechnicianCropDiagnosisScreenState
                   delegate: SliverChildListDelegate([
                     _buildSectionTitle('Factores de riesgo', isDark),
                     const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: _risks.map((risk) => DiagnosisRiskIndicator(
-                        isDark: isDark,
-                        label: risk['label'] as String,
-                        level: risk['level'] as String,
-                        color: risk['color'] as Color,
-                      )).toList(),
-                    ),
+                    if (_risks.isEmpty)
+                      _buildEmptyMessage('Sin factores de riesgo identificados', isDark)
+                    else
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        children: _risks.map((risk) => DiagnosisRiskIndicator(
+                          isDark: isDark,
+                          label: risk['label'] as String,
+                          level: risk['level'] as String,
+                          color: risk['color'] as Color,
+                        )).toList(),
+                      ),
                     const SizedBox(height: 20),
                   ]),
                 ),
@@ -238,7 +216,10 @@ class _TechnicianCropDiagnosisScreenState
                   delegate: SliverChildListDelegate([
                     _buildSectionTitle('Galería de evidencias', isDark),
                     const SizedBox(height: 12),
-                    _buildEvidenceGallery(isDark, textColor),
+                    if (_evidenceImages.isEmpty)
+                      _buildEmptyMessage('Sin evidencias registradas', isDark)
+                    else
+                      _buildEvidenceGallery(isDark, textColor),
                     const SizedBox(height: 20),
                   ]),
                 ),
@@ -380,7 +361,7 @@ class _TechnicianCropDiagnosisScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.lotName ?? 'Lote Norte',
+                  widget.lotName ?? 'Lote',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
@@ -389,7 +370,7 @@ class _TechnicianCropDiagnosisScreenState
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '🌱 ${widget.farmName ?? 'El Mirador'}  •  👨‍🌾 ${widget.producerName ?? 'Juan Pérez'}',
+                  '🌱 ${widget.farmName ?? 'Finca'}  •  👨‍🌾 ${widget.producerName ?? 'Productor'}',
                   style: TextStyle(
                     fontSize: 12,
                     color: textColor.withOpacity(0.6),
@@ -403,7 +384,7 @@ class _TechnicianCropDiagnosisScreenState
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        widget.location ?? 'Motozintla, Chiapas',
+                        widget.location ?? 'Ubicación',
                         style: TextStyle(
                           fontSize: 11,
                           color: textColor.withOpacity(0.5),
@@ -420,7 +401,7 @@ class _TechnicianCropDiagnosisScreenState
                     Icon(Icons.calendar_today, size: 12, color: textColor.withOpacity(0.4)),
                     const SizedBox(width: 4),
                     Text(
-                      '15 junio 2026  •  Responsable: Carlos Gómez',
+                      'Sin fecha de diagnóstico',
                       style: TextStyle(
                         fontSize: 11,
                         color: textColor.withOpacity(0.5),
@@ -436,64 +417,84 @@ class _TechnicianCropDiagnosisScreenState
     );
   }
 
-  Widget _buildExecutiveSummary(bool isDark, Color textColor) {
-    final items = [
-      {'label': '🟢 Aspectos favorables', 'value': '3', 'color': AppTheme.primaryGreen},
-      {'label': '🟠 Hallazgos importantes', 'value': '2', 'color': AppTheme.alertOrange},
-      {'label': '🔴 Riesgos detectados', 'value': '1', 'color': AppTheme.berryRed},
-      {'label': '📋 Acciones recomendadas', 'value': '5', 'color': AppTheme.goldCoffee},
-    ];
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String message,
+    required bool isDark,
+  }) {
+    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
 
     return NeumorphicBox(
       isDark: isDark,
       borderRadius: 20,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Icon(icon, size: 48, color: textColor.withOpacity(0.2)),
+          const SizedBox(height: 16),
           Text(
-            'Resumen ejecutivo',
+            title,
             style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: textColor,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: textColor.withOpacity(0.6),
             ),
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: items.map((item) {
-              final color = item['color'] as Color;
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      item['value'] as String,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      item['label'] as String,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: textColor.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 13,
+              color: textColor.withOpacity(0.4),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: () {},
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text('Iniciar diagnóstico'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.primaryGreen,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyMessage(String message, bool isDark) {
+    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withOpacity(0.03)
+            : AppTheme.darkCoffee.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: textColor.withOpacity(0.06),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, size: 16, color: textColor.withOpacity(0.2)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: 12,
+                color: textColor.withOpacity(0.4),
+              ),
+            ),
           ),
         ],
       ),
@@ -659,6 +660,17 @@ class _TechnicianCropDiagnosisScreenState
               },
             ),
           ),
+          if (_evidenceImages.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                'Agrega evidencias del diagnóstico',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: textColor.withOpacity(0.4),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -733,10 +745,10 @@ class _TechnicianCropDiagnosisScreenState
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppTheme.alertOrange.withOpacity(0.12),
+              color: Colors.grey.withOpacity(0.05),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: AppTheme.alertOrange.withOpacity(0.2),
+                color: textColor.withOpacity(0.1),
                 width: 1,
               ),
             ),
@@ -745,10 +757,10 @@ class _TechnicianCropDiagnosisScreenState
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppTheme.alertOrange.withOpacity(0.2),
+                    color: Colors.grey.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Text('🟠', style: TextStyle(fontSize: 18)),
+                  child: const Text('⚪', style: TextStyle(fontSize: 18)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -756,7 +768,7 @@ class _TechnicianCropDiagnosisScreenState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Prioridad general: Alta',
+                        'Sin prioridad definida',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
@@ -764,7 +776,7 @@ class _TechnicianCropDiagnosisScreenState
                         ),
                       ),
                       Text(
-                        'Se requiere atención inmediata en los próximos 7 días.',
+                        'Realiza un diagnóstico para establecer prioridades.',
                         style: TextStyle(
                           fontSize: 12,
                           color: textColor.withOpacity(0.6),
@@ -816,7 +828,6 @@ class _TechnicianCropDiagnosisScreenState
 
               return GestureDetector(
                 onTap: () {
-                  // ✅ CONEXIÓN: Emitir certificación
                   if (label == 'Emitir certificación') {
                     _navigateToCertification();
                   }
@@ -892,11 +903,11 @@ class _TechnicianCropDiagnosisScreenState
       isDark: isDark,
       currentIndex: _currentIndex,
       items: const [
-        Icons.home,           // ← Índice 0: Inicio (Dashboard)
-        Icons.people,         // ← Índice 1: Productores
-        Icons.calendar_today, // ← Índice 2: Agenda
-        Icons.analytics,      // ← Índice 3: Diagnóstico / Reportes  ✅
-        Icons.person,         // ← Índice 4: Perfil
+        Icons.home,
+        Icons.people,
+        Icons.calendar_today,
+        Icons.analytics,
+        Icons.person,
       ],
       onTap: (index) {
         setState(() => _currentIndex = index);
@@ -907,7 +918,6 @@ class _TechnicianCropDiagnosisScreenState
         } else if (index == 2) {
           context.go(RouteNames.technicianAgenda);
         } else if (index == 3) {
-          // ✅ CONEXIÓN: Navegar a Certificación del Lote
           _navigateToCertification();
         } else if (index == 4) {
           context.go(RouteNames.profile);

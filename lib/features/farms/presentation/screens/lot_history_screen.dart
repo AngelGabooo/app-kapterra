@@ -1,17 +1,26 @@
+// lib/features/farms/presentation/screens/lot_history_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/farms/data/models/lot_model.dart';
 import 'package:kaabcafe/features/farms/data/models/farm_details_model.dart';
 import 'package:kaabcafe/features/farms/data/models/history_event_model.dart';
 import 'package:kaabcafe/features/farms/presentation/widgets/history_event_card.dart';
+import 'package:kaabcafe/features/activities/presentation/providers/activities_provider.dart';
+import 'package:kaabcafe/features/activities/domain/entities/activity_entity.dart';
 
 class LotHistoryScreen extends StatefulWidget {
   final LotModel lot;
   final FarmDetailsModel farm;
 
-  const LotHistoryScreen({super.key, required this.lot, required this.farm});
+  const LotHistoryScreen({
+    super.key,
+    required this.lot,
+    required this.farm
+  });
 
   @override
   State<LotHistoryScreen> createState() => _LotHistoryScreenState();
@@ -25,85 +34,71 @@ class _LotHistoryScreenState extends State<LotHistoryScreen> {
   @override
   void initState() {
     super.initState();
+    // Cargar eventos después del primer build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadEvents();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Recargar eventos cuando cambie el provider
     _loadEvents();
   }
 
   void _loadEvents() {
-    _events = [
-      HistoryEventModel(
-        id: '1',
-        type: EventType.activity,
-        title: 'Fertilización aplicada',
-        description: 'Se aplicaron 50 kg de fertilizante foliar en todo el lote.',
-        date: DateTime(2026, 6, 15, 10, 30),
-        responsible: 'Juan Pérez',
-        attachments: ['foto1.jpg', 'foto2.jpg', 'foto3.jpg'],
-        amount: 1250,
-      ),
-      HistoryEventModel(
-        id: '2',
-        type: EventType.cost,
-        title: 'Compra de fertilizante',
-        description: 'Compra de fertilizante orgánico para el lote.',
-        date: DateTime(2026, 6, 10, 14, 15),
-        responsible: 'Pedro López',
-        attachments: ['factura.pdf'],
-        amount: 1250,
-        producer: 'AgroServicios del Sur',
-      ),
-      HistoryEventModel(
-        id: '3',
-        type: EventType.alert,
-        title: 'Posible riesgo de roya detectado',
-        description: 'Se detectó un patrón inusual de humedad que podría favorecer la roya.',
-        date: DateTime(2026, 6, 5, 9, 0),
-        responsible: 'Sistema IA',
-        attachments: ['reporte.pdf'],
-      ),
-      HistoryEventModel(
-        id: '4',
-        type: EventType.aiRecommendation,
-        title: 'Recomendación de monitoreo',
-        description: 'La IA recomienda aumentar monitoreo de humedad en el sector norte.',
-        date: DateTime(2026, 6, 3, 8, 30),
-        responsible: 'Sistema IA',
-        confidence: '92',
-      ),
-      HistoryEventModel(
-        id: '5',
-        type: EventType.production,
-        title: 'Cosecha parcial registrada',
-        description: 'Primera cosecha del año con excelente calidad.',
-        date: DateTime(2026, 5, 15, 11, 0),
-        responsible: 'Equipo de cosecha',
-        attachments: ['cosecha1.jpg'],
-        amount: 220,
-      ),
-      HistoryEventModel(
-        id: '6',
-        type: EventType.traceability,
-        title: 'Pasaporte digital generado',
-        description: 'Se generó el pasaporte digital de trazabilidad para este lote.',
-        date: DateTime(2026, 5, 1, 12, 0),
-        responsible: 'Sistema',
-      ),
-      HistoryEventModel(
-        id: '7',
-        type: EventType.milestone,
-        title: 'Primera certificación obtenida',
-        description: 'El lote obtuvo certificación de comercio justo.',
-        date: DateTime(2026, 4, 20, 10, 0),
-        responsible: 'Certificadora',
-        attachments: ['certificado.pdf'],
-      ),
-    ];
-    _applyFilter();
+    final activitiesProvider = Provider.of<ActivitiesProvider>(context, listen: false);
+    final lotActivities = activitiesProvider.activities
+        .where((activity) => activity.lotId == widget.lot.id)
+        .toList();
+
+    setState(() {
+      _events = lotActivities.map((activity) => _activityToHistoryEvent(activity)).toList();
+      _applyFilter();
+    });
+  }
+
+  HistoryEventModel _activityToHistoryEvent(ActivityEntity activity) {
+    return HistoryEventModel(
+      id: activity.id,
+      type: EventType.activity,
+      title: _getActivityTitle(activity.type),
+      description: activity.description.isNotEmpty
+          ? activity.description
+          : 'Actividad registrada - Responsable: ${activity.responsible}',
+      date: activity.date,
+      responsible: activity.responsible,
+      attachments: activity.evidenceUrls,
+      amount: activity.cost > 0 ? activity.cost : null,
+    );
+  }
+
+  String _getActivityTitle(ActivityTypeEntity type) {
+    switch (type) {
+      case ActivityTypeEntity.fertilization:
+        return 'Fertilización aplicada';
+      case ActivityTypeEntity.pruning:
+        return 'Poda realizada';
+      case ActivityTypeEntity.pestControl:
+        return 'Control de plagas aplicado';
+      case ActivityTypeEntity.weedControl:
+        return 'Control de malezas realizado';
+      case ActivityTypeEntity.irrigation:
+        return 'Riego aplicado';
+      case ActivityTypeEntity.harvest:
+        return 'Cosecha registrada';
+      case ActivityTypeEntity.inspection:
+        return 'Inspección técnica realizada';
+      case ActivityTypeEntity.other:
+        return 'Otra actividad registrada';
+    }
   }
 
   void _applyFilter() {
     setState(() {
       if (_selectedFilter == null) {
-        _filteredEvents = _events;
+        _filteredEvents = List.from(_events);
       } else {
         _filteredEvents = _events.where((e) => e.type == _selectedFilter).toList();
       }
@@ -137,7 +132,7 @@ class _LotHistoryScreenState extends State<LotHistoryScreen> {
 
   int get _totalActivities => _events.where((e) => e.type == EventType.activity).length;
   double get _totalCosts => _events.where((e) => e.amount != null).fold(0, (sum, e) => sum + (e.amount ?? 0));
-  double get _totalProduction => _events.where((e) => e.type == EventType.production && e.amount != null).fold(0, (sum, e) => sum + (e.amount ?? 0));
+  double get _totalProduction => 0;
   int get _totalTraceability => _events.where((e) => e.type == EventType.traceability).length;
 
   @override
@@ -156,277 +151,34 @@ class _LotHistoryScreenState extends State<LotHistoryScreen> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              // Barra superior con botones de acción
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back),
-                      color: AppTheme.darkCoffee,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Historial del Lote',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.darkCoffee,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Consulta la evolución completa del lote.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.darkCoffee.withOpacity(0.6),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Botón para ver todas las actividades
-                    IconButton(
-                      onPressed: _navigateToActivitiesList,
-                      icon: Icon(Icons.list_alt, color: AppTheme.primaryGreen),
-                      tooltip: 'Ver todas las actividades',
-                    ),
-                    // Botón para registrar nueva actividad
-                    IconButton(
-                      onPressed: _navigateToRegisterActivity,
-                      icon: Icon(Icons.add_circle_outline, color: AppTheme.primaryGreen),
-                      tooltip: 'Registrar actividad',
-                    ),
-                    IconButton(
-                      onPressed: () {},
-                      icon: Icon(Icons.share, color: AppTheme.darkCoffee),
-                    ),
-                  ],
-                ),
-              ),
+          child: Consumer<ActivitiesProvider>(
+            builder: (context, provider, child) {
+              // ✅ Actualizar eventos cuando cambie el provider
+              final lotActivities = provider.activities
+                  .where((activity) => activity.lotId == widget.lot.id)
+                  .toList();
 
-              // Resumen del lote
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Colors.white,
-                      AppTheme.lightBeige,
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [AppTheme.primaryGreen, AppTheme.secondaryGreen],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Icon(Icons.agriculture, size: 30, color: Colors.white),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.lot.name,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.darkCoffee,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            widget.farm.name,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.darkCoffee.withOpacity(0.6),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 4,
-                            children: [
-                              _buildChip(Icons.location_on, widget.farm.location),
-                              _buildChip(Icons.emoji_nature, widget.lot.variety),
-                              _buildChip(Icons.landscape, '${widget.lot.area} ha'),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: widget.lot.statusColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: widget.lot.statusColor,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            widget.lot.statusText,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: widget.lot.statusColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              // ✅ Solo actualizar si la lista cambió
+              final newEvents = lotActivities.map((activity) => _activityToHistoryEvent(activity)).toList();
+              if (_events.length != newEvents.length ||
+                  _events.any((e) => !newEvents.any((ne) => ne.id == e.id))) {
+                // Programar actualización después del build
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  setState(() {
+                    _events = newEvents;
+                    _applyFilter();
+                  });
+                });
+              }
 
-              const SizedBox(height: 20),
+              if (provider.isLoading && _events.isEmpty) {
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
+              }
 
-              // KPIs
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    _buildKPI(Icons.assignment, 'Actividades', '$_totalActivities'),
-                    const SizedBox(width: 12),
-                    _buildKPI(Icons.attach_money, 'Costos', '\$${_totalCosts.toStringAsFixed(0)}'),
-                    const SizedBox(width: 12),
-                    _buildKPI(Icons.eco, 'Producción', '${_totalProduction.toStringAsFixed(0)} kg'),
-                    const SizedBox(width: 12),
-                    _buildKPI(Icons.qr_code, 'Trazabilidad', '$_totalTraceability'),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Filtros
-              SizedBox(
-                height: 40,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: [
-                    _buildFilterChip('Todos', null),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('Actividades', EventType.activity),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('Costos', EventType.cost),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('Producción', EventType.production),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('Alertas', EventType.alert),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('IA', EventType.aiRecommendation),
-                    const SizedBox(width: 8),
-                    _buildFilterChip('Trazabilidad', EventType.traceability),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Lista de eventos
-              Expanded(
-                child: _filteredEvents.isEmpty
-                    ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryGreen.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.history,
-                          size: 50,
-                          color: AppTheme.primaryGreen.withOpacity(0.5),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'No hay eventos registrados',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.darkCoffee,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Comienza registrando actividades para construir\nla historia de tu lote.',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppTheme.darkCoffee.withOpacity(0.6),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: _navigateToRegisterActivity,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Registrar Actividad'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryGreen,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                )
-                    : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _filteredEvents.length,
-                  itemBuilder: (context, index) {
-                    return HistoryEventCard(
-                      event: _filteredEvents[index],
-                      onTap: () => _onEventTap(_filteredEvents[index]),
-                    );
-                  },
-                ),
-              ),
-            ],
+              return _buildContent();
+            },
           ),
         ),
       ),
@@ -464,6 +216,294 @@ class _LotHistoryScreenState extends State<LotHistoryScreen> {
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        children: [
+          // Barra superior con botones de acción
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back),
+                  color: AppTheme.darkCoffee,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Historial del Lote',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.darkCoffee,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Consulta la evolución completa del lote.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.darkCoffee.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: _navigateToActivitiesList,
+                  icon: Icon(Icons.list_alt, color: AppTheme.primaryGreen),
+                  tooltip: 'Ver todas las actividades',
+                ),
+                IconButton(
+                  onPressed: _navigateToRegisterActivity,
+                  icon: Icon(Icons.add_circle_outline, color: AppTheme.primaryGreen),
+                  tooltip: 'Registrar actividad',
+                ),
+                IconButton(
+                  onPressed: () {},
+                  icon: Icon(Icons.share, color: AppTheme.darkCoffee),
+                ),
+              ],
+            ),
+          ),
+
+          // Resumen del lote
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white,
+                  AppTheme.lightBeige,
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppTheme.primaryGreen, AppTheme.secondaryGreen],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(Icons.agriculture, size: 30, color: Colors.white),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.lot.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.darkCoffee,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.farm.name,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.darkCoffee.withOpacity(0.6),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: [
+                          _buildChip(Icons.location_on, widget.farm.location),
+                          _buildChip(Icons.emoji_nature, widget.lot.variety),
+                          _buildChip(Icons.landscape, '${widget.lot.area} ha'),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: widget.lot.statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: widget.lot.statusColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        widget.lot.statusText,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: widget.lot.statusColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // KPIs
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                _buildKPI(Icons.assignment, 'Actividades', '$_totalActivities'),
+                const SizedBox(width: 12),
+                _buildKPI(Icons.attach_money, 'Costos', '\$${_totalCosts.toStringAsFixed(0)}'),
+                const SizedBox(width: 12),
+                _buildKPI(Icons.eco, 'Producción', '${_totalProduction.toStringAsFixed(0)} kg'),
+                const SizedBox(width: 12),
+                _buildKPI(Icons.qr_code, 'Trazabilidad', '$_totalTraceability'),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Filtros
+          SizedBox(
+            height: 40,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                _buildFilterChip('Todos', null),
+                const SizedBox(width: 8),
+                _buildFilterChip('Actividades', EventType.activity),
+                const SizedBox(width: 8),
+                _buildFilterChip('Costos', EventType.cost),
+                const SizedBox(width: 8),
+                _buildFilterChip('Producción', EventType.production),
+                const SizedBox(width: 8),
+                _buildFilterChip('Alertas', EventType.alert),
+                const SizedBox(width: 8),
+                _buildFilterChip('IA', EventType.aiRecommendation),
+                const SizedBox(width: 8),
+                _buildFilterChip('Trazabilidad', EventType.traceability),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // Lista de eventos
+          _buildEventList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEventList() {
+    if (_filteredEvents.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryGreen.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.history,
+                  size: 50,
+                  color: AppTheme.primaryGreen.withOpacity(0.5),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'No hay eventos registrados',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.darkCoffee,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Comienza registrando actividades para construir\nla historia de tu lote.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.darkCoffee.withOpacity(0.6),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _navigateToRegisterActivity,
+                icon: const Icon(Icons.add),
+                label: const Text('Registrar Actividad'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryGreen,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: _filteredEvents.map((event) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: HistoryEventCard(
+              event: event,
+              onTap: () => _onEventTap(event),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

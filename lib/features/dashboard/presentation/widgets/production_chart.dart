@@ -55,7 +55,6 @@ class ProductionChart extends StatelessWidget {
                 painter: GridLinesPainter(theme: theme),
               ),
 
-              // Si no hay datos, renderiza una interfaz limpia en espera, si los hay dibuja la línea neón
               isEmpty
                   ? Positioned.fill(
                 child: Center(

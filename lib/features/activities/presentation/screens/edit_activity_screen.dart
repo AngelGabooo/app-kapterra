@@ -46,30 +46,34 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
   final List<String> _responsibleOptions = ['Productor', 'Técnico', 'Trabajador'];
   final List<String> _quantityUnits = ['kg', 'litros', 'unidades', 'horas'];
 
-  // Historial de cambios (mock para demo)
-  final List<Map<String, dynamic>> _changeHistory = [
-    {'action': 'Descripción actualizada', 'date': '15 de junio de 2026', 'user': 'Juan Pérez', 'icon': Icons.edit},
-    {'action': 'Fotografía agregada', 'date': '14 de junio de 2026', 'user': 'Juan Pérez', 'icon': Icons.camera_alt},
-    {'action': 'Costo corregido', 'date': '10 de junio de 2026', 'user': 'María Gómez', 'icon': Icons.attach_money},
-    {'action': 'Fecha modificada', 'date': '5 de junio de 2026', 'user': 'Juan Pérez', 'icon': Icons.calendar_today},
-  ];
+  // ✅ Historial de cambios vacío
+  final List<Map<String, dynamic>> _changeHistory = [];
 
   @override
   void initState() {
     super.initState();
+
+    // ✅ Valores por defecto si la actividad está vacía
     _selectedType = widget.activity.type;
     _selectedDate = widget.activity.date;
 
-    // ✅ CORREGIDO: Verificar que el responsable esté en las opciones
     final responsible = widget.activity.responsible;
     _selectedResponsible = _responsibleOptions.contains(responsible) ? responsible : 'Productor';
 
-    _descriptionController = TextEditingController(text: widget.activity.description);
-    _quantityController = TextEditingController(text: widget.activity.quantity.toString());
+    _descriptionController = TextEditingController(text: widget.activity.description.isNotEmpty
+        ? widget.activity.description
+        : '');
+    _quantityController = TextEditingController(text: widget.activity.quantity > 0
+        ? widget.activity.quantity.toString()
+        : '');
     _quantityUnit = widget.activity.quantityUnit.isNotEmpty ? widget.activity.quantityUnit : 'kg';
-    _costController = TextEditingController(text: widget.activity.cost.toString());
-    _durationController = TextEditingController(text: '2.5');
-    _observationsController = TextEditingController(text: widget.activity.observations);
+    _costController = TextEditingController(text: widget.activity.cost > 0
+        ? widget.activity.cost.toString()
+        : '');
+    _durationController = TextEditingController(text: '');
+    _observationsController = TextEditingController(text: widget.activity.observations.isNotEmpty
+        ? widget.activity.observations
+        : '');
     _evidenceImages = List.from(widget.activity.evidenceUrls);
   }
 
@@ -104,6 +108,17 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
   }
 
   void _saveChanges() async {
+    // Validación: al menos debe tener descripción o tipo
+    if (_descriptionController.text.trim().isEmpty && _selectedType == ActivityType.other) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Por favor, completa la descripción de la actividad'),
+          backgroundColor: AppTheme.alertOrange,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
 
     final updatedActivity = ActivityModel(
@@ -272,6 +287,7 @@ class _EditActivityScreenState extends State<EditActivityScreen> {
                     const SizedBox(height: 20),
                     _buildObservationsCard(),
                     const SizedBox(height: 20),
+                    // ✅ Historial de cambios vacío
                     ChangeHistoryTimeline(history: _changeHistory),
                     const SizedBox(height: 20),
                     const TraceabilityImpactCard(),

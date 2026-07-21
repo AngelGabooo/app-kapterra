@@ -1,3 +1,4 @@
+// lib/features/technician/presentation/screens/technician_dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
@@ -19,106 +20,35 @@ class TechnicianDashboardScreen extends StatefulWidget {
 class _TechnicianDashboardScreenState extends State<TechnicianDashboardScreen> {
   int _currentIndex = 0;
 
-  final List<TechnicianProducerModel> _producers = [
-    TechnicianProducerModel(
-      id: '1',
-      name: 'Juan Pérez',
-      location: 'Motozintla, Chiapas',
-      production: 1850,
-      traceability: 96,
-      status: ProducerStatus.excellent,
-      lastVisit: 'Hace 3 días',
-    ),
-    TechnicianProducerModel(
-      id: '2',
-      name: 'María López',
-      location: 'Tapachula, Chiapas',
-      production: 1200,
-      traceability: 78,
-      status: ProducerStatus.requiresAttention,
-      lastVisit: 'Hace 1 semana',
-    ),
-    TechnicianProducerModel(
-      id: '3',
-      name: 'Carlos Gómez',
-      location: 'Ocosingo, Chiapas',
-      production: 800,
-      traceability: 45,
-      status: ProducerStatus.risk,
-      lastVisit: 'Hace 2 semanas',
-    ),
-  ];
+  // ✅ TODOS LOS DATOS VACÍOS
+  final List<TechnicianProducerModel> _producers = [];
 
-  final List<TechnicianVisitModel> _visits = [
-    TechnicianVisitModel(
-      id: '1',
-      producerName: 'Juan Pérez',
-      location: 'Motozintla, Chiapas',
-      time: '10:30 AM',
-      objective: 'Inspección por riesgo de roya',
-      isUrgent: true,
-    ),
-    TechnicianVisitModel(
-      id: '2',
-      producerName: 'María López',
-      location: 'Tapachula, Chiapas',
-      time: '02:00 PM',
-      objective: 'Certificación de lote Geisha',
-      isUrgent: false,
-    ),
-  ];
+  final List<TechnicianVisitModel> _visits = [];
 
-  final List<TechnicianAlertModel> _alerts = [
-    TechnicianAlertModel(
-      id: '1',
-      title: 'Posible roya detectada',
-      description: 'Lote Norte - Motozintla',
-      isCritical: true,
-      date: DateTime.now(),
-    ),
-    TechnicianAlertModel(
-      id: '2',
-      title: 'Productor sin actividad reciente',
-      description: 'María López - 8 días sin registro',
-      isCritical: false,
-      date: DateTime.now(),
-    ),
-    TechnicianAlertModel(
-      id: '3',
-      title: 'Lote pendiente de certificación',
-      description: 'Lote Geisha - Vence en 5 días',
-      isCritical: true,
-      date: DateTime.now(),
-    ),
-  ];
+  final List<TechnicianAlertModel> _alerts = [];
 
-  final List<String> _pendingTasks = [
-    'Certificar Lote Geisha',
-    'Revisar humedad en Lote Norte',
-    'Enviar recomendación a María López',
-  ];
+  final List<String> _pendingTasks = [];
 
   void _navigateToVisitRegistration() {
     context.push(
       RouteNames.technicianVisitRegistration,
       extra: {
-        'producerName': 'Juan Pérez',
-        'farmName': 'El Mirador',
-        'lotName': 'Lote Norte',
-        'location': 'Motozintla, Chiapas',
+        'producerName': 'Productor',
+        'farmName': 'Finca',
+        'lotName': 'Lote',
+        'location': 'Ubicación',
       },
     );
   }
 
-  // ✅ NUEVO: Navegar al Diagnóstico del Cultivo
   void _navigateToCropDiagnosis() {
     context.push(
       RouteNames.technicianCropDiagnosis,
       extra: {
-        'lotName': 'Lote Norte',
-        'farmName': 'El Mirador',
-        'producerName': 'Juan Pérez',
-        'location': 'Motozintla, Chiapas',
+        'lotName': 'Lote',
+        'farmName': 'Finca',
+        'producerName': 'Productor',
+        'location': 'Ubicación',
       },
     );
   }
@@ -152,7 +82,7 @@ class _TechnicianDashboardScreenState extends State<TechnicianDashboardScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Buenos días, Carlos',
+                              'Buenos días, Técnico',
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w800,
@@ -162,7 +92,7 @@ class _TechnicianDashboardScreenState extends State<TechnicianDashboardScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Tienes 5 actividades programadas para hoy.',
+                              'No tienes actividades programadas para hoy.',
                               style: TextStyle(fontSize: 12.5, color: textColor.withOpacity(0.6)),
                             ),
                           ],
@@ -192,25 +122,25 @@ class _TechnicianDashboardScreenState extends State<TechnicianDashboardScreen> {
                   child: Column(
                     children: [
                       const SizedBox(height: 8),
-                      // KPIs
+                      // ✅ KPIs - TODOS EN 0
                       Row(
                         children: [
                           TechnicianKPICard(
                             title: 'Productores',
-                            value: '42',
+                            value: '0',
                             icon: Icons.people,
                             color: AppTheme.primaryGreen,
                             isDark: isDark,
-                            change: 12.5,
+                            change: 0,
                           ),
                           const SizedBox(width: 12),
                           TechnicianKPICard(
                             title: 'Fincas',
-                            value: '97',
+                            value: '0',
                             icon: Icons.landscape,
                             color: AppTheme.secondaryGreen,
                             isDark: isDark,
-                            change: 5.3,
+                            change: 0,
                           ),
                         ],
                       ),
@@ -219,26 +149,26 @@ class _TechnicianDashboardScreenState extends State<TechnicianDashboardScreen> {
                         children: [
                           TechnicianKPICard(
                             title: 'Lotes activos',
-                            value: '168',
+                            value: '0',
                             icon: Icons.view_module,
                             color: AppTheme.goldCoffee,
                             isDark: isDark,
-                            change: 8.7,
+                            change: 0,
                           ),
                           const SizedBox(width: 12),
                           TechnicianKPICard(
                             title: 'Alertas',
-                            value: '11',
+                            value: '0',
                             icon: Icons.warning,
                             color: AppTheme.berryRed,
                             isDark: isDark,
-                            change: -2.1,
+                            change: 0,
                           ),
                         ],
                       ),
                       const SizedBox(height: 22),
 
-                      // Actividad del día
+                      // ✅ Actividad del día - VACÍA
                       LiquidGlassCard(
                         isDark: isDark,
                         child: Column(
@@ -262,7 +192,6 @@ class _TechnicianDashboardScreenState extends State<TechnicianDashboardScreen> {
                                 const Spacer(),
                                 TextButton(
                                   onPressed: () {
-                                    // ✅ Navegar a la agenda
                                     context.go(RouteNames.technicianAgenda);
                                   },
                                   child: Text('Ver Agenda', style: TextStyle(color: accent, fontWeight: FontWeight.w600)),
@@ -270,20 +199,33 @@ class _TechnicianDashboardScreenState extends State<TechnicianDashboardScreen> {
                               ],
                             ),
                             const SizedBox(height: 18),
-                            Row(
-                              children: [
-                                _buildActivityItem('👨‍🌾', 'Visitas', '3', isDark),
-                                _buildActivityItem('🔍', 'Inspecciones', '2', isDark),
-                                _buildActivityItem('🏅', 'Certificaciones', '1', isDark),
-                                _buildActivityItem('💡', 'Recomendaciones', '4', isDark),
-                              ],
+                            // ✅ Mostrar mensaje de vacío
+                            Container(
+                              padding: const EdgeInsets.symmetric(vertical: 20),
+                              width: double.infinity,
+                              child: Column(
+                                children: [
+                                  Icon(Icons.calendar_today_outlined,
+                                    size: 32,
+                                    color: textColor.withOpacity(0.2),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Sin actividades programadas',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: textColor.withOpacity(0.4),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 22),
 
-                      // Próxima visita
+                      // ✅ Próxima visita - VACÍA
                       if (_visits.isNotEmpty)
                         NextVisitCard(
                           visit: _visits.first,
@@ -292,10 +234,47 @@ class _TechnicianDashboardScreenState extends State<TechnicianDashboardScreen> {
                             _navigateToVisitRegistration();
                           },
                           onViewProducer: () {},
+                        )
+                      else
+                        LiquidGlassCard(
+                          isDark: isDark,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            width: double.infinity,
+                            child: Column(
+                              children: [
+                                Icon(Icons.assignment_outlined,
+                                  size: 32,
+                                  color: textColor.withOpacity(0.2),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Sin visitas programadas',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: textColor.withOpacity(0.4),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                OutlinedButton.icon(
+                                  onPressed: _navigateToVisitRegistration,
+                                  icon: const Icon(Icons.add, size: 16),
+                                  label: const Text('Programar visita'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppTheme.primaryGreen,
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       const SizedBox(height: 70),
 
-                      // Alertas
+                      // ✅ Alertas - VACÍAS
                       Row(
                         children: [
                           Text(
@@ -310,10 +289,36 @@ class _TechnicianDashboardScreenState extends State<TechnicianDashboardScreen> {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      ..._alerts.map((alert) => TechnicianAlertCard(alert: alert, isDark: isDark)),
+                      if (_alerts.isEmpty)
+                        LiquidGlassCard(
+                          isDark: isDark,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            width: double.infinity,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.check_circle_outline,
+                                  color: AppTheme.primaryGreen.withOpacity(0.3),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Sin alertas pendientes',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: textColor.withOpacity(0.4),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        ..._alerts.map((alert) => TechnicianAlertCard(alert: alert, isDark: isDark)),
                       const SizedBox(height: 12),
 
-                      // Productores destacados
+                      // ✅ Productores destacados - VACÍOS
                       Row(
                         children: [
                           Text(
@@ -323,23 +328,48 @@ class _TechnicianDashboardScreenState extends State<TechnicianDashboardScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      SizedBox(
-                        height: 190,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _producers.length,
-                          itemBuilder: (context, index) {
-                            return TechnicianProducerCard(
-                              producer: _producers[index],
-                              isDark: isDark,
-                              onTap: () {},
-                            );
-                          },
+                      if (_producers.isEmpty)
+                        LiquidGlassCard(
+                          isDark: isDark,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            width: double.infinity,
+                            child: Column(
+                              children: [
+                                Icon(Icons.people_outline,
+                                  size: 32,
+                                  color: textColor.withOpacity(0.2),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Sin productores registrados',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: textColor.withOpacity(0.4),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        SizedBox(
+                          height: 190,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _producers.length,
+                            itemBuilder: (context, index) {
+                              return TechnicianProducerCard(
+                                producer: _producers[index],
+                                isDark: isDark,
+                                onTap: () {},
+                              );
+                            },
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 22),
 
-                      // Recordatorios
+                      // ✅ Recordatorios - VACÍOS
                       ClayCard(
                         isDark: isDark,
                         accent: AppTheme.goldCoffee,
@@ -369,28 +399,43 @@ class _TechnicianDashboardScreenState extends State<TechnicianDashboardScreen> {
                               ],
                             ),
                             const SizedBox(height: 14),
-                            ..._pendingTasks.map((task) => Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 6,
-                                    height: 6,
-                                    decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      task,
-                                      style: TextStyle(
-                                        fontSize: 12.5,
-                                        color: (isDark ? Colors.white : AppTheme.darkCoffee).withOpacity(0.85),
-                                      ),
+                            if (_pendingTasks.isEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                width: double.infinity,
+                                child: Center(
+                                  child: Text(
+                                    'Sin recordatorios pendientes',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: (isDark ? Colors.white : AppTheme.darkCoffee).withOpacity(0.4),
                                     ),
                                   ),
-                                ],
-                              ),
-                            )),
+                                ),
+                              )
+                            else
+                              ..._pendingTasks.map((task) => Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        task,
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          color: (isDark ? Colors.white : AppTheme.darkCoffee).withOpacity(0.85),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )),
                           ],
                         ),
                       ),
@@ -423,7 +468,7 @@ class _TechnicianDashboardScreenState extends State<TechnicianDashboardScreen> {
           Icons.home,           // ← Índice 0: Inicio (Dashboard)
           Icons.people,         // ← Índice 1: Productores
           Icons.calendar_today, // ← Índice 2: Agenda
-          Icons.analytics,      // ← Índice 3: Diagnóstico / Reportes  ✅ NUEVA
+          Icons.analytics,      // ← Índice 3: Diagnóstico / Reportes
           Icons.person,         // ← Índice 4: Perfil
         ],
         onTap: (index) {
@@ -435,7 +480,6 @@ class _TechnicianDashboardScreenState extends State<TechnicianDashboardScreen> {
           } else if (index == 2) {
             context.go(RouteNames.technicianAgenda);
           } else if (index == 3) {
-            // ✅ CONEXIÓN: Navegar al Diagnóstico del Cultivo
             _navigateToCropDiagnosis();
           } else if (index == 4) {
             context.go(RouteNames.profile);

@@ -1,3 +1,4 @@
+// lib/features/marketplace/presentation/screens/negotiation_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
@@ -16,68 +17,20 @@ class _NegotiationScreenState extends State<NegotiationScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
+  // ✅ Lista vacía inicialmente
   List<MessageModel> _messages = [];
 
   @override
   void initState() {
     super.initState();
-    _loadMessages();
+    // ✅ Eliminamos la carga de datos de ejemplo
+    // _loadMessages();
   }
 
-  void _loadMessages() {
-    _messages = [
-      MessageModel(
-        id: '1',
-        senderName: 'Juan Pérez',
-        senderRole: 'Productor',
-        content: '¡Hola! Me interesa tu lote de café. ¿Podrías darme más información?',
-        timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-        type: MessageType.text,
-        isFromBuyer: false,
-        isRead: true,
-      ),
-      MessageModel(
-        id: '2',
-        senderName: 'Coffee Export México',
-        senderRole: 'Comprador',
-        content: '¡Claro! Tenemos un lote Geisha Premium de 420 kg disponibles. ¿Te gustaría visitar la finca?',
-        timestamp: DateTime.now().subtract(const Duration(hours: 1, minutes: 45)),
-        type: MessageType.text,
-        isFromBuyer: true,
-        isRead: true,
-      ),
-      MessageModel(
-        id: '3',
-        senderName: 'Juan Pérez',
-        senderRole: 'Productor',
-        content: 'Sí, me encantaría. ¿Cuándo podría agendar una visita?',
-        timestamp: DateTime.now().subtract(const Duration(hours: 1, minutes: 30)),
-        type: MessageType.text,
-        isFromBuyer: false,
-        isRead: true,
-      ),
-      MessageModel(
-        id: '4',
-        senderName: 'Coffee Export México',
-        senderRole: 'Comprador',
-        content: 'Podemos coordinar para la próxima semana. ¿Qué día te acomoda mejor?',
-        timestamp: DateTime.now().subtract(const Duration(hours: 1)),
-        type: MessageType.text,
-        isFromBuyer: true,
-        isRead: true,
-      ),
-      MessageModel(
-        id: '5',
-        senderName: 'Juan Pérez',
-        senderRole: 'Productor',
-        content: 'Excelente, el martes en la mañana me funciona perfecto. ¡Gracias!',
-        timestamp: DateTime.now().subtract(const Duration(minutes: 30)),
-        type: MessageType.text,
-        isFromBuyer: false,
-        isRead: true,
-      ),
-    ];
-  }
+  // ✅ Eliminamos este método
+  // void _loadMessages() {
+  //   // Sin datos de ejemplo
+  // }
 
   void _sendMessage() {
     if (_messageController.text.trim().isEmpty) return;
@@ -169,7 +122,7 @@ class _NegotiationScreenState extends State<NegotiationScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          'Lote Geisha Premium',
+                          'Negociación',
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -184,21 +137,13 @@ class _NegotiationScreenState extends State<NegotiationScreen> {
                               width: 6,
                               height: 6,
                               decoration: BoxDecoration(
-                                color: AppTheme.primaryGreen,
+                                color: Colors.grey,
                                 shape: BoxShape.circle,
                               ),
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'Activo',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: AppTheme.primaryGreen,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '👨‍🌾 Juan Pérez',
+                              'Sin conversación activa',
                               style: TextStyle(
                                 fontSize: 10,
                                 color: textColor.withOpacity(0.5),
@@ -225,22 +170,78 @@ class _NegotiationScreenState extends State<NegotiationScreen> {
               ),
             ),
 
+            // ✅ Mensajes - VACÍO
+            if (_messages.isEmpty)
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryGreen.withOpacity(0.08),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.chat_bubble_outline,
+                          size: 36,
+                          color: AppTheme.primaryGreen.withOpacity(0.3),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Sin conversación',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: textColor.withOpacity(0.6),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Comienza una negociación enviando\nun mensaje al productor.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: textColor.withOpacity(0.4),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 20),
+                      OutlinedButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.add, size: 16),
+                        label: const Text('Iniciar conversación'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.primaryGreen,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
             // Mensajes
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: ListView.builder(
-                  controller: _scrollController,
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) {
-                    return MessageBubble(
-                      message: _messages[index],
-                      isDark: isDark,
-                    );
-                  },
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      return MessageBubble(
+                        message: _messages[index],
+                        isDark: isDark,
+                      );
+                    },
+                  ),
                 ),
               ),
-            ),
 
             // Caja de mensaje
             Container(

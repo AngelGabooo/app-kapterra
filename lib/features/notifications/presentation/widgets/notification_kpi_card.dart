@@ -1,3 +1,4 @@
+// lib/features/notifications/presentation/widgets/notification_kpi_card.dart
 import 'package:flutter/material.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 
@@ -6,6 +7,7 @@ class NotificationKpiCard extends StatelessWidget {
   final String value;
   final IconData icon;
   final Color color;
+  final bool isDark;
 
   const NotificationKpiCard({
     super.key,
@@ -13,23 +15,27 @@ class NotificationKpiCard extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.color,
+    this.isDark = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
+    final cardColor = isDark
+        ? AppTheme.coffeeDeep.withOpacity(0.7)
+        : Colors.white.withOpacity(0.9);
+
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cardColor,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          border: Border.all(
+            color: textColor.withOpacity(0.06),
+            width: 0.5,
+          ),
+          boxShadow: const [],
         ),
         child: Column(
           children: [
@@ -44,10 +50,10 @@ class NotificationKpiCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.darkCoffee,
+                color: textColor,
               ),
             ),
             const SizedBox(height: 4),
@@ -55,7 +61,7 @@ class NotificationKpiCard extends StatelessWidget {
               title,
               style: TextStyle(
                 fontSize: 11,
-                color: AppTheme.darkCoffee.withOpacity(0.6),
+                color: textColor.withOpacity(0.6),
               ),
               textAlign: TextAlign.center,
             ),

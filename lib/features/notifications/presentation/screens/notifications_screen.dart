@@ -1,7 +1,10 @@
+// lib/features/notifications/presentation/screens/notifications_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
+import 'package:kaabcafe/core/widgets/aurora_background.dart';
+import 'package:kaabcafe/core/widgets/neumorphic_widgets.dart';
 import 'package:kaabcafe/features/notifications/presentation/widgets/notification_kpi_card.dart';
 import 'package:kaabcafe/features/notifications/presentation/widgets/notification_filter_chip.dart';
 import 'package:kaabcafe/features/notifications/presentation/widgets/notification_card.dart';
@@ -17,91 +20,24 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   NotificationCategory _selectedCategory = NotificationCategory.all;
+
+  // ✅ LISTAS VACÍAS
   List<NotificationModel> _notifications = [];
   List<NotificationModel> _filteredNotifications = [];
 
   @override
   void initState() {
     super.initState();
-    _loadNotifications();
+    // ❌ No cargar datos de ejemplo
+    // _loadNotifications();
   }
 
-  void _loadNotifications() {
-    _notifications = [
-      NotificationModel(
-        id: '1',
-        title: 'Posible riesgo de roya detectado',
-        description: 'Se detectó un patrón inusual de humedad en Lote Norte. Revisa inmediatamente.',
-        date: DateTime.now().subtract(const Duration(minutes: 10)),
-        priority: NotificationPriority.critical,
-        category: NotificationCategory.critical,
-        icon: Icons.warning,
-        isRead: false,
-        actionLabel: 'Ver detalle',
-      ),
-      NotificationModel(
-        id: '2',
-        title: 'Recomendación de fertilización',
-        description: 'La IA recomienda fertilizar el Lote Sur durante esta semana para optimizar producción.',
-        date: DateTime.now().subtract(const Duration(hours: 2)),
-        priority: NotificationPriority.high,
-        category: NotificationCategory.aiRecommendation,
-        icon: Icons.psychology,
-        isRead: false,
-        actionLabel: 'Ver recomendación',
-      ),
-      NotificationModel(
-        id: '3',
-        title: 'Incremento en costos de producción',
-        description: 'Los costos aumentaron un 8% respecto al mes anterior. Revisa el desglose.',
-        date: DateTime.now().subtract(const Duration(days: 1)),
-        priority: NotificationPriority.low,
-        category: NotificationCategory.costs,
-        icon: Icons.attach_money,
-        isRead: true,
-        actionLabel: 'Ver análisis',
-      ),
-      NotificationModel(
-        id: '4',
-        title: 'Producción por encima del promedio',
-        description: 'Tu rendimiento actual supera el promedio regional en un 15%. ¡Sigue así!',
-        date: DateTime.now().subtract(const Duration(days: 2)),
-        priority: NotificationPriority.positive,
-        category: NotificationCategory.production,
-        icon: Icons.trending_up,
-        isRead: true,
-        actionLabel: 'Ver indicadores',
-      ),
-      NotificationModel(
-        id: '5',
-        title: 'Actualización de trazabilidad',
-        description: 'Se ha generado un nuevo pasaporte digital para Lote Centro.',
-        date: DateTime.now().subtract(const Duration(days: 3)),
-        priority: NotificationPriority.medium,
-        category: NotificationCategory.traceability,
-        icon: Icons.qr_code,
-        isRead: false,
-        actionLabel: 'Ver pasaporte',
-      ),
-      NotificationModel(
-        id: '6',
-        title: 'Mantenimiento programado',
-        description: 'La plataforma estará en mantenimiento el domingo de 2:00 AM a 4:00 AM.',
-        date: DateTime.now().subtract(const Duration(days: 5)),
-        priority: NotificationPriority.low,
-        category: NotificationCategory.system,
-        icon: Icons.build,
-        isRead: true,
-        actionLabel: 'Ver detalles',
-      ),
-    ];
-    _applyFilter();
-  }
+  // ❌ Eliminar método _loadNotifications
 
   void _applyFilter() {
     setState(() {
       if (_selectedCategory == NotificationCategory.all) {
-        _filteredNotifications = _notifications;
+        _filteredNotifications = List.from(_notifications);
       } else {
         _filteredNotifications = _notifications
             .where((n) => n.category == _selectedCategory)
@@ -111,6 +47,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   void _markAllAsRead() {
+    if (_notifications.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No hay notificaciones para marcar como leídas'),
+          backgroundColor: AppTheme.primaryGreen,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _notifications = _notifications.map((n) => n.copyWith(isRead: true)).toList();
       _applyFilter();
@@ -140,6 +86,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     // TODO: Navegar según el tipo de notificación
   }
 
+  // ✅ Estadísticas siempre en 0 cuando está vacío
   int get _criticalCount => _notifications.where((n) => n.priority == NotificationPriority.critical && !n.isRead).length;
   int get _pendingCount => _notifications.where((n) => !n.isRead).length;
   int get _infoCount => _notifications.where((n) => n.priority == NotificationPriority.low && !n.isRead).length;
@@ -165,43 +112,41 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
+
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.lightBeige,
-              AppTheme.primaryGreen.withOpacity(0.03),
-              AppTheme.lightBeige,
-            ],
-          ),
-        ),
+      backgroundColor: Colors.transparent,
+      body: AuroraBackground(
+        isDark: isDark,
         child: SafeArea(
           child: Column(
             children: [
-              // Barra superior
+              // ── Barra superior ──────────────────────────────────
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(12, 16, 16, 8),
                 child: Row(
                   children: [
-                    IconButton(
+                    NeumorphicIconButton(
+                      icon: Icons.arrow_back,
+                      isDark: isDark,
                       onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.arrow_back),
-                      color: AppTheme.darkCoffee,
+                      size: 44,
+                      iconSize: 20,
+                      color: textColor,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Notificaciones',
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.darkCoffee,
+                              color: textColor,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -209,7 +154,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             'Mantente informado sobre tu producción.',
                             style: TextStyle(
                               fontSize: 12,
-                              color: AppTheme.darkCoffee.withOpacity(0.6),
+                              color: textColor.withOpacity(0.6),
                             ),
                           ),
                         ],
@@ -224,250 +169,157 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
               ),
 
-              // KPIs
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    NotificationKpiCard(
-                      title: 'Críticas',
-                      value: '$_criticalCount',
-                      icon: Icons.warning,
-                      color: const Color(0xFFD32F2F),
-                    ),
-                    const SizedBox(width: 12),
-                    NotificationKpiCard(
-                      title: 'Pendientes',
-                      value: '$_pendingCount',
-                      icon: Icons.pending_actions,
-                      color: const Color(0xFFF57C00),
-                    ),
-                    const SizedBox(width: 12),
-                    NotificationKpiCard(
-                      title: 'Informativas',
-                      value: '$_infoCount',
-                      icon: Icons.info,
-                      color: const Color(0xFF1976D2),
-                    ),
-                    const SizedBox(width: 12),
-                    NotificationKpiCard(
-                      title: 'Resueltas',
-                      value: '$_resolvedCount',
-                      icon: Icons.check_circle,
-                      color: AppTheme.primaryGreen,
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Filtros
-              SizedBox(
-                height: 40,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: [
-                    NotificationFilterChip(
-                      category: NotificationCategory.all,
-                      isSelected: _selectedCategory == NotificationCategory.all,
-                      onTap: () {
-                        setState(() {
-                          _selectedCategory = NotificationCategory.all;
-                          _applyFilter();
-                        });
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    NotificationFilterChip(
-                      category: NotificationCategory.critical,
-                      isSelected: _selectedCategory == NotificationCategory.critical,
-                      onTap: () {
-                        setState(() {
-                          _selectedCategory = NotificationCategory.critical;
-                          _applyFilter();
-                        });
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    NotificationFilterChip(
-                      category: NotificationCategory.aiRecommendation,
-                      isSelected: _selectedCategory == NotificationCategory.aiRecommendation,
-                      onTap: () {
-                        setState(() {
-                          _selectedCategory = NotificationCategory.aiRecommendation;
-                          _applyFilter();
-                        });
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    NotificationFilterChip(
-                      category: NotificationCategory.production,
-                      isSelected: _selectedCategory == NotificationCategory.production,
-                      onTap: () {
-                        setState(() {
-                          _selectedCategory = NotificationCategory.production;
-                          _applyFilter();
-                        });
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    NotificationFilterChip(
-                      category: NotificationCategory.costs,
-                      isSelected: _selectedCategory == NotificationCategory.costs,
-                      onTap: () {
-                        setState(() {
-                          _selectedCategory = NotificationCategory.costs;
-                          _applyFilter();
-                        });
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    NotificationFilterChip(
-                      category: NotificationCategory.traceability,
-                      isSelected: _selectedCategory == NotificationCategory.traceability,
-                      onTap: () {
-                        setState(() {
-                          _selectedCategory = NotificationCategory.traceability;
-                          _applyFilter();
-                        });
-                      },
-                    ),
-                    const SizedBox(width: 8),
-                    NotificationFilterChip(
-                      category: NotificationCategory.system,
-                      isSelected: _selectedCategory == NotificationCategory.system,
-                      onTap: () {
-                        setState(() {
-                          _selectedCategory = NotificationCategory.system;
-                          _applyFilter();
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Lista de notificaciones
+              // ── Contenido con scroll ─────────────────────────────
               Expanded(
-                child: _filteredNotifications.isEmpty
-                    ? Center(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryGreen.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.notifications_off,
-                          size: 50,
-                          color: AppTheme.primaryGreen.withOpacity(0.5),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      const Text(
-                        'No tienes notificaciones',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.darkCoffee,
-                        ),
-                      ),
                       const SizedBox(height: 8),
-                      Text(
-                        'Todo marcha correctamente en tus fincas.',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppTheme.darkCoffee.withOpacity(0.6),
+
+                      // ── KPIs ─────────────────────────────────────
+                      Row(
+                        children: [
+                          NotificationKpiCard(
+                            title: 'Críticas',
+                            value: '$_criticalCount',
+                            icon: Icons.warning,
+                            color: const Color(0xFFD32F2F),
+                            isDark: isDark,
+                          ),
+                          const SizedBox(width: 12),
+                          NotificationKpiCard(
+                            title: 'Pendientes',
+                            value: '$_pendingCount',
+                            icon: Icons.pending_actions,
+                            color: const Color(0xFFF57C00),
+                            isDark: isDark,
+                          ),
+                          const SizedBox(width: 12),
+                          NotificationKpiCard(
+                            title: 'Informativas',
+                            value: '$_infoCount',
+                            icon: Icons.info,
+                            color: const Color(0xFF1976D2),
+                            isDark: isDark,
+                          ),
+                          const SizedBox(width: 12),
+                          NotificationKpiCard(
+                            title: 'Resueltas',
+                            value: '$_resolvedCount',
+                            icon: Icons.check_circle,
+                            color: AppTheme.primaryGreen,
+                            isDark: isDark,
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // ── Filtros ──────────────────────────────────
+                      SizedBox(
+                        height: 40,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: [
+                            NotificationFilterChip(
+                              category: NotificationCategory.all,
+                              isSelected: _selectedCategory == NotificationCategory.all,
+                              isDark: isDark,
+                              onTap: () {
+                                setState(() {
+                                  _selectedCategory = NotificationCategory.all;
+                                  _applyFilter();
+                                });
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            NotificationFilterChip(
+                              category: NotificationCategory.critical,
+                              isSelected: _selectedCategory == NotificationCategory.critical,
+                              isDark: isDark,
+                              onTap: () {
+                                setState(() {
+                                  _selectedCategory = NotificationCategory.critical;
+                                  _applyFilter();
+                                });
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            NotificationFilterChip(
+                              category: NotificationCategory.aiRecommendation,
+                              isSelected: _selectedCategory == NotificationCategory.aiRecommendation,
+                              isDark: isDark,
+                              onTap: () {
+                                setState(() {
+                                  _selectedCategory = NotificationCategory.aiRecommendation;
+                                  _applyFilter();
+                                });
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            NotificationFilterChip(
+                              category: NotificationCategory.production,
+                              isSelected: _selectedCategory == NotificationCategory.production,
+                              isDark: isDark,
+                              onTap: () {
+                                setState(() {
+                                  _selectedCategory = NotificationCategory.production;
+                                  _applyFilter();
+                                });
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            NotificationFilterChip(
+                              category: NotificationCategory.costs,
+                              isSelected: _selectedCategory == NotificationCategory.costs,
+                              isDark: isDark,
+                              onTap: () {
+                                setState(() {
+                                  _selectedCategory = NotificationCategory.costs;
+                                  _applyFilter();
+                                });
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            NotificationFilterChip(
+                              category: NotificationCategory.traceability,
+                              isSelected: _selectedCategory == NotificationCategory.traceability,
+                              isDark: isDark,
+                              onTap: () {
+                                setState(() {
+                                  _selectedCategory = NotificationCategory.traceability;
+                                  _applyFilter();
+                                });
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            NotificationFilterChip(
+                              category: NotificationCategory.system,
+                              isSelected: _selectedCategory == NotificationCategory.system,
+                              isDark: isDark,
+                              onTap: () {
+                                setState(() {
+                                  _selectedCategory = NotificationCategory.system;
+                                  _applyFilter();
+                                });
+                              },
+                            ),
+                          ],
                         ),
                       ),
+
+                      const SizedBox(height: 20),
+
+                      // ── Lista de notificaciones ──────────────────
+                      if (_filteredNotifications.isEmpty)
+                        _buildEmptyState(isDark, textColor)
+                      else
+                        ..._buildNotificationSections(isDark),
                     ],
                   ),
-                )
-                    : ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    // Hoy
-                    if (_todayNotifications.isNotEmpty) ...[
-                      const Text(
-                        'Hoy',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.darkCoffee,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ..._todayNotifications.map((n) => NotificationCard(
-                        notification: n,
-                        onTap: () => _onNotificationTap(n),
-                        onMarkAsRead: () => _markAsRead(n.id),
-                      )),
-                      const SizedBox(height: 16),
-                    ],
-                    // Ayer
-                    if (_yesterdayNotifications.isNotEmpty) ...[
-                      const Text(
-                        'Ayer',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.darkCoffee,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ..._yesterdayNotifications.map((n) => NotificationCard(
-                        notification: n,
-                        onTap: () => _onNotificationTap(n),
-                        onMarkAsRead: () => _markAsRead(n.id),
-                      )),
-                      const SizedBox(height: 16),
-                    ],
-                    // Esta semana
-                    if (_thisWeekNotifications.isNotEmpty) ...[
-                      const Text(
-                        'Esta semana',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.darkCoffee,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ..._thisWeekNotifications.map((n) => NotificationCard(
-                        notification: n,
-                        onTap: () => _onNotificationTap(n),
-                        onMarkAsRead: () => _markAsRead(n.id),
-                      )),
-                      const SizedBox(height: 16),
-                    ],
-                    // Anteriores
-                    if (_earlierNotifications.isNotEmpty) ...[
-                      const Text(
-                        'Anteriores',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.darkCoffee,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ..._earlierNotifications.map((n) => NotificationCard(
-                        notification: n,
-                        onTap: () => _onNotificationTap(n),
-                        onMarkAsRead: () => _markAsRead(n.id),
-                      )),
-                      const SizedBox(height: 16),
-                    ],
-                  ],
                 ),
               ),
             ],
@@ -475,5 +327,141 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildEmptyState(bool isDark, Color textColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 60),
+      width: double.infinity,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryGreen.withOpacity(0.08),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.notifications_off,
+              size: 50,
+              color: AppTheme.primaryGreen.withOpacity(0.4),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Sin notificaciones',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Todo marcha correctamente en tus fincas.',
+            style: TextStyle(
+              fontSize: 13,
+              color: textColor.withOpacity(0.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildNotificationSections(bool isDark) {
+    final List<Widget> sections = [];
+
+    if (_todayNotifications.isNotEmpty) {
+      sections.addAll([
+        const SizedBox(height: 8),
+        Text(
+          'Hoy',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white : AppTheme.darkCoffee,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ..._todayNotifications.map((n) => NotificationCard(
+          notification: n,
+          isDark: isDark,
+          onTap: () => _onNotificationTap(n),
+          onMarkAsRead: () => _markAsRead(n.id),
+        )),
+        const SizedBox(height: 16),
+      ]);
+    }
+
+    if (_yesterdayNotifications.isNotEmpty) {
+      sections.addAll([
+        Text(
+          'Ayer',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white : AppTheme.darkCoffee,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ..._yesterdayNotifications.map((n) => NotificationCard(
+          notification: n,
+          isDark: isDark,
+          onTap: () => _onNotificationTap(n),
+          onMarkAsRead: () => _markAsRead(n.id),
+        )),
+        const SizedBox(height: 16),
+      ]);
+    }
+
+    if (_thisWeekNotifications.isNotEmpty) {
+      sections.addAll([
+        Text(
+          'Esta semana',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white : AppTheme.darkCoffee,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ..._thisWeekNotifications.map((n) => NotificationCard(
+          notification: n,
+          isDark: isDark,
+          onTap: () => _onNotificationTap(n),
+          onMarkAsRead: () => _markAsRead(n.id),
+        )),
+        const SizedBox(height: 16),
+      ]);
+    }
+
+    if (_earlierNotifications.isNotEmpty) {
+      sections.addAll([
+        Text(
+          'Anteriores',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white : AppTheme.darkCoffee,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ..._earlierNotifications.map((n) => NotificationCard(
+          notification: n,
+          isDark: isDark,
+          onTap: () => _onNotificationTap(n),
+          onMarkAsRead: () => _markAsRead(n.id),
+        )),
+        const SizedBox(height: 16),
+      ]);
+    }
+
+    // Espacio inferior
+    sections.add(const SizedBox(height: 80));
+
+    return sections;
   }
 }

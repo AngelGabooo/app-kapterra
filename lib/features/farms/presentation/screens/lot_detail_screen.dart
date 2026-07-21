@@ -1,3 +1,4 @@
+// lib/features/farms/presentation/screens/lot_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +9,8 @@ import 'package:kaabcafe/features/farms/data/models/lot_model.dart';
 import 'package:kaabcafe/features/farms/data/models/farm_details_model.dart';
 import 'package:kaabcafe/features/farms/data/models/lot_cost_model.dart';
 import 'package:kaabcafe/features/farms/data/models/farm_activity_model.dart';
+import 'package:kaabcafe/features/activities/presentation/providers/activities_provider.dart';
+import 'package:kaabcafe/features/activities/domain/entities/activity_entity.dart';
 
 class LotDetailScreen extends StatefulWidget {
   final LotModel lot;
@@ -26,47 +29,12 @@ class LotDetailScreen extends StatefulWidget {
 class _LotDetailScreenState extends State<LotDetailScreen> {
   int _currentIndex = 1;
 
-  // ✅ CORREGIDO: Usando LotCostModel correctamente
-  final List<LotCostModel> _costs = [
-    LotCostModel(category: 'Mano de obra', amount: 5800, icon: Icons.people),
-    LotCostModel(category: 'Insumos', amount: 4200, icon: Icons.agriculture),
-    LotCostModel(category: 'Transporte', amount: 2500, icon: Icons.local_shipping),
-  ];
-
-  // ✅ CORREGIDO: Usando FarmActivityModel correctamente
-  final List<FarmActivityModel> _activities = [
-    FarmActivityModel(
-      id: '1',
-      title: 'Fertilización',
-      description: 'Aplicación de fertilizante orgánico - Responsable: Juan Pérez',
-      date: DateTime.now().subtract(const Duration(days: 2)),
-      icon: Icons.agriculture,
-    ),
-    FarmActivityModel(
-      id: '2',
-      title: 'Poda',
-      description: 'Poda de mantenimiento - Responsable: Pedro López',
-      date: DateTime.now().subtract(const Duration(days: 7)),
-      icon: Icons.content_cut,
-    ),
-    FarmActivityModel(
-      id: '3',
-      title: 'Aplicación fitosanitaria',
-      description: 'Control preventivo de plagas - Responsable: María Gómez',
-      date: DateTime.now().subtract(const Duration(days: 12)),
-      icon: Icons.bug_report,
-    ),
-    FarmActivityModel(
-      id: '4',
-      title: 'Cosecha',
-      description: 'Primera cosecha del año - 250 kg - Responsable: Equipo de cosecha',
-      date: DateTime.now().subtract(const Duration(days: 20)),
-      icon: Icons.agriculture,
-    ),
-  ];
+  // ✅ LISTAS VACÍAS - Sin datos de ejemplo
+  final List<LotCostModel> _costs = []; // Vacío inicialmente
 
   final List<Map<String, dynamic>> _quickActions = [
     {'title': 'Registrar actividad', 'icon': Icons.add_task},
+    {'title': 'Ver Actividades', 'icon': Icons.assignment},
     {'title': 'Registrar costo', 'icon': Icons.attach_money},
     {'title': 'Subir evidencia', 'icon': Icons.camera_alt},
     {'title': 'Consultar IA', 'icon': Icons.psychology},
@@ -98,6 +66,80 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
     return _averageProduction / widget.lot.area;
   }
 
+  @override
+  void initState() {
+    super.initState();
+    // Cargar actividades del provider al iniciar
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final activitiesProvider = Provider.of<ActivitiesProvider>(context, listen: false);
+      activitiesProvider.loadActivities();
+    });
+  }
+
+  // ✅ Método para convertir ActivityEntity a FarmActivityModel
+  FarmActivityModel _entityToFarmActivity(ActivityEntity entity) {
+    // Obtener el título del tipo de actividad
+    String title = _getActivityTypeTitle(entity.type);
+
+    // Construir descripción
+    String description = entity.description.isNotEmpty
+        ? entity.description
+        : 'Actividad registrada - Responsable: ${entity.responsible}';
+
+    // Obtener el icono correspondiente
+    IconData icon = _getIconForActivityType(entity.type);
+
+    return FarmActivityModel(
+      id: entity.id,
+      title: title,
+      description: description,
+      date: entity.date,
+      icon: icon,
+    );
+  }
+
+  String _getActivityTypeTitle(ActivityTypeEntity type) {
+    switch (type) {
+      case ActivityTypeEntity.fertilization:
+        return 'Fertilización';
+      case ActivityTypeEntity.pruning:
+        return 'Poda';
+      case ActivityTypeEntity.pestControl:
+        return 'Control de plagas';
+      case ActivityTypeEntity.weedControl:
+        return 'Control de malezas';
+      case ActivityTypeEntity.irrigation:
+        return 'Riego';
+      case ActivityTypeEntity.harvest:
+        return 'Cosecha';
+      case ActivityTypeEntity.inspection:
+        return 'Inspección técnica';
+      case ActivityTypeEntity.other:
+        return 'Otra actividad';
+    }
+  }
+
+  IconData _getIconForActivityType(ActivityTypeEntity type) {
+    switch (type) {
+      case ActivityTypeEntity.fertilization:
+        return Icons.spa;
+      case ActivityTypeEntity.pruning:
+        return Icons.content_cut;
+      case ActivityTypeEntity.pestControl:
+        return Icons.bug_report;
+      case ActivityTypeEntity.weedControl:
+        return Icons.grass;
+      case ActivityTypeEntity.irrigation:
+        return Icons.water_drop;
+      case ActivityTypeEntity.harvest:
+        return Icons.agriculture;
+      case ActivityTypeEntity.inspection:
+        return Icons.science;
+      case ActivityTypeEntity.other:
+        return Icons.note_add;
+    }
+  }
+
   void _onQuickActionTap(String action) {
     switch (action) {
       case 'Registrar actividad':
@@ -107,7 +149,13 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
         );
         break;
       case 'Registrar costo':
-        context.push(RouteNames.costs, extra: {'lot': widget.lot, 'farm': widget.farm});
+        context.push(
+          RouteNames.costs,
+          extra: {
+            'lotId': widget.lot.id,
+            'lotName': widget.lot.name,
+          },
+        );
         break;
       case 'Subir evidencia':
         _showUploadEvidenceDialog();
@@ -122,6 +170,15 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
         context.push(
           RouteNames.lotHistory,
           extra: {'lot': widget.lot, 'farm': widget.farm},
+        );
+        break;
+      case 'Ver Actividades':
+        context.push(
+          RouteNames.activities,
+          extra: {
+            'lot': widget.lot,
+            'farm': widget.farm,
+          },
         );
         break;
       default:
@@ -532,7 +589,7 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
                   _buildKPIs(),
                   const SizedBox(height: 16),
 
-                  // Actividades
+                  // ✅ Actividades - Ahora con Consumer para escuchar cambios
                   _buildActivitiesSection(colorScheme),
                   const SizedBox(height: 16),
 
@@ -711,6 +768,7 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
     );
   }
 
+  // ✅ SECCIÓN DE ACTIVIDADES CON CONSUMER
   Widget _buildActivitiesSection(ColorScheme colorScheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -724,49 +782,118 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
             borderRadius: BorderRadius.circular(12),
             boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6)],
           ),
-          child: Column(
-            children: _activities.map((activity) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryGreen.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(activity.icon, size: 16, color: AppTheme.primaryGreen),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            activity.title,
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.darkCoffee),
+          child: Consumer<ActivitiesProvider>(
+            builder: (context, provider, child) {
+              // Filtrar actividades del lote actual
+              final lotActivities = provider.activities
+                  .where((activity) => activity.lotId == widget.lot.id)
+                  .toList();
+
+              if (provider.isLoading) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+
+              if (lotActivities.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Icon(Icons.assignment_outlined, size: 48, color: AppTheme.primaryGreen.withOpacity(0.3)),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Sin actividades registradas',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppTheme.darkCoffee.withOpacity(0.6),
                           ),
-                          Text(
-                            activity.description,
-                            style: TextStyle(fontSize: 12, color: AppTheme.darkCoffee.withOpacity(0.6)),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () {
+                            context.push(
+                              RouteNames.registerActivity,
+                              extra: {'lot': widget.lot, 'farm': widget.farm},
+                            );
+                          },
+                          child: const Text('Registrar primera actividad'),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                );
+              }
+
+              // Convertir a FarmActivityModel para mostrar
+              final farmActivities = lotActivities
+                  .map((entity) => _entityToFarmActivity(entity))
+                  .toList();
+
+              return Column(
+                children: farmActivities.map((activity) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryGreen.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(activity.icon, size: 16, color: AppTheme.primaryGreen),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                activity.title,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.darkCoffee,
+                                ),
+                              ),
+                              Text(
+                                activity.description,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.darkCoffee.withOpacity(0.6),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          '${activity.date.day}/${activity.date.month}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.darkCoffee.withOpacity(0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
               );
-            }).toList(),
+            },
           ),
         ),
       ],
     );
   }
 
+  // ✅ COSTOS - Vacío inicialmente
   Widget _buildCostsSection(ColorScheme colorScheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -782,46 +909,62 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
           ),
           child: Column(
             children: [
-              ..._costs.map((cost) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryGreen.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(cost.icon, size: 14, color: AppTheme.primaryGreen),
+              if (_costs.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                    child: Text(
+                      'Sin costos registrados',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: AppTheme.darkCoffee.withOpacity(0.6),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          cost.category,
-                          style: const TextStyle(fontSize: 13, color: AppTheme.darkCoffee),
-                        ),
-                      ),
-                      Text(
-                        '\$${cost.amount.toStringAsFixed(0)} MXN',
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.darkCoffee),
-                      ),
-                    ],
+                    ),
                   ),
-                );
-              }).toList(),
-              const Divider(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Total', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.darkCoffee)),
-                  Text(
-                    '\$${_totalCost.toStringAsFixed(0)} MXN',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryGreen),
-                  ),
-                ],
-              ),
+                )
+              else
+                ..._costs.map((cost) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryGreen.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(cost.icon, size: 14, color: AppTheme.primaryGreen),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            cost.category,
+                            style: const TextStyle(fontSize: 13, color: AppTheme.darkCoffee),
+                          ),
+                        ),
+                        Text(
+                          '\$${cost.amount.toStringAsFixed(0)} MXN',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.darkCoffee),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              if (_costs.isNotEmpty) ...[
+                const Divider(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Total', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.darkCoffee)),
+                    Text(
+                      '\$${_totalCost.toStringAsFixed(0)} MXN',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryGreen),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),

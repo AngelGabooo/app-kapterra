@@ -1,6 +1,10 @@
+// lib/features/auth/presentation/widgets/login_form.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:kaabcafe/core/services/login_attempt_service.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_button.dart';
-import 'neumorphic_box.dart';
+import 'package:kaabcafe/features/auth/presentation/widgets/login_blocked_widget.dart';
+import 'package:kaabcafe/features/auth/presentation/widgets/neumorphic_box.dart';
 
 class LoginForm extends StatefulWidget {
   final Function(String email, String password) onLogin;
@@ -21,6 +25,7 @@ class _LoginFormState extends State<LoginForm> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   final _formKey = GlobalKey<FormState>();
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -29,9 +34,35 @@ class _LoginFormState extends State<LoginForm> {
     super.dispose();
   }
 
-  void _handleSubmit() {
+  void _handleSubmit() async {
+    if (_isSubmitting) return;
+
+    final service = Provider.of<LoginAttemptService>(context, listen: false);
+
+    if (service.isBlocked || service.isPermanentlyBlocked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⛔ Cuenta bloqueada. Verifica el mensaje de arriba.'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     if (_formKey.currentState!.validate()) {
-      widget.onLogin(_emailController.text, _passwordController.text);
+      setState(() {
+        _isSubmitting = true;
+      });
+
+      await widget.onLogin(
+        _emailController.text,
+        _passwordController.text,
+      );
+
+      setState(() {
+        _isSubmitting = false;
+      });
     }
   }
 
@@ -64,12 +95,25 @@ class _LoginFormState extends State<LoginForm> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final service = Provider.of<LoginAttemptService>(context);
 
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (service.isBlocked || service.isPermanentlyBlocked)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: LoginBlockedWidget(
+                service: service,
+                onUnblocked: () {
+                  _formKey.currentState?.reset();
+                  setState(() {});
+                },
+              ),
+            ),
+
           Text(
             'Correo electrónico',
             style: TextStyle(
@@ -87,6 +131,7 @@ class _LoginFormState extends State<LoginForm> {
               keyboardType: TextInputType.emailAddress,
               textInputAction: TextInputAction.next,
               style: TextStyle(color: theme.colorScheme.onSurface),
+              enabled: !service.isBlocked && !service.isPermanentlyBlocked,
               decoration: _decoration(
                 theme,
                 hint: 'ejemplo@kaabterra.com',
@@ -100,6 +145,7 @@ class _LoginFormState extends State<LoginForm> {
             ),
           ),
           const SizedBox(height: 20),
+
           Text(
             'Contraseña',
             style: TextStyle(
@@ -117,6 +163,7 @@ class _LoginFormState extends State<LoginForm> {
               obscureText: _obscurePassword,
               textInputAction: TextInputAction.done,
               onFieldSubmitted: (_) => _handleSubmit(),
+              enabled: !service.isBlocked && !service.isPermanentlyBlocked,
               style: TextStyle(color: theme.colorScheme.onSurface),
               decoration: _decoration(
                 theme,
@@ -142,10 +189,11 @@ class _LoginFormState extends State<LoginForm> {
             ),
           ),
           const SizedBox(height: 12),
+
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: widget.onForgotPassword,
+              onPressed: service.isBlocked || service.isPermanentlyBlocked ? null : widget.onForgotPassword,
               child: Text(
                 '¿Olvidaste tu contraseña?',
                 style: TextStyle(
@@ -156,10 +204,37 @@ class _LoginFormState extends State<LoginForm> {
             ),
           ),
           const SizedBox(height: 24),
+
           LoginButton(
-            text: 'Iniciar sesión',
+            text: _isSubmitting ? 'Verificando...' : 'Iniciar sesión',
             onPressed: _handleSubmit,
+            isLoading: _isSubmitting,
+            enabled: !service.isBlocked && !service.isPermanentlyBlocked,
           ),
+
+          if (!service.isBlocked && !service.isPermanentlyBlocked && service.attempts > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 16,
+                    color: Colors.orange.shade700,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Intentos restantes: ${6 - service.attempts}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

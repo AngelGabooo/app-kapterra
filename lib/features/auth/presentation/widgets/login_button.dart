@@ -1,17 +1,20 @@
+// lib/features/auth/presentation/widgets/login_button.dart
 import 'package:flutter/material.dart';
 
 class LoginButton extends StatefulWidget {
   final String text;
   final VoidCallback onPressed;
   final bool isLoading;
-  final bool isEnabled;
+  final bool enabled; // ✅ Nombre principal
+  final bool isEnabled; // ✅ Compatibilidad con código antiguo
 
   const LoginButton({
     super.key,
     required this.text,
     required this.onPressed,
     this.isLoading = false,
-    this.isEnabled = true,
+    this.enabled = true,
+    this.isEnabled = true, // ✅ Default para compatibilidad
   });
 
   @override
@@ -21,7 +24,12 @@ class LoginButton extends StatefulWidget {
 class _LoginButtonState extends State<LoginButton> {
   bool _pressed = false;
 
-  bool get _active => widget.isEnabled && !widget.isLoading;
+  // ✅ Usar enabled o isEnabled (el que esté disponible)
+  bool get _active {
+    // Si enabled fue pasado explícitamente, usarlo
+    // Si no, usar isEnabled
+    return (widget.enabled && widget.isEnabled) && !widget.isLoading;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,8 +37,6 @@ class _LoginButtonState extends State<LoginButton> {
     final isDark = theme.brightness == Brightness.dark;
     final onColor = isDark ? Colors.black : Colors.white;
 
-    // Degradado "aurora": combina primary -> tertiary, se apaga cuando
-    // el botón está deshabilitado.
     final gradientColors = _active
         ? [theme.colorScheme.primary, theme.colorScheme.tertiary]
         : [

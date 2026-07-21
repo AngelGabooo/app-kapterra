@@ -1,5 +1,7 @@
+// lib/features/costs/presentation/screens/costs_list_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/core/widgets/aurora_background.dart';
@@ -11,107 +13,140 @@ import 'package:kaabcafe/features/costs/presentation/widgets/cost_empty_state.da
 import 'package:kaabcafe/features/costs/presentation/widgets/cost_filter_chips.dart';
 import 'package:kaabcafe/features/costs/presentation/widgets/cost_search_bar.dart';
 import 'package:kaabcafe/features/costs/presentation/widgets/cost_category_chart.dart';
+import 'package:kaabcafe/features/activities/presentation/providers/activities_provider.dart';
+import 'package:kaabcafe/features/activities/domain/entities/activity_entity.dart';
 
 class CostsListScreen extends StatefulWidget {
-  const CostsListScreen({super.key});
+  final String? lotId;
+  final String? lotName;
+
+  const CostsListScreen({
+    super.key,
+    this.lotId,
+    this.lotName,
+  });
 
   @override
   State<CostsListScreen> createState() => _CostsListScreenState();
 }
 
 class _CostsListScreenState extends State<CostsListScreen> {
-  int _currentIndex = 2;
   String _searchQuery = '';
   CostCategory? _selectedCategory;
   String _selectedLot = 'Todos los lotes';
   bool _isCompactView = false;
 
-  final List<CostModel> _costs = [];
-  final List<String> _availableLots = [
-    'Todos los lotes',
-    'Lote Norte',
-    'Lote Sur',
-    'Lote Río',
-    'Lote Geisha',
-  ];
+  List<CostModel> _costs = [];
+  List<String> _availableLots = ['Todos los lotes'];
 
   @override
   void initState() {
     super.initState();
-    _loadMockCosts();
+    _loadCostsFromActivities();
   }
 
-  void _loadMockCosts() {
-    _costs.addAll([
-      CostModel(
-        id: '1',
-        concept: 'Fertilizante Foliar',
-        category: CostCategory.fertilizer,
-        amount: 1250,
-        date: DateTime(2026, 6, 15),
-        lotId: '1',
-        lotName: 'Lote Norte',
-        provider: 'AgroServicios del Sur',
-        responsible: 'Juan Pérez',
-        hasInvoice: true,
-      ),
-      CostModel(
-        id: '2',
-        concept: 'Mano de obra - Poda',
-        category: CostCategory.labor,
-        amount: 2500,
-        date: DateTime(2026, 6, 12),
-        lotId: '2',
-        lotName: 'Lote Sur',
-        provider: 'Cooperativa Local',
-        responsible: 'Pedro López',
-        hasInvoice: false,
-      ),
-      CostModel(
-        id: '3',
-        concept: 'Transporte de cosecha',
-        category: CostCategory.transportation,
-        amount: 850,
-        date: DateTime(2026, 6, 8),
-        lotId: '4',
-        lotName: 'Lote Geisha',
-        provider: 'Transportes del Café',
-        responsible: 'Carlos Ruiz',
-        hasInvoice: true,
-      ),
-      CostModel(
-        id: '4',
-        concept: 'Combustible',
-        category: CostCategory.fuel,
-        amount: 1800,
-        date: DateTime(2026, 6, 5),
-        lotId: '1',
-        lotName: 'Lote Norte',
-        provider: 'Gasolinera Central',
-        responsible: 'Juan Pérez',
-        hasInvoice: false,
-      ),
-      CostModel(
-        id: '5',
-        concept: 'Mantenimiento de equipo',
-        category: CostCategory.maintenance,
-        amount: 3200,
-        date: DateTime(2026, 6, 1),
-        lotId: '3',
-        lotName: 'Lote Río',
-        provider: 'Talleres Agrícolas',
-        responsible: 'Pedro López',
-        hasInvoice: true,
-      ),
-    ]);
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadCostsFromActivities();
+  }
+
+  void _loadCostsFromActivities() {
+    final activitiesProvider = Provider.of<ActivitiesProvider>(context, listen: false);
+    final allActivities = activitiesProvider.activities;
+
+    List<ActivityEntity> filteredActivities = allActivities;
+    if (widget.lotId != null) {
+      filteredActivities = allActivities.where((a) => a.lotId == widget.lotId).toList();
+    }
+
+    final newCosts = filteredActivities
+        .where((activity) => activity.cost > 0)
+        .map((activity) => _activityToCostModel(activity))
+        .toList();
+
+    setState(() {
+      _costs = newCosts;
+      _updateAvailableLots();
+    });
+  }
+
+  CostModel _activityToCostModel(ActivityEntity activity) {
+    CostCategory category = _getCategoryFromActivityType(activity.type);
+
+    return CostModel(
+      id: activity.id,
+      concept: _getActivityTitle(activity.type),
+      category: category,
+      amount: activity.cost,
+      date: activity.date,
+      lotId: activity.lotId,
+      lotName: activity.lotName,
+      provider: activity.responsible,
+      responsible: activity.responsible,
+      hasInvoice: activity.evidenceUrls.isNotEmpty,
+    );
+  }
+
+  CostCategory _getCategoryFromActivityType(ActivityTypeEntity type) {
+    switch (type) {
+      case ActivityTypeEntity.fertilization:
+        return CostCategory.fertilizer;
+      case ActivityTypeEntity.pruning:
+        return CostCategory.labor;
+      case ActivityTypeEntity.pestControl:
+        return CostCategory.fertilizer;
+      case ActivityTypeEntity.weedControl:
+        return CostCategory.fertilizer;
+      case ActivityTypeEntity.irrigation:
+        return CostCategory.fuel;
+      case ActivityTypeEntity.harvest:
+        return CostCategory.labor;
+      case ActivityTypeEntity.inspection:
+        return CostCategory.maintenance;
+      case ActivityTypeEntity.other:
+        return CostCategory.other;
+    }
+  }
+
+  String _getActivityTitle(ActivityTypeEntity type) {
+    switch (type) {
+      case ActivityTypeEntity.fertilization:
+        return 'Fertilización aplicada';
+      case ActivityTypeEntity.pruning:
+        return 'Poda realizada';
+      case ActivityTypeEntity.pestControl:
+        return 'Control de plagas aplicado';
+      case ActivityTypeEntity.weedControl:
+        return 'Control de malezas realizado';
+      case ActivityTypeEntity.irrigation:
+        return 'Riego aplicado';
+      case ActivityTypeEntity.harvest:
+        return 'Cosecha registrada';
+      case ActivityTypeEntity.inspection:
+        return 'Inspección técnica realizada';
+      case ActivityTypeEntity.other:
+        return 'Otra actividad registrada';
+    }
+  }
+
+  void _updateAvailableLots() {
+    final lotNames = _costs.map((c) => c.lotName).toSet().toList();
+    _availableLots = ['Todos los lotes', ...lotNames];
+
+    if (_availableLots.length == 2 && _selectedLot == 'Todos los lotes') {
+      _selectedLot = _availableLots[1];
+    }
   }
 
   double get _totalCost => _costs.fold(0, (sum, c) => sum + c.amount);
+
   double get _currentMonthCost => _costs.where((c) =>
   c.date.year == DateTime.now().year &&
       c.date.month == DateTime.now().month).fold(0, (sum, c) => sum + c.amount);
-  double get _costPerKg => _totalCost / 5000;
-  double get _variation => 8.5;
+
+  double get _costPerKg => _totalCost > 0 ? _totalCost / 5000 : 0;
+  double get _variation => _costs.isNotEmpty ? 8.5 : 0;
 
   List<CostModel> get _filteredCosts {
     return _costs.where((cost) {
@@ -146,10 +181,11 @@ class _CostsListScreenState extends State<CostsListScreen> {
   void _navigateToRegisterCost() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Próximamente: Registro de Costos'),
+        content: Text('Registra actividades con costos para verlos aquí'),
         backgroundColor: AppTheme.primaryGreen,
       ),
     );
+    context.push(RouteNames.registerActivity);
   }
 
   void _showCostDetail(CostModel cost) {
@@ -157,12 +193,29 @@ class _CostsListScreenState extends State<CostsListScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _ModernCostDetailSheet(cost: cost, isDark: Theme.of(context).brightness == Brightness.dark),
+      builder: (context) => _ModernCostDetailSheet(
+          cost: cost,
+          isDark: Theme.of(context).brightness == Brightness.dark
+      ),
     );
   }
 
   void _editCost(CostModel cost) {
-    debugPrint('Editar costo: ${cost.concept}');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Editar actividad: ${cost.concept}'),
+        backgroundColor: AppTheme.primaryGreen,
+      ),
+    );
+  }
+
+  void _goBack() {
+    if (widget.lotId != null) {
+      // Volver a lot_detail_screen
+      Navigator.pop(context);
+    } else {
+      context.go(RouteNames.myFarms);
+    }
   }
 
   @override
@@ -174,98 +227,107 @@ class _CostsListScreenState extends State<CostsListScreen> {
 
     return Scaffold(
       backgroundColor: Colors.transparent,
-      extendBody: true,
-      body: AuroraBackground(
-        isDark: isDark,
-        child: SafeArea(
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // Header Sliver
-              SliverToBoxAdapter(
-                child: _buildHeader(isDark),
-              ),
+      body: Consumer<ActivitiesProvider>(
+        builder: (context, provider, child) {
+          final allActivities = provider.activities;
+          List<ActivityEntity> filteredActivities = allActivities;
+          if (widget.lotId != null) {
+            filteredActivities = allActivities.where((a) => a.lotId == widget.lotId).toList();
+          }
 
-              // KPIs Sliver
-              SliverToBoxAdapter(
-                child: _buildModernKPIs(isDark),
-              ),
+          final newCosts = filteredActivities
+              .where((activity) => activity.cost > 0)
+              .map((activity) => _activityToCostModel(activity))
+              .toList();
 
-              // Category Chart Sliver
-              if (distribution.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: _buildCategoryChart(distribution, isDark),
-                ),
+          if (_costs.length != newCosts.length ||
+              _costs.any((c) => !newCosts.any((nc) => nc.id == c.id))) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              setState(() {
+                _costs = newCosts;
+                _updateAvailableLots();
+              });
+            });
+          }
 
-              // Search Section Sliver
-              SliverToBoxAdapter(
-                child: _buildSearchSection(isDark),
-              ),
-
-              // Filter Chips Sliver
-              SliverToBoxAdapter(
-                child: _buildFilterSection(isDark),
-              ),
-
-              // Lot Filter & View Toggle Sliver
-              SliverToBoxAdapter(
-                child: _buildLotFilterAndViewToggle(isDark),
-              ),
-
-              // Cost List Sliver
-              filteredCosts.isEmpty
-                  ? SliverToBoxAdapter(
-                child: SizedBox(
-                  height: MediaQuery.of(context).size.height * 0.4,
-                  child: CostEmptyState(
-                    onRegister: _navigateToRegisterCost,
-                    isDark: isDark,
+          return AuroraBackground(
+            isDark: isDark,
+            child: SafeArea(
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: _buildHeader(isDark),
                   ),
-                ),
-              )
-                  : SliverPadding(
-                padding: const EdgeInsets.all(16),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                      final cost = filteredCosts[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: AnimatedContainer(
-                          duration: Duration(milliseconds: 200 + (index * 50)),
-                          curve: Curves.easeOut,
-                          child: _isCompactView
-                              ? CostCompactCard(
-                            cost: cost,
-                            isDark: isDark,
-                            onTap: () => _showCostDetail(cost),
-                            onEdit: () => _editCost(cost),
-                          )
-                              : CostCard(
-                            cost: cost,
-                            isDark: isDark,
-                            onTap: () => _showCostDetail(cost),
-                            onEdit: () => _editCost(cost),
-                          ),
-                        ),
-                      );
-                    },
-                    childCount: filteredCosts.length,
+                  SliverToBoxAdapter(
+                    child: _buildModernKPIs(isDark),
                   ),
-                ),
+                  if (distribution.isNotEmpty)
+                    SliverToBoxAdapter(
+                      child: _buildCategoryChart(distribution, isDark),
+                    ),
+                  SliverToBoxAdapter(
+                    child: _buildSearchSection(isDark),
+                  ),
+                  SliverToBoxAdapter(
+                    child: _buildFilterSection(isDark),
+                  ),
+                  SliverToBoxAdapter(
+                    child: _buildLotFilterAndViewToggle(isDark),
+                  ),
+                  filteredCosts.isEmpty
+                      ? SliverToBoxAdapter(
+                    child: SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.4,
+                      child: CostEmptyState(
+                        onRegister: _navigateToRegisterCost,
+                        isDark: isDark,
+                      ),
+                    ),
+                  )
+                      : SliverPadding(
+                    padding: const EdgeInsets.all(16),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                          final cost = filteredCosts[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: AnimatedContainer(
+                              duration: Duration(milliseconds: 200 + (index * 50)),
+                              curve: Curves.easeOut,
+                              child: _isCompactView
+                                  ? CostCompactCard(
+                                cost: cost,
+                                isDark: isDark,
+                                onTap: () => _showCostDetail(cost),
+                                onEdit: () => _editCost(cost),
+                              )
+                                  : CostCard(
+                                cost: cost,
+                                isDark: isDark,
+                                onTap: () => _showCostDetail(cost),
+                                onEdit: () => _editCost(cost),
+                              ),
+                            ),
+                          );
+                        },
+                        childCount: filteredCosts.length,
+                      ),
+                    ),
+                  ),
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 90),
+                  ),
+                ],
               ),
-
-              // ✅ Padding inferior para que no se superponga con la barra
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 90),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
       floatingActionButton: _buildModernFAB(isDark),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: _buildBottomNavigationBar(isDark),
+      // ✅ Eliminamos la barra de navegación inferior
     );
   }
 
@@ -273,26 +335,34 @@ class _CostsListScreenState extends State<CostsListScreen> {
     final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      padding: const EdgeInsets.fromLTRB(12, 20, 20, 0),
       child: Row(
         children: [
+          // ✅ Botón de regreso
+          IconButton(
+            onPressed: _goBack,
+            icon: Icon(Icons.arrow_back, color: textColor),
+          ),
+          const SizedBox(width: 4),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Costos',
+                  widget.lotName != null ? 'Costos del Lote' : 'Costos',
                   style: TextStyle(
-                    fontSize: 28,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: textColor,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
-                  'Control financiero de tu producción',
+                  widget.lotName != null
+                      ? 'Costos generados por actividades en ${widget.lotName}'
+                      : 'Control financiero de tu producción',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     color: textColor.withOpacity(0.6),
                   ),
                 ),
@@ -303,8 +373,8 @@ class _CostsListScreenState extends State<CostsListScreen> {
             icon: Icons.filter_list,
             isDark: isDark,
             onPressed: () => _showFilterDialog(isDark),
-            size: 48,
-            iconSize: 22,
+            size: 44,
+            iconSize: 20,
             color: AppTheme.primaryGreen,
           ),
         ],
@@ -325,7 +395,6 @@ class _CostsListScreenState extends State<CostsListScreen> {
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        // ✅ SIN SOMBRAS EN AMBOS MODOS
         boxShadow: const [],
       ),
       child: Padding(
@@ -364,28 +433,29 @@ class _CostsListScreenState extends State<CostsListScreen> {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.trending_up, size: 14, color: Colors.white),
-                      const SizedBox(width: 4),
-                      Text(
-                        '+${_variation.toStringAsFixed(1)}%',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                if (_costs.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.trending_up, size: 14, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Text(
+                          '+${_variation.toStringAsFixed(1)}%',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -482,6 +552,10 @@ class _CostsListScreenState extends State<CostsListScreen> {
   Widget _buildLotFilterAndViewToggle(bool isDark) {
     final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
 
+    if (widget.lotId != null) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
@@ -528,44 +602,11 @@ class _CostsListScreenState extends State<CostsListScreen> {
 
   Widget _buildModernFAB(bool isDark) {
     return NeumorphicActionButton(
-      label: 'Registrar Costo',
+      label: 'Registrar Actividad',
       icon: Icons.add,
       isDark: isDark,
       onPressed: _navigateToRegisterCost,
       accentColor: AppTheme.primaryGreen,
-    );
-  }
-
-  Widget _buildBottomNavigationBar(bool isDark) {
-    return NeumorphicBottomNav(
-      isDark: isDark,
-      currentIndex: _currentIndex,
-      items: const [
-        Icons.home_outlined,
-        Icons.landscape_outlined,
-        Icons.attach_money_outlined,
-        Icons.assignment_outlined,
-        Icons.person_outline,
-      ],
-      onTap: (index) {
-        setState(() => _currentIndex = index);
-        switch (index) {
-          case 0:
-            context.go(RouteNames.dashboard);
-            break;
-          case 1:
-            context.go(RouteNames.myFarms);
-            break;
-          case 2:
-            break;
-          case 3:
-            context.go(RouteNames.activities);
-            break;
-          case 4:
-            context.go(RouteNames.profile);
-            break;
-        }
-      },
     );
   }
 
@@ -719,7 +760,6 @@ class _ModernCostDetailSheet extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
                 Row(
                   children: [
                     Container(
@@ -759,7 +799,6 @@ class _ModernCostDetailSheet extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
 
-                // Amount Card
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -790,22 +829,18 @@ class _ModernCostDetailSheet extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // Details
                 _buildDetailRow(Icons.landscape, 'Lote', cost.lotName, textColor),
                 const SizedBox(height: 12),
                 _buildDetailRow(Icons.calendar_today, 'Fecha', '${cost.date.day}/${cost.date.month}/${cost.date.year}', textColor),
                 const SizedBox(height: 12),
                 if (cost.provider != null) ...[
-                  _buildDetailRow(Icons.business, 'Proveedor', cost.provider!, textColor),
+                  _buildDetailRow(Icons.person, 'Responsable', cost.provider!, textColor),
                   const SizedBox(height: 12),
                 ],
-                _buildDetailRow(Icons.person, 'Responsable', cost.responsible, textColor),
-                const SizedBox(height: 12),
                 _buildDetailRow(Icons.receipt, 'Comprobante', cost.hasInvoice ? 'Disponible' : 'No disponible', textColor),
 
                 const SizedBox(height: 20),
 
-                // Actions
                 Row(
                   children: [
                     Expanded(
@@ -827,9 +862,15 @@ class _ModernCostDetailSheet extends StatelessWidget {
                       child: ElevatedButton.icon(
                         onPressed: () {
                           Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Editar actividad relacionada'),
+                              backgroundColor: AppTheme.primaryGreen,
+                            ),
+                          );
                         },
                         icon: const Icon(Icons.edit, size: 18),
-                        label: const Text('Editar'),
+                        label: const Text('Ver Actividad'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primaryGreen,
                           foregroundColor: Colors.white,

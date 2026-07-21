@@ -1,3 +1,4 @@
+// lib/features/buyer/presentation/screens/acopio_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
@@ -29,59 +30,20 @@ class _AcopioScreenState extends State<AcopioScreen> {
     'Hoy',
   ];
 
-  // ✅ Lista de acopios con datos de ejemplo
+  // ✅ Lista vacía inicialmente
   List<AcopioModel> _acopios = [];
 
   @override
   void initState() {
     super.initState();
-    _loadSampleData();
+    // ❌ Eliminamos la carga de datos de ejemplo
+    // _loadSampleData();
   }
 
-  void _loadSampleData() {
-    // ✅ Datos de ejemplo para mostrar la vista
-    _acopios = [
-      AcopioModel(
-        id: '1',
-        producerName: 'Juan Pérez',
-        lotName: 'Lote Norte',
-        date: DateTime.now().subtract(const Duration(days: 1)),
-        grossWeight: 620,
-        netWeight: 610,
-        humidity: 11.8,
-        classification: 'Especialidad',
-        status: AcopioStatus.stored,
-        warehouse: 'Bodega A',
-        shelf: 'Estante 12',
-      ),
-      AcopioModel(
-        id: '2',
-        producerName: 'María López',
-        lotName: 'Lote Geisha',
-        date: DateTime.now().subtract(const Duration(days: 2)),
-        grossWeight: 430,
-        netWeight: 420,
-        humidity: 12.3,
-        classification: 'Pendiente',
-        status: AcopioStatus.inReview,
-        warehouse: 'Bodega B',
-        shelf: 'Estante 5',
-      ),
-      AcopioModel(
-        id: '3',
-        producerName: 'Carlos Gómez',
-        lotName: 'Lote Centro',
-        date: DateTime.now().subtract(const Duration(days: 3)),
-        grossWeight: 550,
-        netWeight: 540,
-        humidity: 10.5,
-        classification: 'Primera',
-        status: AcopioStatus.classified,
-        warehouse: 'Bodega A',
-        shelf: 'Estante 8',
-      ),
-    ];
-  }
+  // ❌ Eliminamos este método completamente
+  // void _loadSampleData() {
+  //   // Sin datos de ejemplo
+  // }
 
   void _registerAcopio() {
     showDialog(
@@ -123,7 +85,7 @@ class _AcopioScreenState extends State<AcopioScreen> {
     );
   }
 
-  // ✅ Calcular estadísticas
+  // ✅ Calcular estadísticas (siempre retornan 0 cuando está vacío)
   int get _totalEntregas => _acopios.length;
   double get _totalCafeRecibido => _acopios.fold(0, (sum, a) => sum + a.netWeight);
   int get _totalEspecialidad => _acopios.where((a) => a.classification == 'Especialidad').length;
@@ -151,7 +113,6 @@ class _AcopioScreenState extends State<AcopioScreen> {
       } else if (_selectedFilter == 'Especialidad') {
         filtered = filtered.where((a) => a.classification == 'Especialidad').toList();
       } else if (_selectedFilter == 'Orgánico') {
-        // Simulamos filtro orgánico
         filtered = filtered.where((a) => a.classification.contains('Orgánico')).toList();
       } else if (_selectedFilter == 'Hoy') {
         filtered = filtered.where((a) =>
@@ -521,7 +482,8 @@ class _AcopioScreenState extends State<AcopioScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${_acopios.where((a) => a.status == AcopioStatus.inReview).fold(0.0, (sum, a) => sum + a.netWeight).toStringAsFixed(0)} kg',                            style: TextStyle(
+                            '${_acopios.where((a) => a.status == AcopioStatus.inReview).fold(0.0, (sum, a) => sum + a.netWeight).toStringAsFixed(0)} kg',
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
                               color: AppTheme.goldCoffee,
@@ -542,7 +504,8 @@ class _AcopioScreenState extends State<AcopioScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '${_acopios.where((a) => a.status == AcopioStatus.pending).fold(0.0, (sum, a) => sum + a.netWeight).toStringAsFixed(0)} kg',                            style: TextStyle(
+                            '${_acopios.where((a) => a.status == AcopioStatus.pending).fold(0.0, (sum, a) => sum + a.netWeight).toStringAsFixed(0)} kg',
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
                               color: Colors.orange,

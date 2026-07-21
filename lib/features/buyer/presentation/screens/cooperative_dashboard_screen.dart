@@ -1,4 +1,4 @@
-
+// lib/features/buyer/presentation/screens/cooperative_dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
@@ -23,7 +23,6 @@ class _CooperativeDashboardScreenState extends State<CooperativeDashboardScreen>
     with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
 
-  // ✅ Inicializar con null y usar ?. para acceder
   AnimationController? _fadeController;
 
   // ✅ TODOS LOS DATOS VACÍOS
@@ -133,7 +132,7 @@ class _CooperativeDashboardScreenState extends State<CooperativeDashboardScreen>
                 ),
               ),
 
-              // ✅ Contenido con CustomScrollView y verificación de controller
+              // ✅ Contenido con CustomScrollView
               Expanded(
                 child: _fadeController != null
                     ? FadeTransition(
@@ -200,7 +199,7 @@ class _CooperativeDashboardScreenState extends State<CooperativeDashboardScreen>
         SliverToBoxAdapter(
           child: Column(
             children: [
-              // Encabezado institucional
+              // ✅ Encabezado institucional
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -275,7 +274,7 @@ class _CooperativeDashboardScreenState extends State<CooperativeDashboardScreen>
 
               const SizedBox(height: 20),
 
-              // KPIs principales
+              // ✅ KPIs principales - TODOS VACÍOS
               Column(
                 children: [
                   Row(
@@ -334,7 +333,7 @@ class _CooperativeDashboardScreenState extends State<CooperativeDashboardScreen>
 
               const SizedBox(height: 16),
 
-              // Indicadores secundarios
+              // ✅ Indicadores secundarios - TODOS VACÍOS
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -353,7 +352,7 @@ class _CooperativeDashboardScreenState extends State<CooperativeDashboardScreen>
                     Expanded(
                       child: _buildSecondaryKPI(
                         'Lotes trazables',
-                        '--',
+                        '0',
                         Icons.qr_code,
                         isDark ? AppTheme.coffeeGoldLight : AppTheme.primaryGreen,
                         isDark,
@@ -362,7 +361,7 @@ class _CooperativeDashboardScreenState extends State<CooperativeDashboardScreen>
                     Expanded(
                       child: _buildSecondaryKPI(
                         'Trazabilidad',
-                        '--',
+                        '0%',
                         Icons.analytics,
                         isDark ? AppTheme.coffeeGoldLight : AppTheme.goldCoffee,
                         isDark,
@@ -380,7 +379,7 @@ class _CooperativeDashboardScreenState extends State<CooperativeDashboardScreen>
                     Expanded(
                       child: _buildSecondaryKPI(
                         'Rentabilidad',
-                        '--',
+                        '0%',
                         Icons.trending_up,
                         isDark ? AppTheme.coffeeGoldLight : AppTheme.secondaryGreen,
                         isDark,
@@ -392,7 +391,7 @@ class _CooperativeDashboardScreenState extends State<CooperativeDashboardScreen>
 
               const SizedBox(height: 20),
 
-              // Gráfica vacía
+              // ✅ Gráfica vacía
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -416,7 +415,7 @@ class _CooperativeDashboardScreenState extends State<CooperativeDashboardScreen>
 
               const SizedBox(height: 20),
 
-              // Mapa regional
+              // ✅ Mapa regional (vacío)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -449,7 +448,7 @@ class _CooperativeDashboardScreenState extends State<CooperativeDashboardScreen>
 
               const SizedBox(height: 20),
 
-              // Ranking de productores (vacío)
+              // ✅ Ranking de productores (vacío)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -503,7 +502,7 @@ class _CooperativeDashboardScreenState extends State<CooperativeDashboardScreen>
 
               const SizedBox(height: 20),
 
-              // Alertas (vacío)
+              // ✅ Alertas (vacío)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -565,7 +564,7 @@ class _CooperativeDashboardScreenState extends State<CooperativeDashboardScreen>
 
               const SizedBox(height: 20),
 
-              // Acopio reciente (vacío)
+              // ✅ Acopio reciente (vacío)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -619,7 +618,7 @@ class _CooperativeDashboardScreenState extends State<CooperativeDashboardScreen>
 
               const SizedBox(height: 20),
 
-              // Trazabilidad consolidada (vacía)
+              // ✅ Trazabilidad consolidada (vacía)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -659,7 +658,7 @@ class _CooperativeDashboardScreenState extends State<CooperativeDashboardScreen>
                           child: Column(
                             children: [
                               Text(
-                                '--',
+                                '0%',
                                 style: TextStyle(
                                   fontSize: 28,
                                   fontWeight: FontWeight.bold,
@@ -681,7 +680,7 @@ class _CooperativeDashboardScreenState extends State<CooperativeDashboardScreen>
                           child: Column(
                             children: [
                               Text(
-                                '--',
+                                '0',
                                 style: TextStyle(
                                   fontSize: 28,
                                   fontWeight: FontWeight.bold,
@@ -703,7 +702,7 @@ class _CooperativeDashboardScreenState extends State<CooperativeDashboardScreen>
                           child: Column(
                             children: [
                               Text(
-                                '--',
+                                '0',
                                 style: TextStyle(
                                   fontSize: 28,
                                   fontWeight: FontWeight.bold,

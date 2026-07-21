@@ -1,3 +1,4 @@
+// lib/features/technician/presentation/screens/technician_agenda_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
@@ -18,67 +19,32 @@ class _TechnicianAgendaScreenState extends State<TechnicianAgendaScreen> {
   int _currentIndex = 2;
   String _selectedView = 'Diaria';
 
-  final List<Map<String, dynamic>> _visits = [
-    {
-      'producerName': 'Juan Pérez',
-      'farmName': 'El Mirador',
-      'lotName': 'Lote Norte',
-      'location': 'Motozintla, Chiapas',
-      'time': '10:30 AM',
-      'objective': 'Inspección por riesgo de roya',
-      'status': 'Confirmada',
-      'isUrgent': true,
-    },
-    {
-      'producerName': 'María López',
-      'farmName': 'La Esperanza',
-      'lotName': 'Lote Geisha',
-      'location': 'Tapachula, Chiapas',
-      'time': '02:00 PM',
-      'objective': 'Certificación de lote Geisha',
-      'status': 'Pendiente',
-      'isUrgent': false,
-    },
-    {
-      'producerName': 'Carlos Gómez',
-      'farmName': 'Los Naranjos',
-      'lotName': 'Lote Sur',
-      'location': 'Ocosingo, Chiapas',
-      'time': '04:30 PM',
-      'objective': 'Revisión de humedad en lote',
-      'status': 'Reprogramar',
-      'isUrgent': true,
-    },
-  ];
+  // ✅ Listas vacías
+  final List<Map<String, dynamic>> _visits = [];
 
   final List<String> _viewOptions = ['Diaria', 'Semanal', 'Mensual'];
-  final List<String> _pendingTasks = [
-    '📌 Llevar medidor de humedad',
-    '📌 Tomar fotografías del lote',
-    '📌 Obtener firma del productor',
-  ];
+  final List<String> _pendingTasks = [];
 
   void _navigateToVisitRegistration([Map<String, dynamic>? visitData]) {
     context.push(
       RouteNames.technicianVisitRegistration,
       extra: visitData ?? {
-        'producerName': 'Juan Pérez',
-        'farmName': 'El Mirador',
-        'lotName': 'Lote Norte',
-        'location': 'Motozintla, Chiapas',
+        'producerName': 'Productor',
+        'farmName': 'Finca',
+        'lotName': 'Lote',
+        'location': 'Ubicación',
       },
     );
   }
 
-  // ✅ NUEVO: Navegar al Diagnóstico del Cultivo
   void _navigateToCropDiagnosis() {
     context.push(
       RouteNames.technicianCropDiagnosis,
       extra: {
-        'lotName': 'Lote Norte',
-        'farmName': 'El Mirador',
-        'producerName': 'Juan Pérez',
-        'location': 'Motozintla, Chiapas',
+        'lotName': 'Lote',
+        'farmName': 'Finca',
+        'producerName': 'Productor',
+        'location': 'Ubicación',
       },
     );
   }
@@ -164,7 +130,7 @@ class _TechnicianAgendaScreenState extends State<TechnicianAgendaScreen> {
                       children: [
                         TechnicianKPICard(
                           title: 'Visitas programadas',
-                          value: '5',
+                          value: '0',
                           icon: Icons.calendar_today,
                           color: AppTheme.primaryGreen,
                           isDark: isDark,
@@ -172,7 +138,7 @@ class _TechnicianAgendaScreenState extends State<TechnicianAgendaScreen> {
                         const SizedBox(width: 12),
                         TechnicianKPICard(
                           title: 'Completadas',
-                          value: '2',
+                          value: '0',
                           icon: Icons.check_circle,
                           color: AppTheme.secondaryGreen,
                           isDark: isDark,
@@ -184,7 +150,7 @@ class _TechnicianAgendaScreenState extends State<TechnicianAgendaScreen> {
                       children: [
                         TechnicianKPICard(
                           title: 'Pendientes',
-                          value: '3',
+                          value: '0',
                           icon: Icons.pending,
                           color: AppTheme.alertOrange,
                           isDark: isDark,
@@ -192,7 +158,7 @@ class _TechnicianAgendaScreenState extends State<TechnicianAgendaScreen> {
                         const SizedBox(width: 12),
                         TechnicianKPICard(
                           title: 'Requieren prioridad',
-                          value: '2',
+                          value: '0',
                           icon: Icons.warning,
                           color: AppTheme.berryRed,
                           isDark: isDark,
@@ -318,39 +284,88 @@ class _TechnicianAgendaScreenState extends State<TechnicianAgendaScreen> {
               ),
 
               // ── Tarjetas de visitas ─────────────────────────────
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                    final visit = _visits[index];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: AgendaVisitCard(
-                          producerName: visit['producerName'],
-                          farmName: visit['farmName'],
-                          location: visit['location'],
-                          time: visit['time'],
-                          objective: visit['objective'],
-                          status: visit['status'],
-                          isUrgent: visit['isUrgent'],
-                          isDark: isDark,
-                          onViewDetails: () {},
-                          onStart: () {
-                            _navigateToVisitRegistration({
-                              'producerName': visit['producerName'],
-                              'farmName': visit['farmName'],
-                              'lotName': visit['lotName'] ?? 'Lote Principal',
-                              'location': visit['location'],
-                            });
-                          },
+              if (_visits.isEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 30),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withOpacity(0.03)
+                              : AppTheme.darkCoffee.withOpacity(0.02),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: textColor.withOpacity(0.06),
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.calendar_today_outlined,
+                              size: 48,
+                              color: textColor.withOpacity(0.15),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Sin visitas programadas',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: textColor.withOpacity(0.4),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Programa tu primera visita desde el botón +',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: textColor.withOpacity(0.3),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    );
-                  },
-                  childCount: _visits.length,
+                      const SizedBox(height: 22),
+                    ]),
+                  ),
+                )
+              else
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                      final visit = _visits[index];
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: AgendaVisitCard(
+                            producerName: visit['producerName'],
+                            farmName: visit['farmName'],
+                            location: visit['location'],
+                            time: visit['time'],
+                            objective: visit['objective'],
+                            status: visit['status'],
+                            isUrgent: visit['isUrgent'],
+                            isDark: isDark,
+                            onViewDetails: () {},
+                            onStart: () {
+                              _navigateToVisitRegistration({
+                                'producerName': visit['producerName'],
+                                'farmName': visit['farmName'],
+                                'lotName': visit['lotName'] ?? 'Lote Principal',
+                                'location': visit['location'],
+                              });
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    childCount: _visits.length,
+                  ),
                 ),
-              ),
 
               // ── Recordatorios ────────────────────────────────────
               SliverPadding(
@@ -391,31 +406,45 @@ class _TechnicianAgendaScreenState extends State<TechnicianAgendaScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          ..._pendingTasks.map((task) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 5,
-                                  height: 5,
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.white,
+                          if (_pendingTasks.isEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Center(
+                                child: Text(
+                                  'Sin recordatorios pendientes',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: (isDark ? Colors.white : AppTheme.darkCoffee).withOpacity(0.4),
                                   ),
                                 ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    task,
-                                    style: TextStyle(
-                                      fontSize: 12.5,
-                                      color: (isDark ? Colors.white : AppTheme.darkCoffee).withOpacity(0.85),
+                              ),
+                            )
+                          else
+                            ..._pendingTasks.map((task) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 5,
+                                    height: 5,
+                                    decoration: const BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          )),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      task,
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        color: (isDark ? Colors.white : AppTheme.darkCoffee).withOpacity(0.85),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )),
                         ],
                       ),
                     ),
@@ -459,7 +488,6 @@ class _TechnicianAgendaScreenState extends State<TechnicianAgendaScreen> {
           } else if (index == 2) {
             context.go(RouteNames.technicianAgenda);
           } else if (index == 3) {
-            // ✅ CONEXIÓN: Navegar al Diagnóstico del Cultivo
             _navigateToCropDiagnosis();
           } else if (index == 4) {
             context.go(RouteNames.profile);
@@ -514,138 +542,43 @@ class _TechnicianAgendaScreenState extends State<TechnicianAgendaScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppTheme.primaryGreen,
-                      AppTheme.secondaryGreen,
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Center(
-                  child: Text(
-                    'JP',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Juan Pérez',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '🌱 El Mirador • ☕ Lote Norte',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: textColor.withOpacity(0.6),
-                      ),
-                    ),
-                    Text(
-                      '📍 Motozintla, Chiapas • 🕙 10:30 AM',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: textColor.withOpacity(0.5),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
+          // ✅ Mensaje de "Sin visitas" en lugar de datos hardcodeados
           Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? AppTheme.coffeeDark.withOpacity(0.3)
-                  : const Color(0xFFF5F0E8).withOpacity(0.6),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.task_alt,
-                  size: 14,
-                  color: AppTheme.primaryGreen,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Inspección por riesgo de roya',
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.assignment_outlined,
+                    size: 32,
+                    color: textColor.withOpacity(0.2),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No hay visitas programadas',
                     style: TextStyle(
-                      fontSize: 12,
-                      color: textColor.withOpacity(0.7),
+                      fontSize: 13,
+                      color: textColor.withOpacity(0.4),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      _navigateToVisitRegistration();
+                    },
+                    icon: const Icon(Icons.add, size: 16),
+                    label: const Text('Programar visita'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primaryGreen,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    _navigateToVisitRegistration({
-                      'producerName': 'Juan Pérez',
-                      'farmName': 'El Mirador',
-                      'lotName': 'Lote Norte',
-                      'location': 'Motozintla, Chiapas',
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryGreen,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text('▶ Iniciar visita'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.goldCoffee,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    side: BorderSide(
-                      color: AppTheme.goldCoffee.withOpacity(0.3),
-                      width: 1,
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Text('📍 Ver ruta'),
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -676,6 +609,7 @@ class _TechnicianAgendaScreenState extends State<TechnicianAgendaScreen> {
         Row(
           children: List.generate(7, (index) {
             final isToday = index == 2;
+            // ✅ Sin puntos de visitas (sin datos)
             return Expanded(
               child: Container(
                 margin: const EdgeInsets.all(2),
@@ -685,42 +619,15 @@ class _TechnicianAgendaScreenState extends State<TechnicianAgendaScreen> {
                       : Colors.transparent,
                   shape: BoxShape.circle,
                 ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Text(
-                      '${dates[index]}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
-                        color: isToday ? accent : textColor.withOpacity(0.7),
-                      ),
+                child: Center(
+                  child: Text(
+                    '${dates[index]}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                      color: isToday ? accent : textColor.withOpacity(0.7),
                     ),
-                    if (index == 0 || index == 3)
-                      Positioned(
-                        bottom: 4,
-                        child: Container(
-                          width: 4,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryGreen,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                    if (index == 2)
-                      Positioned(
-                        bottom: 4,
-                        child: Container(
-                          width: 4,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: AppTheme.goldCoffee,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                  ],
+                  ),
                 ),
               ),
             );

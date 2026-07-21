@@ -1,10 +1,16 @@
+// lib/features/auth/presentation/screens/login_screen.dart
+import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:kaabcafe/core/constants/app_constants.dart';
 import 'package:kaabcafe/core/providers/user_provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
+import 'package:kaabcafe/core/mixins/session_timeout_mixin.dart';
+import 'package:kaabcafe/core/services/login_attempt_service.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_logo.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_form.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/social_login_button.dart';
@@ -19,70 +25,179 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
   bool _isLoading = false;
 
-  void _handleLogin(String email, String password) async {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final service = Provider.of<LoginAttemptService>(context, listen: false);
+      if (service.isPermanentlyBlocked) {
+        context.go(RouteNames.pinSecurity);
+      }
+    });
+  }
+
+  Future<void> _handleLogin(String email, String password) async {
+    final service = Provider.of<LoginAttemptService>(context, listen: false);
+
+    if (service.isPermanentlyBlocked) {
+      context.go(RouteNames.pinSecurity);
+      return;
+    }
+
+    if (service.isBlocked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⛔ Cuenta bloqueada temporalmente. Espera unos segundos.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
 
     debugPrint('Login intentado con: $email');
 
-    // Simular proceso de login
-    await Future.delayed(const Duration(seconds: 2));
-
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (mounted) {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-
-      // ✅ PRIMERO: Buscar el rol guardado para este email específico
-      final userType = await userProvider.loadSavedUserTypeForEmail(email);
-
-      // ✅ SEGUNDO: Si no hay rol guardado, ir a seleccionar perfil
-      if (userType == null) {
-        // Guardar el email para usarlo después en la selección de perfil
-        userProvider.setUserEmail(email);
-        context.go(RouteNames.selectUserType);
-        return;
-      }
-
-      // ✅ TERCERO: Si hay rol, guardar información del usuario
-      userProvider.setUserInfo(
-        type: userType,
-        email: email,
-        name: 'Usuario', // Puedes obtener el nombre del backend
+    try {
+      final url = Uri.parse('${AppConstants.apiBaseUrl}/api/auth/login');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+        }),
       );
 
-      // ✅ CUARTO: Navegar según el rol
-      String destinationRoute;
-      switch (userType) {
-        case UserType.producer:
-          destinationRoute = RouteNames.setupProfile; // ✅ Productor va a setupProfile
-          break;
-        case UserType.cooperative:
-          destinationRoute = RouteNames.cooperativeDashboard;
-          break;
-        case UserType.buyer:
-          destinationRoute = RouteNames.marketplace;
-          break;
-        case UserType.technician:
-          destinationRoute = RouteNames.technicianDashboard;
-          break;
-        default:
-        // ✅ Si no se reconoce el rol, ir a seleccionar perfil
-          destinationRoute = RouteNames.selectUserType;
-      }
+      setState(() {
+        _isLoading = false;
+      });
 
-      debugPrint('✅ Navegando a: $destinationRoute para rol: ${userType.title}');
-      context.go(destinationRoute);
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        final userData = responseData['user'] ?? {};
+        final userName = userData['fullName'] ?? userData['name'] ?? 'Usuario';
+
+        await service.resetBlock();
+
+        if (mounted) {
+          final userProvider = Provider.of<UserProvider>(context, listen: false);
+          final userType = await userProvider.loadSavedUserTypeForEmail(email);
+
+          if (userType == null) {
+            userProvider.setUserEmail(email);
+            context.go(RouteNames.selectUserType);
+            return;
+          }
+
+          userProvider.setUserInfo(
+            type: userType,
+            email: email,
+            name: userName,
+          );
+
+          String destinationRoute;
+          switch (userType) {
+            case UserType.producer:
+              destinationRoute = RouteNames.setupProfile;
+              break;
+            case UserType.cooperative:
+              destinationRoute = RouteNames.cooperativeDashboard;
+              break;
+            case UserType.buyer:
+              destinationRoute = RouteNames.marketplace;
+              break;
+            case UserType.technician:
+              destinationRoute = RouteNames.technicianDashboard;
+              break;
+            default:
+              destinationRoute = RouteNames.selectUserType;
+          }
+
+          debugPrint('✅ Navegando a: $destinationRoute');
+          context.go(destinationRoute);
+        }
+      } else {
+        final errorBody = jsonDecode(response.body);
+        final errorMessage = errorBody['message'] ?? errorBody['detail'] ?? 'Credenciales incorrectas';
+
+        final (isBlocked, isPermanentlyBlocked, remaining) = await service.registerFailedAttempt();
+
+        if (mounted) {
+          if (isPermanentlyBlocked) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('🔒 Cuenta bloqueada. Verifica tu identidad con el PIN.'),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 2),
+              ),
+            );
+            context.go(RouteNames.pinSecurity);
+            return;
+          }
+
+          if (isBlocked) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('⏳ Demasiados intentos. Espera ${remaining ?? 30}s. Intentos: ${service.attempts}/6'),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+            return;
+          }
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '❌ $errorMessage. Intentos restantes: ${6 - service.attempts}',
+              ),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('⚠️ Error de conexión: ${e.toString()}'),
+            backgroundColor: Colors.red.shade700,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
   void _handleGoogleLogin() async {
+    final service = Provider.of<LoginAttemptService>(context, listen: false);
+
+    if (service.isPermanentlyBlocked) {
+      context.go(RouteNames.pinSecurity);
+      return;
+    }
+
+    if (service.isBlocked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('⛔ Cuenta bloqueada temporalmente.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -95,9 +210,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (mounted) {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
-
-      // Para Google login, necesitamos un email
-      // En un caso real, vendría del login de Google
       final email = 'usuario_google@ejemplo.com';
       final userType = await userProvider.loadSavedUserTypeForEmail(email);
 
@@ -148,7 +260,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // ✅ Color crema/beige
     final creamColor = isDark
         ? AppTheme.coffeeDeep
         : const Color(0xFFF0E8D8);
@@ -157,13 +268,11 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // ✅ Fondo base en color crema
           Positioned.fill(
             child: Container(
               color: creamColor,
             ),
           ),
-          // Fondo "aurora / espacial"
           Positioned.fill(
             child: _AuroraBackground(
               theme: theme,
@@ -248,7 +357,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-/// Fondo tipo "aurora boreal / espacial"
 class _AuroraBackground extends StatelessWidget {
   final ThemeData theme;
   final Color creamColor;
