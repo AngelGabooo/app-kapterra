@@ -1,3 +1,4 @@
+// lib/features/marketplace/presentation/screens/explore_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
@@ -30,22 +31,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
     'Recientes',
   ];
 
-  // ✅ Lote de ejemplo
-  final List<MarketplaceLotModel> _lots = [
-    MarketplaceLotModel(
-      id: '1',
-      name: 'Lote Geisha Premium',
-      producerName: 'Juaqqqn Pérez',
-      location: 'Motozintla, Chiapas',
-      price: 95,
-      availableQuantity: 420,
-      rating: 4.8,
-      imageUrl: 'assets/img/lote_geisha.png',
-      isVerified: true,
-      category: 'Especialidad',
-      description: 'Café de altura con perfil dulce y notas florales.',
-    ),
-  ];
+  // ✅ Lista de lotes vacía
+  final List<MarketplaceLotModel> _lots = [];
 
   @override
   Widget build(BuildContext context) {
@@ -57,259 +44,247 @@ class _ExploreScreenState extends State<ExploreScreen> {
     final bool hasData = _lots.isNotEmpty;
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              isDark ? AppTheme.coffeeDark : AppTheme.lightBeige,
-              isDark ? AppTheme.coffeeDeep.withOpacity(0.5) : AppTheme.primaryGreen.withOpacity(0.03),
-              isDark ? AppTheme.coffeeDark : AppTheme.lightBeige,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Barra superior
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: () => context.go(RouteNames.marketplace),
-                      icon: Icon(Icons.arrow_back, color: textColor),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Explorar Cafés',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: textColor,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Lotes trazables disponibles para compra.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: textColor.withOpacity(0.6),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () {},
-                      icon: Icon(Icons.search, color: textColor),
-                    ),
-                    IconButton(
-                      onPressed: () {
-                        setState(() {
-                          _showAdvancedFilters = !_showAdvancedFilters;
-                        });
-                      },
-                      icon: Icon(
-                        _showAdvancedFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
-                        color: _showAdvancedFilters ? AppTheme.primaryGreen : textColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Buscador
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.02),
-                        blurRadius: 4,
-                      ),
-                    ],
+      backgroundColor: isDark ? AppTheme.coffeeDark : AppTheme.lightBeige,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── Barra superior ──────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => context.go(RouteNames.marketplace),
+                    icon: Icon(Icons.arrow_back, color: textColor),
                   ),
-                  child: TextField(
-                    onChanged: (value) => setState(() => _searchQuery = value),
-                    decoration: InputDecoration(
-                      hintText: 'Buscar por lote, productor, región o variedad...',
-                      hintStyle: TextStyle(
-                        fontSize: 13,
-                        color: textColor.withOpacity(0.4),
-                      ),
-                      prefixIcon: Icon(
-                        Icons.search,
-                        size: 20,
-                        color: textColor.withOpacity(0.4),
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Filtros rápidos
-              SizedBox(
-                height: 36,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: _filterOptions.length,
-                  itemBuilder: (context, index) {
-                    final filter = _filterOptions[index];
-                    final isSelected = _selectedFilter == filter;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ExploreFilterChip(
-                        label: filter,
-                        isSelected: isSelected,
-                        isDark: isDark,
-                        onTap: () {
-                          setState(() {
-                            _selectedFilter = filter;
-                          });
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              // Filtros avanzados
-              if (_showAdvancedFilters)
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: cardColor,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.02),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.filter_list, size: 18, color: textColor),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Filtros avanzados',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: textColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      _buildFilterSection('Región', ['Chiapas', 'Oaxaca', 'Veracruz', 'Colombia', 'Guatemala']),
-                      const SizedBox(height: 12),
-                      _buildFilterSection('Variedad', ['Bourbon', 'Typica', 'Catuaí', 'Geisha', 'Robusta']),
-                      const SizedBox(height: 12),
-                      _buildFilterSection('Certificaciones', ['Orgánico', 'Comercio Justo', 'Sostenible']),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildRangeFilter('Precio', '\$0', '\$200'),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _buildRangeFilter('Altitud', '900', '1800'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton(
-                          onPressed: () {
-                            setState(() {
-                              _showAdvancedFilters = false;
-                            });
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.primaryGreen,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: const Text('Aplicar filtros'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-              const SizedBox(height: 8),
-
-              // Resumen y orden
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    Text(
-                      '${_lots.length} lotes encontrados',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: textColor.withOpacity(0.6),
-                      ),
-                    ),
-                    const Spacer(),
-                    Row(
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        IconButton(
-                          onPressed: () => setState(() => _isGridView = true),
-                          icon: Icon(
-                            Icons.grid_view,
-                            size: 20,
-                            color: _isGridView ? AppTheme.primaryGreen : textColor.withOpacity(0.3),
+                        Text(
+                          'Explorar Cafés',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
                           ),
                         ),
-                        IconButton(
-                          onPressed: () => setState(() => _isGridView = false),
-                          icon: Icon(
-                            Icons.list,
-                            size: 20,
-                            color: !_isGridView ? AppTheme.primaryGreen : textColor.withOpacity(0.3),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Lotes trazables disponibles para compra.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: textColor.withOpacity(0.6),
                           ),
                         ),
                       ],
                     ),
+                  ),
+                  IconButton(
+                    onPressed: () {},
+                    icon: Icon(Icons.search, color: textColor),
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      setState(() {
+                        _showAdvancedFilters = !_showAdvancedFilters;
+                      });
+                    },
+                    icon: Icon(
+                      _showAdvancedFilters ? Icons.filter_alt : Icons.filter_alt_outlined,
+                      color: _showAdvancedFilters ? AppTheme.primaryGreen : textColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── Buscador ──────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                height: 44,
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                  decoration: InputDecoration(
+                    hintText: 'Buscar por lote, productor, región o variedad...',
+                    hintStyle: TextStyle(
+                      fontSize: 13,
+                      color: textColor.withOpacity(0.4),
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      size: 20,
+                      color: textColor.withOpacity(0.4),
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // ── Filtros rápidos ──────────────────────────────────
+            SizedBox(
+              height: 36,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _filterOptions.length,
+                itemBuilder: (context, index) {
+                  final filter = _filterOptions[index];
+                  final isSelected = _selectedFilter == filter;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ExploreFilterChip(
+                      label: filter,
+                      isSelected: isSelected,
+                      isDark: isDark,
+                      onTap: () {
+                        setState(() {
+                          _selectedFilter = filter;
+                        });
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // ── Filtros avanzados ──────────────────────────────────
+            if (_showAdvancedFilters)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 4,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.filter_list, size: 18, color: textColor),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Filtros avanzados',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildFilterSection('Región', ['Chiapas', 'Oaxaca', 'Veracruz', 'Colombia', 'Guatemala']),
+                    const SizedBox(height: 12),
+                    _buildFilterSection('Variedad', ['Bourbon', 'Typica', 'Catuaí', 'Geisha', 'Robusta']),
+                    const SizedBox(height: 12),
+                    _buildFilterSection('Certificaciones', ['Orgánico', 'Comercio Justo', 'Sostenible']),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildRangeFilter('Precio', '\$0', '\$200'),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildRangeFilter('Altitud', '900', '1800'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          setState(() {
+                            _showAdvancedFilters = false;
+                          });
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.primaryGreen,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text('Aplicar filtros'),
+                      ),
+                    ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 8),
+            const SizedBox(height: 8),
 
-              // Listado de lotes
-              Expanded(
-                child: hasData
-                    ? _buildContentWithData(isDark, cardColor, textColor)
-                    : _buildEmptyState(isDark, textColor),
+            // ── Resumen y orden ──────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Text(
+                    '${_lots.length} lotes encontrados',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: textColor.withOpacity(0.6),
+                    ),
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => setState(() => _isGridView = true),
+                        icon: Icon(
+                          Icons.grid_view,
+                          size: 20,
+                          color: _isGridView ? AppTheme.primaryGreen : textColor.withOpacity(0.3),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => setState(() => _isGridView = false),
+                        icon: Icon(
+                          Icons.list,
+                          size: 20,
+                          color: !_isGridView ? AppTheme.primaryGreen : textColor.withOpacity(0.3),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // ── Contenido ──────────────────────────────────────────
+            Expanded(
+              child: hasData
+                  ? _buildContentWithData(isDark, cardColor, textColor)
+                  : _buildEmptyState(isDark, textColor),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: Container(
@@ -329,12 +304,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
             setState(() {
               _currentIndex = index;
             });
+            // ✅ Navegación con 4 items (sin Favoritos)
             if (index == 0) {
               context.go(RouteNames.marketplace);
             } else if (index == 1) {
               context.go(RouteNames.explore);
-            } else if (index == 4) {
-              context.go(RouteNames.profile);
+            } else if (index == 2) {
+              context.go(RouteNames.purchases);
+            } else if (index == 3) {
+              context.go(RouteNames.buyerProfile);
             }
           },
           type: BottomNavigationBarType.fixed,
@@ -345,7 +323,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
             BottomNavigationBarItem(icon: Icon(Icons.store), label: 'Marketplace'),
             BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Explorar'),
             BottomNavigationBarItem(icon: Icon(Icons.shopping_bag), label: 'Compras'),
-            BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Favoritos'),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
           ],
         ),
@@ -527,7 +504,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           final lot = _lots[index];
           return GestureDetector(
             onTap: () => context.push(
-              RouteNames.marketplaceLotDetail,  // ✅ Nuevo nombre
+              RouteNames.marketplaceLotDetail,
               extra: {'lot': lot},
             ),
             child: Container(
@@ -651,7 +628,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
           final lot = _lots[index];
           return GestureDetector(
             onTap: () => context.push(
-              RouteNames.marketplaceLotDetail,  // ✅ Nuevo nombre
+              RouteNames.marketplaceLotDetail,
               extra: {'lot': lot},
             ),
             child: Container(

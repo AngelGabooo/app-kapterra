@@ -1,14 +1,18 @@
+// lib/features/auth/presentation/screens/register_screen.dart
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:kaabcafe/core/constants/app_constants.dart';
+import 'package:kaabcafe/core/providers/user_provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
+import 'package:kaabcafe/core/themes/app_theme.dart';
+import 'package:kaabcafe/core/widgets/neumorphic_widgets.dart';
+import 'package:kaabcafe/features/auth/data/models/user_type_model.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/register_form.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/social_login_button.dart';
-import '../../../../core/themes/app_theme.dart';
-import '../../../../core/widgets/neumorphic_widgets.dart';
 import '../widgets/neumorphic_box.dart' hide NeumorphicBox;
 
 class RegisterScreen extends StatefulWidget {
@@ -40,6 +44,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       if (response.statusCode == 201) {
         debugPrint('Usuario registrado con éxito en la nube.');
+
+        // ✅ GUARDAR EN USERPROVIDER CON EL TELÉFONO
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        await userProvider.setUserInfo(
+          type: UserType.producer, // ⚠️ Temporal, luego se seleccionará
+          email: data.email,
+          name: data.fullName,
+          phone: data.phoneNumber, // ✅ PASAR EL TELÉFONO
+        );
+
+        debugPrint('✅ Teléfono guardado en UserProvider: ${data.phoneNumber}');
+
         if (mounted) {
           context.go(RouteNames.selectUserType);
         }
@@ -98,22 +114,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // ✅ Color crema/beige para el fondo
     final creamColor = isDark
         ? AppTheme.coffeeDeep
-        : const Color(0xFFF0E8D8); // Beige crema claro
+        : const Color(0xFFF0E8D8);
     final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
 
     return Scaffold(
       body: Stack(
         children: [
-          // ✅ Fondo base en color crema (no blanco puro)
           Positioned.fill(
-            child: Container(
-              color: creamColor, // ✅ Crema en lugar de blanco
-            ),
+            child: Container(color: creamColor),
           ),
-          // Fondo "aurora / espacial"
           Positioned.fill(
             child: _AuroraBackground(
               theme: theme,
@@ -138,7 +149,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           intensity: 4,
                           padding: const EdgeInsets.all(10),
                           isDark: isDark,
-                          // ✅ Eliminado el parámetro color que causaba error
                           child: Icon(
                             Icons.arrow_back,
                             color: theme.colorScheme.onSurface,
@@ -181,8 +191,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   Row(
                     children: [
                       Expanded(
-                        child: Divider(
-                            color: textColor.withOpacity(0.15), thickness: 1),
+                        child: Divider(color: textColor.withOpacity(0.15), thickness: 1),
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -195,8 +204,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       Expanded(
-                        child: Divider(
-                            color: textColor.withOpacity(0.15), thickness: 1),
+                        child: Divider(color: textColor.withOpacity(0.15), thickness: 1),
                       ),
                     ],
                   ),
@@ -246,7 +254,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 }
 
-/// Fondo de aurora con soporte para color crema
 class _AuroraBackground extends StatelessWidget {
   final ThemeData theme;
   final Color creamColor;

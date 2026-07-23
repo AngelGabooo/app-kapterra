@@ -1,9 +1,11 @@
+// lib/features/farms/presentation/screens/create_lot_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/core/providers/farm_provider.dart';
 import 'package:kaabcafe/features/farms/data/models/farm_details_model.dart';
 import 'package:kaabcafe/features/farms/data/models/lot_model.dart';
+import '../location/location_picker.dart'; // ✅ Importar LocationPicker
 
 class CreateLotScreen extends StatefulWidget {
   final FarmDetailsModel farm;
@@ -26,6 +28,11 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
   String _selectedStatus = 'Excelente';
   List<String> _images = [];
   bool _isSaving = false;
+
+  // ✅ Variables para ubicación
+  double? _lotLatitude;
+  double? _lotLongitude;
+  String _lotAddress = '';
 
   final List<String> _varietyOptions = [
     'Bourbon',
@@ -298,6 +305,18 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
       _selectedVariety = 'Bourbon';
       _selectedStatus = 'Excelente';
       _images.clear();
+      _lotLatitude = null;
+      _lotLongitude = null;
+      _lotAddress = '';
+    });
+  }
+
+  // ✅ Manejar selección de ubicación
+  void _onLocationSelected(double lat, double lng, String address) {
+    setState(() {
+      _lotLatitude = lat;
+      _lotLongitude = lng;
+      _lotAddress = address;
     });
   }
 
@@ -511,7 +530,7 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
 
                       const SizedBox(height: 16),
 
-                      // Ubicación del lote
+                      // ✅ Ubicación del lote - CON LOCATION PICKER
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -528,59 +547,56 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Ubicación del lote',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Container(
-                              height: 150,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                gradient: LinearGradient(
-                                  colors: [
-                                    AppTheme.primaryGreen.withOpacity(0.2),
-                                    AppTheme.secondaryGreen.withOpacity(0.1),
-                                  ],
+                            Row(
+                              children: [
+                                Icon(Icons.location_on, color: AppTheme.primaryGreen),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Ubicación del lote',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: colorScheme.onSurface,
+                                  ),
                                 ),
-                              ),
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            LocationPicker(
+                              onLocationSelected: _onLocationSelected,
+                              initialLat: widget.farm.latitude,
+                              initialLng: widget.farm.longitude,
+                              initialAddress: widget.farm.location,
+                            ),
+                            // Mostrar ubicación seleccionada si existe
+                            if (_lotAddress.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryGreen.withOpacity(0.05),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: AppTheme.primaryGreen.withOpacity(0.2),
+                                  ),
+                                ),
+                                child: Row(
                                   children: [
-                                    Icon(Icons.map, size: 40, color: AppTheme.primaryGreen),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      widget.farm.location,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: colorScheme.onSurface,
+                                    Icon(Icons.check_circle, color: AppTheme.primaryGreen, size: 16),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Ubicación seleccionada: $_lotAddress',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: colorScheme.onSurface,
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: () {},
-                                icon: const Icon(Icons.my_location),
-                                label: const Text('Usar ubicación actual'),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppTheme.primaryGreen,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                ),
-                              ),
-                            ),
+                            ],
                           ],
                         ),
                       ),
@@ -849,7 +865,7 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                             _buildSummaryRow(Icons.landscape, 'Finca', widget.farm.name),
                             _buildSummaryRow(Icons.emoji_nature, 'Variedad', _selectedVariety),
                             _buildSummaryRow(Icons.landscape, 'Área', _areaController.text.isEmpty ? 'Sin especificar' : '${_areaController.text} ha'),
-                            _buildSummaryRow(Icons.location_on, 'Ubicación', widget.farm.location),
+                            _buildSummaryRow(Icons.location_on, 'Ubicación', _lotAddress.isNotEmpty ? _lotAddress : widget.farm.location),
                             if (_areaController.text.isNotEmpty) ...[
                               _buildSummaryRow(Icons.nature, 'Árboles', _calculateTreesCount().toString()),
                               _buildSummaryRow(Icons.eco, 'Producción', '${_calculateEstimatedProduction().toStringAsFixed(1)} qq'),

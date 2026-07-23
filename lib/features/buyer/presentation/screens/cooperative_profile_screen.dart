@@ -31,7 +31,6 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
 
   // ✅ Listas vacías
   final List<Map<String, dynamic>> _documents = [];
-
   final List<Map<String, dynamic>> _bankAccounts = [];
 
   void _showEditDialog(String title, String initialValue, Function(String) onSave) {
@@ -74,6 +73,10 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
     );
   }
 
+  void _goBack() {
+    context.go(RouteNames.cooperativeDashboard);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -85,7 +88,7 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Barra superior
+            // ── Barra superior con botón de regreso ──────────────
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
@@ -101,6 +104,17 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
               ),
               child: Row(
                 children: [
+                  // ✅ Botón de regreso
+                  IconButton(
+                    onPressed: _goBack,
+                    icon: Icon(
+                      Icons.arrow_back,
+                      color: textColor,
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 4),
                   Container(
                     width: 40,
                     height: 40,
@@ -158,14 +172,14 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
               ),
             ),
 
-            // Contenido
+            // ── Contenido ──────────────────────────────────────────
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    // ✅ Estadísticas - TODOS EN 0
+                    // ── Estadísticas ──────────────────────────────
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -212,6 +226,7 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
                     ),
 
                     const SizedBox(height: 16),
+
                     Row(
                       children: [
                         CooperativeProfileStatCard(
@@ -237,7 +252,7 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
 
                     const SizedBox(height: 20),
 
-                    // ✅ Información de la cooperativa - VACÍA
+                    // ── Información de la cooperativa ──────────────
                     Container(
                       decoration: BoxDecoration(
                         color: isDark
@@ -378,7 +393,7 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
 
                     const SizedBox(height: 20),
 
-                    // ✅ Certificaciones - VACÍAS
+                    // ── Certificaciones ─────────────────────────────
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -442,7 +457,7 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
 
                     const SizedBox(height: 20),
 
-                    // ✅ Documentos - VACÍO
+                    // ── Documentos ──────────────────────────────────
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -476,7 +491,6 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          // ✅ Mensaje de vacío
                           Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
@@ -521,7 +535,7 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
 
                     const SizedBox(height: 20),
 
-                    // ✅ Cuentas bancarias - VACÍO
+                    // ── Cuentas bancarias ──────────────────────────
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -555,7 +569,6 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          // ✅ Mensaje de vacío
                           Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
@@ -600,7 +613,7 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
 
                     const SizedBox(height: 20),
 
-                    // ✅ Configuración - TODOS DESACTIVADOS
+                    // ── Configuración ──────────────────────────────
                     Container(
                       decoration: BoxDecoration(
                         color: isDark
@@ -696,7 +709,7 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
 
                     const SizedBox(height: 20),
 
-                    // Cerrar sesión
+                    // ── Cerrar sesión ──────────────────────────────
                     Container(
                       width: double.infinity,
                       decoration: BoxDecoration(

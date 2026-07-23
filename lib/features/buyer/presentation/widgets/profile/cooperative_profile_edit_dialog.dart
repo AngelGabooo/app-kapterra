@@ -1,3 +1,4 @@
+// lib/features/buyer/presentation/widgets/profile/cooperative_profile_edit_dialog.dart
 import 'package:flutter/material.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 
@@ -58,8 +59,10 @@ class _CooperativeProfileEditDialogState extends State<CooperativeProfileEditDia
         keyboardType: widget.keyboardType,
         maxLines: widget.maxLines,
         style: TextStyle(color: textColor),
+        autofocus: true, // ✅ Auto-focus para mejor UX
         decoration: InputDecoration(
-          hintText: widget.title,
+          hintText: 'Ingresa ${widget.title}',
+          hintStyle: TextStyle(color: textColor.withOpacity(0.4)),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide(
@@ -78,18 +81,38 @@ class _CooperativeProfileEditDialogState extends State<CooperativeProfileEditDia
           ),
           filled: true,
           fillColor: isDark ? AppTheme.coffeeDark : AppTheme.lightBeige,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            // ✅ Asegurar que se cierra correctamente
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
+          },
+          style: TextButton.styleFrom(
+            foregroundColor: textColor.withOpacity(0.6),
+          ),
           child: const Text('Cancelar'),
         ),
         ElevatedButton(
           onPressed: () {
             if (_controller.text.trim().isNotEmpty) {
               widget.onSave(_controller.text.trim());
-              Navigator.pop(context);
+              if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
+            } else {
+              // ✅ Mostrar snackbar si está vacío
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Por favor ingresa un valor'),
+                  backgroundColor: Colors.orange,
+                  duration: Duration(seconds: 2),
+                ),
+              );
             }
           },
           style: ElevatedButton.styleFrom(

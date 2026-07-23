@@ -1,3 +1,4 @@
+// lib/features/marketplace/presentation/screens/marketplace_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
@@ -123,14 +124,6 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    IconButton(
-                      onPressed: () => context.push(RouteNames.notifications),
-                      icon: Icon(Icons.notifications_outlined, color: textColor),
-                    ),
-                    IconButton(
-                      onPressed: () {},
-                      icon: Icon(Icons.favorite_border, color: textColor),
-                    ),
                   ],
                 ),
               ),
@@ -162,20 +155,15 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
             setState(() {
               _currentIndex = index;
             });
-            // ✅ Navegación completa
+            // ✅ Navegación con 4 items (sin Favoritos)
             if (index == 0) {
               context.go(RouteNames.marketplace);
             } else if (index == 1) {
               context.go(RouteNames.explore);
             } else if (index == 2) {
-              // Compras - Preparado para futura implementación
-              _showComingSoon(context, 'Mis Compras');
+              context.go(RouteNames.purchases);
             } else if (index == 3) {
-              // Favoritos - Preparado para futura implementación
-              _showComingSoon(context, 'Favoritos');
-            } else if (index == 4) {
               context.go(RouteNames.buyerProfile);
-
             }
           },
           type: BottomNavigationBarType.fixed,
@@ -186,52 +174,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
             BottomNavigationBarItem(icon: Icon(Icons.store), label: 'Marketplace'),
             BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Explorar'),
             BottomNavigationBarItem(icon: Icon(Icons.shopping_bag), label: 'Compras'),
-            BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Favoritos'),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
           ],
         ),
-      ),
-    );
-  }
-
-  // ✅ Método para mostrar "Próximamente"
-  void _showComingSoon(BuildContext context, String title) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDark ? AppTheme.coffeeDeep : Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Row(
-          children: [
-            Icon(Icons.info_outline, color: AppTheme.goldCoffee),
-            const SizedBox(width: 8),
-            Text(
-              'Próximamente',
-              style: TextStyle(
-                color: textColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        content: Text(
-          'La sección "$title" estará disponible próximamente.',
-          style: TextStyle(
-            color: textColor.withOpacity(0.7),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Entendido'),
-          ),
-        ],
       ),
     );
   }

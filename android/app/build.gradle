@@ -1,3 +1,4 @@
+// android/app/build.gradle
 plugins {
     id "com.android.application"
     id "kotlin-android"
@@ -24,10 +25,12 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.kaabterra.mobile"
-    compileSdk 36  // ✅ Actualizar a 36
+    compileSdk 36
     ndkVersion "28.2.13676358"
 
     compileOptions {
+        // ✅ Habilitar coreLibraryDesugaring
+        coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
@@ -42,8 +45,8 @@ android {
 
     defaultConfig {
         applicationId "com.kaabterra.mobile"
-        minSdkVersion flutter.minSdkVersion
-        targetSdkVersion 36  // ✅ Actualizar a 36
+        minSdkVersion flutter.minSdkVersion  // ✅ Cambiar a 21 (flutter.minSdkVersion puede ser más bajo)
+        targetSdkVersion 36
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
@@ -64,4 +67,6 @@ flutter {
 
 dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
+    // ✅ Agregar coreLibraryDesugaring para soporte de Java 8+
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3'
 }

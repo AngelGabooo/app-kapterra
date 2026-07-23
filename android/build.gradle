@@ -1,12 +1,13 @@
+// android/build.gradle
 buildscript {
-    ext.kotlin_version = '2.2.20'
+    ext.kotlin_version = '2.0.20'  // ✅ Cambiar a 2.0.20 (soporta Flutter)
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.11.1'
+        classpath 'com.android.tools.build:gradle:8.5.0'  // ✅ Cambiar a 8.5.0
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }

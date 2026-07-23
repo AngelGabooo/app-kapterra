@@ -1,4 +1,7 @@
+// lib/features/farm/presentation/widgets/farm_form.dart
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/farm/data/models/farm_model.dart';
 import '../../../../core/widgets/neumorphic_widgets.dart';
@@ -6,7 +9,7 @@ import '../../../../core/widgets/neumorphic_widgets.dart';
 class FarmForm extends StatefulWidget {
   final Function(FarmModel) onSave;
 
-  const FarmForm({super.key, required this.onSave});
+  const FarmForm({super.key, required this.onSave, FarmModel? initialFarm});
 
   @override
   State<FarmForm> createState() => FarmFormState();
@@ -15,6 +18,7 @@ class FarmForm extends StatefulWidget {
 class FarmFormState extends State<FarmForm> {
   final _formKey = GlobalKey<FormState>();
   late FarmModel _farm;
+  bool _isLoadingLocation = false;
 
   final _coffeeVarietyOptions = ['Arábica', 'Robusta', 'Bourbon', 'Typica', 'Catuaí', 'Geisha', 'Otra'];
 
@@ -28,6 +32,68 @@ class FarmFormState extends State<FarmForm> {
     if (_formKey.currentState!.validate()) {
       _farm.createdAt = DateTime.now();
       widget.onSave(_farm);
+    }
+  }
+
+  // ✅ Método para obtener la ubicación actual
+  Future<void> _getCurrentLocation() async {
+    setState(() => _isLoadingLocation = true);
+
+    try {
+      // 1. Verificar permisos
+      final status = await Permission.location.request();
+
+      if (status.isDenied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Se necesita permiso de ubicación para continuar'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        setState(() => _isLoadingLocation = false);
+        return;
+      }
+
+      if (status.isPermanentlyDenied) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Por favor habilita la ubicación desde ajustes'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        setState(() => _isLoadingLocation = false);
+        return;
+      }
+
+      // 2. Obtener la ubicación
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // 3. Actualizar el modelo con las coordenadas
+      setState(() {
+        _farm.latitude = position.latitude;
+        _farm.longitude = position.longitude;
+        // También actualizar el campo de ubicación con un nombre genérico
+        _farm.location = 'Ubicación actual (${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)})';
+        _isLoadingLocation = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('📍 Ubicación obtenida: ${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}'),
+          backgroundColor: AppTheme.primaryGreen,
+        ),
+      );
+
+    } catch (e) {
+      setState(() => _isLoadingLocation = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al obtener ubicación: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -98,7 +164,6 @@ class FarmFormState extends State<FarmForm> {
       color: textColor.withOpacity(0.9),
     );
 
-    // ✅ Color crema
     final cardColor = isDark
         ? AppTheme.coffeeDeep.withOpacity(0.7)
         : const Color(0xFFE8E0D5).withOpacity(0.9);
@@ -130,7 +195,6 @@ class FarmFormState extends State<FarmForm> {
 
             Text('Nombre de la finca', style: labelStyle),
             const SizedBox(height: 8),
-            // ✅ Inset SIN BRILLO
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
@@ -178,9 +242,12 @@ class FarmFormState extends State<FarmForm> {
               child: TextFormField(
                 onChanged: (value) => _farm.location = value,
                 style: TextStyle(color: textColor),
+                controller: TextEditingController(
+                  text: _farm.location.isNotEmpty ? _farm.location : null,
+                ),
                 decoration: _buildInputDecoration(
                   icon: Icons.location_on_outlined,
-                  hintText: 'Seleccionar ubicación',
+                  hintText: 'Ej. Motozintla, Chiapas',
                   theme: theme,
                   isDark: isDark,
                 ),
@@ -191,17 +258,11 @@ class FarmFormState extends State<FarmForm> {
 
             const SizedBox(height: 12),
 
+            // ✅ Botón de ubicación actual mejorado
             SizedBox(
               width: double.infinity,
               child: GestureDetector(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Funcionalidad de ubicación próximamente'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                },
+                onTap: _isLoadingLocation ? null : _getCurrentLocation,
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
@@ -221,14 +282,24 @@ class FarmFormState extends State<FarmForm> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.my_location,
-                        color: AppTheme.primaryGreen,
-                        size: 20,
-                      ),
+                      if (_isLoadingLocation)
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppTheme.primaryGreen,
+                          ),
+                        )
+                      else
+                        Icon(
+                          Icons.my_location,
+                          color: AppTheme.primaryGreen,
+                          size: 20,
+                        ),
                       const SizedBox(width: 10),
                       Text(
-                        'Usar ubicación actual',
+                        _isLoadingLocation ? 'Obteniendo ubicación...' : 'Usar ubicación actual',
                         style: TextStyle(
                           color: AppTheme.primaryGreen,
                           fontWeight: FontWeight.w600,

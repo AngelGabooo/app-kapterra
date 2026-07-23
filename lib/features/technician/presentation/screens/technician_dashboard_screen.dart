@@ -1,6 +1,8 @@
 // lib/features/technician/presentation/screens/technician_dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:kaabcafe/core/providers/appointment_provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/core/widgets/glass_widgets.dart';
@@ -60,6 +62,10 @@ class _TechnicianDashboardScreenState extends State<TechnicianDashboardScreen> {
     final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
     final accent = isDark ? AppTheme.coffeeGoldLight : AppTheme.primaryGreen;
 
+    // ✅ Obtener citas pendientes
+    final appointmentProvider = Provider.of<AppointmentProvider>(context);
+    final pendingCount = appointmentProvider.pendingAppointments.length;
+
     return Scaffold(
       extendBody: true,
       backgroundColor: AppTheme.neuBase(isDark),
@@ -98,11 +104,8 @@ class _TechnicianDashboardScreenState extends State<TechnicianDashboardScreen> {
                           ],
                         ),
                       ),
-                      GlowIconButton(
-                        icon: Icons.notifications_outlined,
-                        isDark: isDark,
-                        onPressed: () => context.push(RouteNames.notifications),
-                      ),
+                      // ✅ Botón de Notificaciones con Badge
+                      _buildNotificationButton(isDark, accent, pendingCount),
                       const SizedBox(width: 8),
                       GlowIconButton(
                         icon: Icons.person_outline,
@@ -486,6 +489,48 @@ class _TechnicianDashboardScreenState extends State<TechnicianDashboardScreen> {
           }
         },
       ),
+    );
+  }
+
+  /// ✅ Widget para el botón de notificaciones con badge
+  Widget _buildNotificationButton(bool isDark, Color accentColor, int pendingCount) {
+    if (pendingCount > 0) {
+      return Stack(
+        children: [
+          GlowIconButton(
+            icon: Icons.notifications_outlined,
+            isDark: isDark,
+            onPressed: () => context.push(RouteNames.notifications),
+          ),
+          Positioned(
+            right: 2,
+            top: 2,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                pendingCount > 9 ? '9+' : '$pendingCount',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return GlowIconButton(
+      icon: Icons.notifications_outlined,
+      isDark: isDark,
+      onPressed: () => context.push(RouteNames.notifications),
     );
   }
 

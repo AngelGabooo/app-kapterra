@@ -48,19 +48,29 @@ mixin SessionTimeoutMixin<T extends StatefulWidget> on State<T> {
       _timeoutService!.start();
     }
     _timeoutInitialized = true;
+    debugPrint('✅ SessionTimeoutMixin inicializado');
   }
 
   /// Iniciar el temporizador
-  void startTimeout() => _timeoutService?.start();
+  void startTimeout() {
+    _timeoutService?.start();
+    debugPrint('▶️ Timer iniciado manualmente');
+  }
 
   /// Reiniciar el temporizador (se llama en interacciones del usuario)
-  void resetTimeout() => _timeoutService?.reset();
+  void resetTimeout() {
+    _timeoutService?.reset();
+  }
 
   /// Pausar el temporizador (ej: al mostrar un diálogo)
-  void pauseTimeout() => _timeoutService?.pause();
+  void pauseTimeout() {
+    _timeoutService?.pause();
+  }
 
   /// Reanudar el temporizador (ej: al cerrar un diálogo)
-  void resumeTimeout() => _timeoutService?.resume();
+  void resumeTimeout() {
+    _timeoutService?.resume();
+  }
 
   /// Detener y limpiar el temporizador
   void disposeTimeout() {

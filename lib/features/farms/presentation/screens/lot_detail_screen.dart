@@ -11,6 +11,7 @@ import 'package:kaabcafe/features/farms/data/models/lot_cost_model.dart';
 import 'package:kaabcafe/features/farms/data/models/farm_activity_model.dart';
 import 'package:kaabcafe/features/activities/presentation/providers/activities_provider.dart';
 import 'package:kaabcafe/features/activities/domain/entities/activity_entity.dart';
+import '../qr/qr_card.dart'; // ✅ Importar QR Card
 
 class LotDetailScreen extends StatefulWidget {
   final LotModel lot;
@@ -393,57 +394,6 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
     );
   }
 
-  void _onShareQR() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('📤 Compartiendo código QR...'), backgroundColor: AppTheme.primaryGreen),
-    );
-  }
-
-  void _onDownloadQR() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('📥 Descargando código QR...'), backgroundColor: AppTheme.primaryGreen),
-    );
-  }
-
-  void _onViewPublicQR() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Vista Pública'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.withOpacity(0.2)),
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.qr_code, size: 100, color: AppTheme.darkCoffee.withOpacity(0.3)),
-                    const SizedBox(height: 8),
-                    Text('${widget.lot.name}', style: TextStyle(fontSize: 12, color: AppTheme.darkCoffee.withOpacity(0.5))),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text('Escanea el código QR para ver la información pública del lote', textAlign: TextAlign.center, style: TextStyle(fontSize: 12)),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cerrar')),
-        ],
-      ),
-    );
-  }
-
   void _goToEditLot() {
     context.push(RouteNames.editLot, extra: {'lot': widget.lot, 'farm': widget.farm});
   }
@@ -601,7 +551,7 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
                   _buildAlertsSection(colorScheme),
                   const SizedBox(height: 16),
 
-                  // QR
+                  // ✅ QR - Usando QRCard
                   _buildQRCard(),
                   const SizedBox(height: 16),
 
@@ -1012,48 +962,18 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
     );
   }
 
+  // ✅ QR CARD - Usando el widget modularizado
   Widget _buildQRCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6)],
-      ),
-      child: Column(
-        children: [
-          const Text('Código QR', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.darkCoffee)),
-          const SizedBox(height: 12),
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.withOpacity(0.2)),
-            ),
-            child: Icon(Icons.qr_code, size: 50, color: AppTheme.darkCoffee.withOpacity(0.5)),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _onShareQR,
-                  child: const Text('Compartir'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _onDownloadQR,
-                  child: const Text('Descargar'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+    return QRCard(
+      lotId: widget.lot.id,
+      lotName: widget.lot.name,
+      farmName: widget.farm.name,
+      variety: widget.lot.variety,
+      area: widget.lot.area,
+      status: widget.lot.statusText,
+      treesCount: widget.lot.treesCount,
+      estimatedProduction: widget.lot.estimatedProduction,
+      location: widget.farm.location,
     );
   }
 

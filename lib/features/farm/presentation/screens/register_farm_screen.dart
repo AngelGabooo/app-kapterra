@@ -1,3 +1,4 @@
+// lib/features/farm/presentation/screens/register_farm_screen.dart
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -16,6 +17,7 @@ import '../../../../core/widgets/neumorphic_widgets.dart';
 
 class RegisterFarmScreen extends StatefulWidget {
   const RegisterFarmScreen({super.key});
+
   @override
   State<RegisterFarmScreen> createState() => _RegisterFarmScreenState();
 }
@@ -26,6 +28,13 @@ class _RegisterFarmScreenState extends State<RegisterFarmScreen> {
   bool _isLoading = false;
   FarmModel? _farm;
   final GlobalKey<FarmFormState> _formKey = GlobalKey<FarmFormState>();
+
+  // ✅ Inicializar _farm en initState
+  @override
+  void initState() {
+    super.initState();
+    _farm = FarmModel();
+  }
 
   void _handleSave(FarmModel farm) async {
     setState(() => _isLoading = true);
@@ -42,11 +51,20 @@ class _RegisterFarmScreenState extends State<RegisterFarmScreen> {
         productivity: 0,
         status: FarmHealthStatus.healthy,
         imageUrl: 'assets/img/default_farm.png',
-        latitude: farm.latitude ?? 19.4326,
-        longitude: farm.longitude ?? -99.1332,
+        latitude: farm.latitude ?? 16.7525,
+        longitude: farm.longitude ?? -93.1167,
       );
       farmProvider.addFarm(newFarm);
-      context.go(RouteNames.dashboard);
+
+      // ✅ Mostrar mensaje de éxito
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Finca registrada correctamente'),
+          backgroundColor: AppTheme.primaryGreen,
+        ),
+      );
+
+      context.go(RouteNames.farmSuccess, extra: farm.name);
     }
   }
 
@@ -90,7 +108,6 @@ class _RegisterFarmScreenState extends State<RegisterFarmScreen> {
     final isDark = theme.brightness == Brightness.dark;
     final progress = (_currentStep / _totalSteps);
 
-    // ✅ Color crema
     final creamColor = isDark
         ? AppTheme.coffeeDeep
         : const Color(0xFFF0E8D8);
@@ -111,7 +128,6 @@ class _RegisterFarmScreenState extends State<RegisterFarmScreen> {
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
                     children: [
-                      // ✅ Botón de regreso SIN BRILLO
                       GestureDetector(
                         onTap: _goBack,
                         child: Container(
@@ -191,7 +207,12 @@ class _RegisterFarmScreenState extends State<RegisterFarmScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
-                        FarmForm(key: _formKey, onSave: _handleSave),
+                        // ✅ Pasar el farm al formulario
+                        FarmForm(
+                          key: _formKey,
+                          onSave: _handleSave,
+                          initialFarm: _farm,
+                        ),
                         const SizedBox(height: 28),
                         Text(
                           'Ubicación en el mapa',
@@ -202,7 +223,6 @@ class _RegisterFarmScreenState extends State<RegisterFarmScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        // ✅ Mapa SIN BRILLO
                         Container(
                           decoration: BoxDecoration(
                             color: isDark
@@ -222,13 +242,16 @@ class _RegisterFarmScreenState extends State<RegisterFarmScreen> {
                             borderRadius: BorderRadius.circular(16),
                             child: FarmMap(
                               onLocationSelected: (lat, lng) {
-                                if (_farm != null) {
-                                  setState(() {
+                                setState(() {
+                                  if (_farm != null) {
                                     _farm!.latitude = lat;
                                     _farm!.longitude = lng;
-                                  });
-                                }
+                                    _farm!.location = 'Ubicación seleccionada (${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)})';
+                                  }
+                                });
                               },
+                              initialLat: _farm?.latitude,
+                              initialLng: _farm?.longitude,
                             ),
                           ),
                         ),

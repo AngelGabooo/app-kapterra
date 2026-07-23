@@ -1,3 +1,4 @@
+// lib/features/auth/presentation/screens/select_user_type_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -63,6 +64,10 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
 
     final userProvider = Provider.of<UserProvider>(context, listen: false);
 
+    // ✅ Verificar que el teléfono se mantiene
+    final currentPhone = userProvider.userPhone;
+    debugPrint('📞 Teléfono antes de setUserType: $currentPhone');
+
     String? email = userProvider.userEmail;
 
     if (email == null || email.isEmpty) {
@@ -103,7 +108,11 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
       }
     }
 
+    // ✅ Guardar tipo de usuario (el teléfono se mantiene automáticamente)
     await userProvider.setUserType(selectedType.type, email: email);
+
+    // ✅ Verificar que el teléfono sigue guardado
+    debugPrint('📞 Teléfono después de setUserType: ${userProvider.userPhone}');
 
     if (selectedType.type == UserType.producer) {
       context.go(RouteNames.setupProfile);
@@ -175,7 +184,6 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // ✅ Color crema - consistente con el login
     final creamColor = isDark
         ? AppTheme.coffeeDeep
         : const Color(0xFFF0E8D8);
@@ -185,7 +193,7 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
-          color: creamColor, // ✅ Fondo crema
+          color: creamColor,
         ),
         child: SafeArea(
           child: Column(
@@ -195,7 +203,6 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
                   children: [
-                    // ✅ Botón de regreso sin brillo
                     GlowIconButton(
                       icon: Icons.arrow_back,
                       isDark: isDark,
@@ -240,7 +247,6 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 36),
-
                         Text(
                           'Selecciona tu perfil',
                           style: TextStyle(
@@ -250,7 +256,6 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                           ),
                         ),
                         const SizedBox(height: 12),
-
                         Text(
                           'Personalizaremos tu experiencia según tu rol dentro de la cadena productiva del café.',
                           style: TextStyle(
@@ -259,10 +264,7 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                             height: 1.4,
                           ),
                         ),
-
                         const SizedBox(height: 32),
-
-                        // ── Listado de tarjetas ──────────────────
                         ListView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
@@ -274,7 +276,6 @@ class _SelectUserTypeScreenState extends State<SelectUserTypeScreen>
                             );
                           },
                         ),
-
                         const SizedBox(height: 32),
                       ],
                     ),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:kaabcafe/core/providers/farm_provider.dart';
 import 'package:kaabcafe/core/providers/user_provider.dart';
+import 'package:kaabcafe/core/providers/appointment_provider.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/core/widgets/aurora_background.dart';
 import 'package:kaabcafe/core/widgets/glass_widgets.dart';
@@ -20,6 +21,8 @@ import 'package:kaabcafe/features/dashboard/presentation/widgets/alert_card.dart
 import 'package:kaabcafe/features/dashboard/presentation/widgets/quick_action_button.dart';
 import 'package:kaabcafe/features/dashboard/presentation/widgets/farm_card.dart';
 import 'package:kaabcafe/features/dashboard/presentation/widgets/activity_timeline.dart';
+import '../../../auth/data/models/user_type_model.dart';
+import '../widgets/contact_producer/contact_producer_card.dart';
 import '../../../../core/routes/route_names.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -39,6 +42,16 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
   @override
   void initState() {
     super.initState();
+
+    // ✅ Verificar que el teléfono está guardado al iniciar el Dashboard
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      debugPrint('📞 Teléfono del usuario en Dashboard: ${userProvider.userPhone}');
+      debugPrint('👤 Nombre: ${userProvider.userName}');
+      debugPrint('📧 Email: ${userProvider.userEmail}');
+      debugPrint('🎯 Rol: ${userProvider.selectedUserType?.title ?? 'No seleccionado'}');
+    });
+
     initSessionTimeout(
       onTimeout: () {
         debugPrint('⏰ Timeout ejecutado desde Dashboard');
@@ -105,6 +118,10 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
     final userProvider = Provider.of<UserProvider>(context);
     final userName = userProvider.userName ?? 'Usuario';
     final userEmail = userProvider.userEmail;
+
+    // ✅ Obtener citas pendientes
+    final appointmentProvider = Provider.of<AppointmentProvider>(context);
+    final pendingCount = appointmentProvider.pendingAppointments.length;
 
     final farmProvider = Provider.of<FarmProvider>(context);
     final farms = farmProvider.farms;
@@ -218,18 +235,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
                           ],
                         ),
                       ),
-                      // ✅ Botón de Notificaciones
-                      NeumorphicIconButton(
-                        icon: Icons.notifications_outlined,
-                        isDark: isDark,
-                        onPressed: () {
-                          resetTimeout();
-                          context.push(RouteNames.notifications);
-                        },
-                        size: 44,
-                        iconSize: 20,
-                        color: accentColor,
-                      ),
+                      // ✅ Botón de Notificaciones con Badge
+                      _buildNotificationButton(isDark, accentColor, pendingCount),
                       const SizedBox(width: 8),
                       // ✅ Botón de Perfil
                       NeumorphicIconButton(
@@ -501,6 +508,11 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
                             isDark: isDark,
                           )).toList(),
                         ),
+                        const SizedBox(height: 16),
+
+                        // ── Contactar a un productor ────────────────
+                        ContactProducerCard(isDark: isDark),
+
                         const SizedBox(height: 110),
                       ],
                     ),
@@ -518,9 +530,66 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
           Icons.widgets_outlined,
           Icons.landscape_rounded,
           Icons.attach_money_rounded,
+          Icons.analytics_outlined,
+          Icons.storefront_rounded,
+          Icons.face_rounded,
         ],
         onTap: _onNavigationTap,
       ),
+    );
+  }
+
+  /// ✅ Widget para el botón de notificaciones con badge
+  Widget _buildNotificationButton(bool isDark, Color accentColor, int pendingCount) {
+    if (pendingCount > 0) {
+      return Stack(
+        children: [
+          NeumorphicIconButton(
+            icon: Icons.notifications_outlined,
+            isDark: isDark,
+            onPressed: () {
+              resetTimeout();
+              context.push(RouteNames.notifications);
+            },
+            size: 44,
+            iconSize: 20,
+            color: accentColor,
+          ),
+          Positioned(
+            right: 2,
+            top: 2,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                pendingCount > 9 ? '9+' : '$pendingCount',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return NeumorphicIconButton(
+      icon: Icons.notifications_outlined,
+      isDark: isDark,
+      onPressed: () {
+        resetTimeout();
+        context.push(RouteNames.notifications);
+      },
+      size: 44,
+      iconSize: 20,
+      color: accentColor,
     );
   }
 }

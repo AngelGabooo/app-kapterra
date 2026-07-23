@@ -1,3 +1,4 @@
+// lib/core/providers/user_provider.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
@@ -7,11 +8,13 @@ class UserProvider extends ChangeNotifier {
   UserType? _selectedUserType;
   String? _userEmail;
   String? _userName;
+  String? _userPhone;  // ✅ NUEVO: Teléfono del usuario
   bool _isLoggedIn = false;
 
   UserType? get selectedUserType => _selectedUserType;
   String? get userEmail => _userEmail;
   String? get userName => _userName;
+  String? get userPhone => _userPhone;  // ✅ NUEVO Getter
   bool get isLoggedIn => _isLoggedIn;
 
   // ============================================================
@@ -35,19 +38,24 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Guardar información completa del usuario
+  /// Guardar información completa del usuario (incluyendo teléfono)
   Future<void> setUserInfo({
     required UserType type,
     required String email,
     required String name,
+    String? phone,  // ✅ NUEVO: Teléfono opcional
   }) async {
     _selectedUserType = type;
     _userEmail = email;
     _userName = name;
+    _userPhone = phone;  // ✅ Guardar teléfono
     _isLoggedIn = true;
     await _saveUserType(type, email: email);
     await _saveUserEmail(email);
     await _saveUserName(name);
+    if (phone != null && phone.isNotEmpty) {
+      await _saveUserPhone(phone);  // ✅ Guardar teléfono
+    }
     notifyListeners();
   }
 
@@ -56,9 +64,10 @@ class UserProvider extends ChangeNotifier {
   // ============================================================
 
   /// Iniciar sesión (recuperar datos guardados del usuario)
-  Future<void> login({required String email, required String name}) async {
+  Future<void> login({required String email, required String name, String? phone}) async {
     _userEmail = email;
     _userName = name;
+    _userPhone = phone;  // ✅ Cargar teléfono
     _isLoggedIn = true;
     // Cargar el tipo de usuario guardado para este email
     await loadSavedUserTypeForEmail(email);
@@ -97,6 +106,7 @@ class UserProvider extends ChangeNotifier {
         if (index != null && index >= 0 && index < UserType.values.length) {
           _selectedUserType = UserType.values[index];
           _userName = prefs.getString('user_name');
+          _userPhone = prefs.getString('user_phone');  // ✅ Cargar teléfono
           _isLoggedIn = true;
           notifyListeners();
           return _selectedUserType;
@@ -125,6 +135,7 @@ class UserProvider extends ChangeNotifier {
     _selectedUserType = null;
     _userEmail = null;
     _userName = null;
+    _userPhone = null;  // ✅ Limpiar teléfono
     _isLoggedIn = false;
     await _clearSavedUserType();
     notifyListeners();
@@ -172,6 +183,17 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
+  /// ✅ Guardar teléfono del usuario
+  Future<void> _saveUserPhone(String phone) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_phone', phone);
+      debugPrint('✅ Teléfono guardado: $phone');
+    } catch (e) {
+      debugPrint('Error guardando teléfono: $e');
+    }
+  }
+
   Future<void> _clearSavedUserType() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -182,6 +204,7 @@ class UserProvider extends ChangeNotifier {
       }
       await prefs.remove('user_email');
       await prefs.remove('user_name');
+      await prefs.remove('user_phone');  // ✅ Eliminar teléfono
       debugPrint('✅ Datos de usuario eliminados');
     } catch (e) {
       debugPrint('Error limpiando tipo de usuario: $e');
@@ -237,6 +260,7 @@ class UserProvider extends ChangeNotifier {
           _userEmail = email;
           _selectedUserType = UserType.values[index];
           _userName = prefs.getString('user_name');
+          _userPhone = prefs.getString('user_phone');  // ✅ Cargar teléfono
           _isLoggedIn = true;
           notifyListeners();
           return true;

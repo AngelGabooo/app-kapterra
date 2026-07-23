@@ -43,6 +43,8 @@ class RouteNames {
   static const String technicianLotInspection = '/technician/lot-inspection';
   static const String technicianCropDiagnosis = '/technician/crop-diagnosis';
   static const String technicianLotCertification = '/technician/lot-certification';
+  static const String lotPublic = '/lot-public';
+  static const String purchases = '/purchases';
 
   // ✅ NUEVA RUTA PARA PIN DE SEGURIDAD
   static const String pinSecurity = '/pin-security';

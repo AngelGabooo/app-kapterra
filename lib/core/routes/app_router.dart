@@ -66,6 +66,9 @@ import 'package:kaabcafe/features/technician/presentation/screens/technician_lot
 import 'package:kaabcafe/features/technician/presentation/screens/technician_crop_diagnosis_screen.dart';
 import 'package:kaabcafe/features/technician/presentation/screens/technician_lot_certification_screen.dart';
 import 'package:kaabcafe/features/auth/presentation/screens/pin_security_screen.dart'; // ✅ NUEVO
+import 'package:kaabcafe/features/farms/presentation/screens/lot_public_screen.dart';
+import 'package:kaabcafe/features/buyer/presentation/screens/reports/reports_screen.dart';
+import 'package:kaabcafe/features/marketplace/presentation/screens/purchases_screen.dart';
 
 
 class AppRouter {
@@ -401,6 +404,24 @@ class AppRouter {
         name: RouteNames.profileDashboard,
         path: RouteNames.profileDashboard,
         builder: (context, state) => const ProfileDashboardScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.lotPublic,
+        path: RouteNames.lotPublic,
+        builder: (context, state) {
+          final args = state.extra as Map<String, dynamic>? ?? {};
+          return LotPublicScreen.fromQRData(args);
+        },
+      ),
+      GoRoute(
+        name: RouteNames.reports,
+        path: RouteNames.reports,
+        builder: (context, state) => const ReportsScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.purchases,
+        path: RouteNames.purchases,
+        builder: (context, state) => const PurchasesScreen(),
       ),
     ],
     errorBuilder: (context, state) => const Scaffold(

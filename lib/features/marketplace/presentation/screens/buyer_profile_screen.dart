@@ -1,6 +1,9 @@
+// lib/features/marketplace/presentation/screens/buyer_profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
+import 'package:kaabcafe/core/providers/user_provider.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/marketplace/presentation/widgets/profile/profile_stat_card.dart';
 import 'package:kaabcafe/features/marketplace/presentation/widgets/profile/profile_info_row.dart';
@@ -17,15 +20,15 @@ class BuyerProfileScreen extends StatefulWidget {
 }
 
 class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
-  int _currentIndex = 4;
+  int _currentIndex = 3;
 
-  // ✅ Datos editables
-  String _companyName = 'Café Export México';
-  String _representative = 'Ángel Espinoza';
-  String _buyerType = 'Cafetería Especializada';
-  String _location = 'Ciudad de México, México';
-  String _email = 'angel@cafeexport.com';
-  String _phone = '+52 55 1234 5678';
+  // ✅ Datos vacíos inicialmente - se cargan desde UserProvider
+  String _companyName = '';
+  String _representative = '';
+  String _buyerType = 'Selecciona un tipo';
+  String _location = '';
+  String _email = '';
+  String _phone = '';
 
   bool _notificationsEnabled = true;
   bool _marketingEmails = true;
@@ -38,20 +41,38 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
     'Importador',
   ];
 
-  final List<Map<String, dynamic>> _preferences = [
-    {'emoji': '🌱', 'label': 'Especialidad'},
-    {'emoji': '🌿', 'label': 'Orgánico'},
-    {'emoji': '🌎', 'label': 'Comercio Justo'},
-    {'emoji': '⛰️', 'label': 'Alta montaña'},
-    {'emoji': '🍫', 'label': 'Perfil chocolate'},
-    {'emoji': '🌸', 'label': 'Notas florales'},
-  ];
+  // ✅ Preferencias vacías
+  final List<Map<String, dynamic>> _preferences = [];
 
-  final List<Map<String, dynamic>> _documents = [
-    {'emoji': '📄', 'label': 'Licencia comercial', 'status': 'Válida hasta 2026'},
-    {'emoji': '📑', 'label': 'Certificado de calidad', 'status': 'ISO 9001'},
-    {'emoji': '📊', 'label': 'Registro de exportador', 'status': 'Renovar en 3 meses'},
-  ];
+  // ✅ Documentos vacíos
+  final List<Map<String, dynamic>> _documents = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  void _loadUserData() {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+    setState(() {
+      _representative = userProvider.userName ?? '';
+      _email = userProvider.userEmail ?? '';
+      _phone = userProvider.userPhone ?? '';
+
+      // Si no hay datos, mostrar valores por defecto
+      if (_representative.isEmpty) {
+        _representative = 'Sin nombre';
+      }
+      if (_email.isEmpty) {
+        _email = 'Sin correo';
+      }
+      if (_phone.isEmpty) {
+        _phone = 'Sin teléfono';
+      }
+    });
+  }
 
   void _showEditDialog(String title, String initialValue, Function(String) onSave) {
     showDialog(
@@ -151,7 +172,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Barra superior
+            // Barra superior con botón de regreso
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
@@ -167,6 +188,17 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
               ),
               child: Row(
                 children: [
+                  // ✅ Botón de regreso al Marketplace
+                  IconButton(
+                    onPressed: () => context.go(RouteNames.marketplace),
+                    icon: Icon(
+                      Icons.arrow_back,
+                      color: textColor,
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 4),
                   Container(
                     width: 40,
                     height: 40,
@@ -185,7 +217,9 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                     ),
                     child: Center(
                       child: Text(
-                        _representative.split(' ').map((e) => e[0]).take(2).join().toUpperCase(),
+                        _representative.isNotEmpty
+                            ? _representative.split(' ').map((e) => e[0]).take(2).join().toUpperCase()
+                            : 'U',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -209,7 +243,9 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                           ),
                         ),
                         Text(
-                          'Comprador • $_buyerType',
+                          _buyerType != 'Selecciona un tipo'
+                              ? 'Comprador • $_buyerType'
+                              : 'Comprador',
                           style: TextStyle(
                             fontSize: 11,
                             color: textColor.withOpacity(0.5),
@@ -364,7 +400,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                                 ProfileInfoRow(
                                   icon: Icons.business,
                                   label: 'Empresa',
-                                  value: _companyName,
+                                  value: _companyName.isEmpty ? 'Sin especificar' : _companyName,
                                   isDark: isDark,
                                   isEditable: true,
                                   onEdit: () => _showEditDialog(
@@ -396,7 +432,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                                 ProfileInfoRow(
                                   icon: Icons.location_on,
                                   label: 'Ubicación',
-                                  value: _location,
+                                  value: _location.isEmpty ? 'Sin especificar' : _location,
                                   isDark: isDark,
                                   isEditable: true,
                                   onEdit: () => _showEditDialog(
@@ -438,9 +474,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
 
                     const SizedBox(height: 20),
 
-                    const SizedBox(height: 20),
-
-                    // Preferencias de café
+                    // Preferencias de café (vacío)
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -478,25 +512,47 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: _preferences.map((pref) => ProfilePreferenceChip(
-                              emoji: pref['emoji'],
-                              label: pref['label'],
-                              isDark: isDark,
-                              onTap: () {
-                                // TODO: Editar preferencia
-                              },
-                            )).toList(),
-                          ),
+                          if (_preferences.isEmpty)
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: (isDark ? AppTheme.coffeeDark : AppTheme.lightBeige).withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.info_outline, color: textColor.withOpacity(0.2)),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Agrega tus preferencias de café',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: textColor.withOpacity(0.4),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _preferences.map((pref) => ProfilePreferenceChip(
+                                emoji: pref['emoji'],
+                                label: pref['label'],
+                                isDark: isDark,
+                                onTap: () {},
+                              )).toList(),
+                            ),
                         ],
                       ),
                     ),
 
                     const SizedBox(height: 20),
 
-                    // Certificaciones
+                    // Certificaciones (vacío)
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -530,13 +586,37 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          ..._documents.map((doc) => ProfileDocumentItem(
-                            emoji: doc['emoji'],
-                            label: doc['label'],
-                            status: doc['status'],
-                            isDark: isDark,
-                            onTap: () {},
-                          )),
+                          if (_documents.isEmpty)
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: (isDark ? AppTheme.coffeeDark : AppTheme.lightBeige).withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.description_outlined, color: textColor.withOpacity(0.2)),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Sin documentos registrados',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: textColor.withOpacity(0.4),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            ..._documents.map((doc) => ProfileDocumentItem(
+                              emoji: doc['emoji'],
+                              label: doc['label'],
+                              status: doc['status'],
+                              isDark: isDark,
+                              onTap: () {},
+                            )),
                           const SizedBox(height: 12),
                           OutlinedButton.icon(
                             onPressed: () {},
@@ -718,7 +798,9 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
               context.go(RouteNames.marketplace);
             } else if (index == 1) {
               context.go(RouteNames.explore);
-            } else if (index == 4) {
+            } else if (index == 2) {
+              context.go(RouteNames.purchases);
+            } else if (index == 3) {
               context.go(RouteNames.buyerProfile);
             }
           },
@@ -730,7 +812,6 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
             BottomNavigationBarItem(icon: Icon(Icons.store), label: 'Marketplace'),
             BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Explorar'),
             BottomNavigationBarItem(icon: Icon(Icons.shopping_bag), label: 'Compras'),
-            BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Favoritos'),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
           ],
         ),
