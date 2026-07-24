@@ -1,5 +1,9 @@
+// lib/features/farms/presentation/screens/edit_farm_screen.dart
+
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/farms/data/models/farm_details_model.dart';
@@ -25,8 +29,14 @@ class _EditFarmScreenState extends State<EditFarmScreen> {
   String _selectedProductionSystem = '';
   List<String> _selectedCertifications = [];
   bool _isSaving = false;
+  bool _isLoadingImage = false;
+  String? _farmImagePath;
+
+  // ✅ ImagePicker correctamente inicializado
+  final ImagePicker _picker = ImagePicker();
 
   final List<String> _varietyOptions = [
+    'Arábica',
     'Bourbon',
     'Typica',
     'Catuaí',
@@ -39,18 +49,14 @@ class _EditFarmScreenState extends State<EditFarmScreen> {
     'Convencional',
     'Orgánico',
     'Sostenible',
+    'Agroforestal',
   ];
 
   final List<String> _certificationOptions = [
     'Orgánico',
     'Comercio Justo',
     'Rainforest Alliance',
-  ];
-
-  final List<Map<String, dynamic>> _changeHistory = [
-    {'action': 'Superficie actualizada', 'date': '12 de junio de 2026', 'icon': Icons.landscape},
-    {'action': 'Ubicación corregida', 'date': '10 de junio de 2026', 'icon': Icons.location_on},
-    {'action': 'Certificación agregada', 'date': '5 de junio de 2026', 'icon': Icons.verified},
+    'UTZ',
   ];
 
   @override
@@ -58,13 +64,14 @@ class _EditFarmScreenState extends State<EditFarmScreen> {
     super.initState();
     _nameController = TextEditingController(text: widget.farm.name);
     _locationController = TextEditingController(text: widget.farm.location);
-    _altitudeController = TextEditingController(text: '1350');
+    _altitudeController = TextEditingController(text: widget.farm.altitude.toString());
     _surfaceController = TextEditingController(text: widget.farm.hectares.toString());
     _lotsController = TextEditingController(text: widget.farm.lots.toString());
-    _yearController = TextEditingController(text: '2018');
-    _selectedVariety = 'Bourbon';
-    _selectedProductionSystem = 'Orgánico';
-    _selectedCertifications = ['Orgánico', 'Comercio Justo'];
+    _yearController = TextEditingController(text: widget.farm.establishmentYear?.toString() ?? '');
+    _selectedVariety = widget.farm.mainVariety ?? 'Arábica';
+    _selectedProductionSystem = widget.farm.productionSystem ?? 'Orgánico';
+    _selectedCertifications = List.from(widget.farm.certifications ?? []);
+    _farmImagePath = widget.farm.imageUrl;
   }
 
   @override
@@ -76,6 +83,161 @@ class _EditFarmScreenState extends State<EditFarmScreen> {
     _lotsController.dispose();
     _yearController.dispose();
     super.dispose();
+  }
+
+  // ✅ MÉTODO PARA TOMAR FOTO CON CÁMARA
+  Future<void> _takePhoto() async {
+    try {
+      setState(() => _isLoadingImage = true);
+
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 80,
+      );
+
+      if (image != null) {
+        setState(() {
+          _farmImagePath = image.path;
+          _isLoadingImage = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Foto tomada correctamente'),
+            backgroundColor: AppTheme.primaryGreen,
+          ),
+        );
+      } else {
+        setState(() => _isLoadingImage = false);
+      }
+    } catch (e) {
+      setState(() => _isLoadingImage = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al tomar foto: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // ✅ MÉTODO PARA SELECCIONAR DE GALERÍA
+  Future<void> _pickFromGallery() async {
+    try {
+      setState(() => _isLoadingImage = true);
+
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 80,
+      );
+
+      if (image != null) {
+        setState(() {
+          _farmImagePath = image.path;
+          _isLoadingImage = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Imagen seleccionada correctamente'),
+            backgroundColor: AppTheme.primaryGreen,
+          ),
+        );
+      } else {
+        setState(() => _isLoadingImage = false);
+      }
+    } catch (e) {
+      setState(() => _isLoadingImage = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al seleccionar imagen: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _showImagePickerDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Cambiar imagen de portada',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.darkCoffee,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildImagePickerOption(
+                  icon: Icons.photo_library,
+                  label: 'Galería',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickFromGallery();
+                  },
+                ),
+                _buildImagePickerOption(
+                  icon: Icons.camera_alt,
+                  label: 'Cámara',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _takePhoto();
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImagePickerOption({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryGreen.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, size: 28, color: AppTheme.primaryGreen),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppTheme.darkCoffee,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _saveChanges() async {
@@ -141,7 +303,7 @@ class _EditFarmScreenState extends State<EditFarmScreen> {
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  context.pop();
+                  Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryGreen,
@@ -249,11 +411,18 @@ class _EditFarmScreenState extends State<EditFarmScreen> {
                         ],
                       ),
                     ),
-                    // Botón guardar
                     Container(
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryGreen,
+                        gradient: LinearGradient(
+                          colors: [AppTheme.primaryGreen, AppTheme.secondaryGreen],
+                        ),
                         borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.primaryGreen.withOpacity(0.3),
+                            blurRadius: 8,
+                          ),
+                        ],
                       ),
                       child: TextButton(
                         onPressed: _isSaving ? null : _saveChanges,
@@ -299,7 +468,45 @@ class _EditFarmScreenState extends State<EditFarmScreen> {
                                 ],
                               ),
                             ),
-                            child: Center(
+                            child: _farmImagePath != null && _farmImagePath!.startsWith('assets/')
+                                ? ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Image.asset(
+                                _farmImagePath!,
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: 180,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Center(
+                                    child: Icon(
+                                      Icons.landscape,
+                                      size: 60,
+                                      color: AppTheme.primaryGreen.withOpacity(0.5),
+                                    ),
+                                  );
+                                },
+                              ),
+                            )
+                                : _farmImagePath != null && _farmImagePath!.isNotEmpty
+                                ? ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Image.file(
+                                File(_farmImagePath!),
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: 180,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Center(
+                                    child: Icon(
+                                      Icons.landscape,
+                                      size: 60,
+                                      color: AppTheme.primaryGreen.withOpacity(0.5),
+                                    ),
+                                  );
+                                },
+                              ),
+                            )
+                                : Center(
                               child: Icon(
                                 Icons.landscape,
                                 size: 60,
@@ -307,6 +514,20 @@ class _EditFarmScreenState extends State<EditFarmScreen> {
                               ),
                             ),
                           ),
+                          if (_isLoadingImage)
+                            Positioned.fill(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(20),
+                                  color: Colors.black.withOpacity(0.3),
+                                ),
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
                           Positioned(
                             bottom: 12,
                             right: 12,
@@ -322,8 +543,29 @@ class _EditFarmScreenState extends State<EditFarmScreen> {
                                 ],
                               ),
                               child: IconButton(
-                                onPressed: () {},
-                                icon: const Icon(Icons.camera_alt, color: AppTheme.primaryGreen),
+                                onPressed: _isLoadingImage ? null : _showImagePickerDialog,
+                                icon: Icon(
+                                  Icons.camera_alt,
+                                  color: _isLoadingImage ? Colors.grey : AppTheme.primaryGreen,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 12,
+                            right: 12,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.6),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                _farmImagePath != null ? '📷 Portada' : 'Sin imagen',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                ),
                               ),
                             ),
                           ),
@@ -414,8 +656,15 @@ class _EditFarmScreenState extends State<EditFarmScreen> {
                                     Icon(Icons.map, size: 40, color: AppTheme.primaryGreen),
                                     const SizedBox(height: 8),
                                     Text(
-                                      widget.farm.location,
+                                      '${widget.farm.latitude.toStringAsFixed(4)}, ${widget.farm.longitude.toStringAsFixed(4)}',
                                       style: TextStyle(color: AppTheme.darkCoffee),
+                                    ),
+                                    Text(
+                                      widget.farm.location,
+                                      style: TextStyle(
+                                        color: AppTheme.darkCoffee.withOpacity(0.5),
+                                        fontSize: 12,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -579,7 +828,7 @@ class _EditFarmScreenState extends State<EditFarmScreen> {
                                   child: _buildSummaryItem(
                                     Icons.eco,
                                     'Producción anual',
-                                    '1,850 kg',
+                                    '${widget.farm.productivity.toStringAsFixed(0)} kg',
                                   ),
                                 ),
                               ],
@@ -591,14 +840,14 @@ class _EditFarmScreenState extends State<EditFarmScreen> {
                                   child: _buildSummaryItem(
                                     Icons.attach_money,
                                     'Costos acumulados',
-                                    '\$58,000',
+                                    '\$0.00',
                                   ),
                                 ),
                                 Expanded(
                                   child: _buildSummaryItem(
                                     Icons.trending_up,
                                     'Rentabilidad',
-                                    '24%',
+                                    '0%',
                                   ),
                                 ),
                               ],
@@ -607,243 +856,60 @@ class _EditFarmScreenState extends State<EditFarmScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 16),
-
-                      // Historial de cambios
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Historial de cambios',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.darkCoffee,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            ..._changeHistory.map((change) => Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 32,
-                                    height: 32,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primaryGreen.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Icon(change['icon'], size: 16, color: AppTheme.primaryGreen),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          change['action'],
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w500,
-                                            color: AppTheme.darkCoffee,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          change['date'],
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: AppTheme.darkCoffee.withOpacity(0.5),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )),
-                          ],
-                        ),
-                      ),
-
                       const SizedBox(height: 20),
 
                       // Botones de acción
-                      // Botones de acción - Versión Premium con Animación
                       Column(
                         children: [
-                          // Botón Guardar Cambios
-                          TweenAnimationBuilder(
-                            tween: Tween<double>(begin: 0, end: 1),
-                            duration: const Duration(milliseconds: 300),
-                            builder: (context, double value, child) {
-                              return Transform.scale(
-                                scale: value,
-                                child: Container(
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        AppTheme.primaryGreen,
-                                        AppTheme.secondaryGreen,
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(24),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppTheme.primaryGreen.withOpacity(0.4),
-                                        blurRadius: 16,
-                                        offset: const Offset(0, 6),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      onTap: _saveChanges,
-                                      borderRadius: BorderRadius.circular(24),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(vertical: 16),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            const Icon(Icons.save_rounded, size: 22),
-                                            const SizedBox(width: 12),
-                                            const Text(
-                                              'Guardar Cambios',
-                                              style: TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w600,
-                                                letterSpacing: 0.5,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _saveChanges,
+                              icon: const Icon(Icons.save_rounded),
+                              label: const Text('Guardar Cambios', style: TextStyle(fontSize: 16)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryGreen,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
                                 ),
-                              );
-                            },
+                              ),
+                            ),
                           ),
-
-                          const SizedBox(height: 16),
-
-                          // Botón Cancelar
-                          TweenAnimationBuilder(
-                            tween: Tween<double>(begin: 0, end: 1),
-                            duration: const Duration(milliseconds: 350),
-                            builder: (context, double value, child) {
-                              return Transform.scale(
-                                scale: value,
-                                child: Container(
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(24),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.06),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: OutlinedButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppTheme.darkCoffee,
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
-                                      side: BorderSide(color: AppTheme.darkCoffee.withOpacity(0.15), width: 1.5),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(24),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(Icons.close_rounded, size: 22),
-                                        const SizedBox(width: 12),
-                                        const Text(
-                                          'Cancelar',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500,
-                                            letterSpacing: 0.5,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(Icons.close_rounded),
+                              label: const Text('Cancelar'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppTheme.darkCoffee,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                side: BorderSide(color: AppTheme.darkCoffee.withOpacity(0.15)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
                                 ),
-                              );
-                            },
+                              ),
+                            ),
                           ),
-
-                          const SizedBox(height: 16),
-
-                          // Botón Eliminar Finca
-                          TweenAnimationBuilder(
-                            tween: Tween<double>(begin: 0, end: 1),
-                            duration: const Duration(milliseconds: 400),
-                            builder: (context, double value, child) {
-                              return Transform.scale(
-                                scale: value,
-                                child: Container(
-                                  width: double.infinity,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(24),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.red.withOpacity(0.1),
-                                        blurRadius: 12,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ],
-                                  ),
-                                  child: OutlinedButton(
-                                    onPressed: _confirmDelete,
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.red.shade600,
-                                      padding: const EdgeInsets.symmetric(vertical: 16),
-                                      side: BorderSide(color: Colors.red.withOpacity(0.3), width: 1.5),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(24),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(Icons.delete_outline_rounded, size: 22),
-                                        const SizedBox(width: 12),
-                                        const Text(
-                                          'Eliminar Finca',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500,
-                                            letterSpacing: 0.5,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: _confirmDelete,
+                              icon: const Icon(Icons.delete_outline_rounded),
+                              label: const Text('Eliminar Finca'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red.shade600,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                side: BorderSide(color: Colors.red.withOpacity(0.3)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
                                 ),
-                              );
-                            },
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -914,7 +980,7 @@ class _EditFarmScreenState extends State<EditFarmScreen> {
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: value,
+          value: value.isNotEmpty ? value : null,
           decoration: InputDecoration(
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),

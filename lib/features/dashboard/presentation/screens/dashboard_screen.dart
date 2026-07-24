@@ -1,4 +1,5 @@
 // lib/features/dashboard/presentation/screens/dashboard_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -43,7 +44,6 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
   void initState() {
     super.initState();
 
-    // ✅ Verificar que el teléfono está guardado al iniciar el Dashboard
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       debugPrint('📞 Teléfono del usuario en Dashboard: ${userProvider.userPhone}');
@@ -71,37 +71,47 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
   }
 
   void _onNavigationTap(int index) {
-    setState(() => _currentIndex = index);
     resetTimeout();
 
     switch (index) {
       case 0:
-        context.go(RouteNames.dashboard);
+        if (_currentIndex != 0) {
+          setState(() => _currentIndex = 0);
+        }
         break;
       case 1:
+        setState(() => _currentIndex = 1);
         context.go(RouteNames.myFarms);
         break;
       case 2:
-        context.push(RouteNames.costs);
+        setState(() => _currentIndex = 2);
+        context.push(RouteNames.costs).then((_) {
+          if (mounted) {
+            setState(() {
+              _currentIndex = 0;
+            });
+          }
+        });
         break;
       case 3:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Próximamente: Indicadores'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
+        setState(() => _currentIndex = 3);
+        context.push(RouteNames.indicators).then((_) {
+          if (mounted) {
+            setState(() {
+              _currentIndex = 0;
+            });
+          }
+        });
         break;
       case 4:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Próximamente: Marketplace'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
-        break;
-      case 5:
-        context.push(RouteNames.profileDashboard);
+        setState(() => _currentIndex = 4);
+        context.push(RouteNames.profileDashboard).then((_) {
+          if (mounted) {
+            setState(() {
+              _currentIndex = 0;
+            });
+          }
+        });
         break;
     }
   }
@@ -114,12 +124,10 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
     final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
     final accentColor = isDark ? AppTheme.coffeeGoldLight : AppTheme.primaryGreen;
 
-    // ✅ Obtener el nombre del usuario desde UserProvider
     final userProvider = Provider.of<UserProvider>(context);
     final userName = userProvider.userName ?? 'Usuario';
     final userEmail = userProvider.userEmail;
 
-    // ✅ Obtener citas pendientes
     final appointmentProvider = Provider.of<AppointmentProvider>(context);
     final pendingCount = appointmentProvider.pendingAppointments.length;
 
@@ -129,7 +137,6 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
     final totalLots = farms.fold(0, (sum, f) => sum + f.lots);
     final totalProd = farms.fold(0.0, (sum, f) => sum + (f.productivity * f.hectares));
 
-    // ✅ Determinar el saludo según la hora del día
     final hour = DateTime.now().hour;
     String greeting = 'Buenos días';
     if (hour >= 12 && hour < 18) {
@@ -210,7 +217,6 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
                               ),
                             ),
                             const SizedBox(height: 8),
-                            // ✅ Mostrar el nombre del usuario con saludo
                             Text(
                               '$greeting, $userName',
                               style: TextStyle(
@@ -235,16 +241,21 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
                           ],
                         ),
                       ),
-                      // ✅ Botón de Notificaciones con Badge
                       _buildNotificationButton(isDark, accentColor, pendingCount),
                       const SizedBox(width: 8),
-                      // ✅ Botón de Perfil
                       NeumorphicIconButton(
                         icon: Icons.person_outline,
                         isDark: isDark,
                         onPressed: () {
                           resetTimeout();
-                          context.push(RouteNames.profileDashboard);
+                          setState(() => _currentIndex = 4);
+                          context.push(RouteNames.profileDashboard).then((_) {
+                            if (mounted) {
+                              setState(() {
+                                _currentIndex = 0;
+                              });
+                            }
+                          });
                         },
                         size: 44,
                         iconSize: 20,
@@ -351,7 +362,13 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
                                 isDark: isDark,
                                 onPressed: () {
                                   resetTimeout();
-                                  context.push(RouteNames.costs);
+                                  context.push(RouteNames.costs).then((_) {
+                                    if (mounted) {
+                                      setState(() {
+                                        _currentIndex = 0;
+                                      });
+                                    }
+                                  });
                                 },
                               ),
                               const SizedBox(width: 10),
@@ -361,6 +378,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
                                 isDark: isDark,
                                 onPressed: () {
                                   resetTimeout();
+                                  setState(() => _currentIndex = 1);
                                   context.go(RouteNames.myFarms);
                                 },
                               ),
@@ -446,6 +464,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
                             TextButton(
                               onPressed: () {
                                 resetTimeout();
+                                setState(() => _currentIndex = 1);
                                 context.go(RouteNames.myFarms);
                               },
                               style: TextButton.styleFrom(
@@ -531,7 +550,6 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
           Icons.landscape_rounded,
           Icons.attach_money_rounded,
           Icons.analytics_outlined,
-          Icons.storefront_rounded,
           Icons.face_rounded,
         ],
         onTap: _onNavigationTap,
@@ -539,7 +557,6 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
     );
   }
 
-  /// ✅ Widget para el botón de notificaciones con badge
   Widget _buildNotificationButton(bool isDark, Color accentColor, int pendingCount) {
     if (pendingCount > 0) {
       return Stack(

@@ -1,16 +1,20 @@
+// lib/features/auth/presentation/widgets/social_login_button.dart
+
 import 'package:flutter/material.dart';
 import 'neumorphic_box.dart';
 
 class SocialLoginButton extends StatefulWidget {
   final String text;
   final String imageAsset;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
+  final bool isLoading;
 
   const SocialLoginButton({
     super.key,
     required this.text,
     required this.imageAsset,
-    required this.onPressed,
+    this.onPressed,
+    this.isLoading = false,
   });
 
   @override
@@ -25,14 +29,19 @@ class _SocialLoginButtonState extends State<SocialLoginButton> {
     final theme = Theme.of(context);
 
     return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
+      onTapDown: widget.isLoading ? null : (_) => setState(() => _pressed = true),
       onTapCancel: () => setState(() => _pressed = false),
       onTapUp: (_) => setState(() => _pressed = false),
-      onTap: widget.onPressed,
+      onTap: widget.isLoading ? null : widget.onPressed,
       child: SizedBox(
         width: double.infinity,
         height: 54,
-        child: _pressed
+        child: widget.isLoading
+            ? NeumorphicBox.inset(
+          borderRadius: 20,
+          child: _loadingContent(theme),
+        )
+            : _pressed
             ? NeumorphicBox.inset(
           borderRadius: 20,
           child: _content(theme),
@@ -71,6 +80,32 @@ class _SocialLoginButtonState extends State<SocialLoginButton> {
             fontSize: 16,
             fontWeight: FontWeight.w600,
             color: theme.colorScheme.onSurface,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _loadingContent(ThemeData theme) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.max,
+      children: [
+        const SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.green,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          'Cargando...',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: theme.colorScheme.onSurface.withOpacity(0.7),
           ),
         ),
       ],

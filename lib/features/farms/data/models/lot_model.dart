@@ -1,4 +1,5 @@
 // lib/features/farms/data/models/lot_model.dart
+
 import 'package:flutter/material.dart';
 
 enum LotStatus { healthy, attention, risk }
@@ -12,6 +13,13 @@ class LotModel {
   final LotStatus status;
   final int treesCount;
 
+  // ✅ CAMPOS ADICIONALES PARA EDITAR LOTE
+  final String? description;
+  final int? altitude;
+  final int? age;
+  final int? density;
+  final List<String>? imageUrls;
+
   LotModel({
     required this.id,
     required this.name,
@@ -20,6 +28,11 @@ class LotModel {
     required this.area,
     required this.status,
     required this.treesCount,
+    this.description,
+    this.altitude,
+    this.age,
+    this.density,
+    this.imageUrls,
   });
 
   Color get statusColor {
@@ -44,7 +57,7 @@ class LotModel {
     }
   }
 
-  // Método copyWith para facilitar actualizaciones
+  // ✅ copyWith ACTUALIZADO con todos los campos
   LotModel copyWith({
     String? id,
     String? name,
@@ -53,6 +66,11 @@ class LotModel {
     double? area,
     LotStatus? status,
     int? treesCount,
+    String? description,
+    int? altitude,
+    int? age,
+    int? density,
+    List<String>? imageUrls,
   }) {
     return LotModel(
       id: id ?? this.id,
@@ -62,10 +80,15 @@ class LotModel {
       area: area ?? this.area,
       status: status ?? this.status,
       treesCount: treesCount ?? this.treesCount,
+      description: description ?? this.description,
+      altitude: altitude ?? this.altitude,
+      age: age ?? this.age,
+      density: density ?? this.density,
+      imageUrls: imageUrls ?? this.imageUrls,
     );
   }
 
-  // Método para convertir a JSON (útil para almacenamiento)
+  // ✅ toJson ACTUALIZADO
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -75,19 +98,31 @@ class LotModel {
       'area': area,
       'status': status.index,
       'treesCount': treesCount,
+      'description': description,
+      'altitude': altitude,
+      'age': age,
+      'density': density,
+      'imageUrls': imageUrls,
     };
   }
 
-  // Método para crear desde JSON
+  // ✅ fromJson ACTUALIZADO
   factory LotModel.fromJson(Map<String, dynamic> json) {
     return LotModel(
       id: json['id'],
       name: json['name'],
       variety: json['variety'],
-      estimatedProduction: json['estimatedProduction'],
-      area: json['area'],
-      status: LotStatus.values[json['status']],
-      treesCount: json['treesCount'],
+      estimatedProduction: json['estimatedProduction']?.toDouble() ?? 0.0,
+      area: json['area']?.toDouble() ?? 0.0,
+      status: LotStatus.values[json['status'] ?? 0],
+      treesCount: json['treesCount'] ?? 0,
+      description: json['description'],
+      altitude: json['altitude'],
+      age: json['age'],
+      density: json['density'],
+      imageUrls: json['imageUrls'] != null
+          ? List<String>.from(json['imageUrls'])
+          : null,
     );
   }
 }

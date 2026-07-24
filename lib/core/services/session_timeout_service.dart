@@ -7,7 +7,7 @@ import 'package:kaabcafe/core/providers/user_provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 
 class SessionTimeoutService extends WidgetsBindingObserver {
-  static const Duration timeoutDuration = Duration(minutes: 5); // ✅ 5 minutos de inactividad
+  static const Duration timeoutDuration = Duration(minutes: 5);
 
   Timer? _timer;
   final BuildContext context;

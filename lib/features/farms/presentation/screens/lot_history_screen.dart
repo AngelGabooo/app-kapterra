@@ -1,4 +1,5 @@
 // lib/features/farms/presentation/screens/lot_history_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -34,7 +35,6 @@ class _LotHistoryScreenState extends State<LotHistoryScreen> {
   @override
   void initState() {
     super.initState();
-    // Cargar eventos después del primer build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadEvents();
     });
@@ -43,7 +43,6 @@ class _LotHistoryScreenState extends State<LotHistoryScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Recargar eventos cuando cambie el provider
     _loadEvents();
   }
 
@@ -107,7 +106,6 @@ class _LotHistoryScreenState extends State<LotHistoryScreen> {
 
   void _onEventTap(HistoryEventModel event) {
     debugPrint('Evento seleccionado: ${event.title}');
-    // TODO: Mostrar detalle del evento
   }
 
   void _navigateToRegisterActivity() {
@@ -153,16 +151,13 @@ class _LotHistoryScreenState extends State<LotHistoryScreen> {
         child: SafeArea(
           child: Consumer<ActivitiesProvider>(
             builder: (context, provider, child) {
-              // ✅ Actualizar eventos cuando cambie el provider
               final lotActivities = provider.activities
                   .where((activity) => activity.lotId == widget.lot.id)
                   .toList();
 
-              // ✅ Solo actualizar si la lista cambió
               final newEvents = lotActivities.map((activity) => _activityToHistoryEvent(activity)).toList();
               if (_events.length != newEvents.length ||
                   _events.any((e) => !newEvents.any((ne) => ne.id == e.id))) {
-                // Programar actualización después del build
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   setState(() {
                     _events = newEvents;
@@ -278,7 +273,7 @@ class _LotHistoryScreenState extends State<LotHistoryScreen> {
             ),
           ),
 
-          // Resumen del lote
+          // Resumen del lote - CORREGIDO
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(16),
@@ -301,6 +296,7 @@ class _LotHistoryScreenState extends State<LotHistoryScreen> {
               ],
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: 60,
@@ -335,11 +331,12 @@ class _LotHistoryScreenState extends State<LotHistoryScreen> {
                         ),
                       ),
                       const SizedBox(height: 4),
+                      // ✅ Wrap corregido para evitar overflow
                       Wrap(
                         spacing: 8,
                         runSpacing: 4,
                         children: [
-                          _buildChip(Icons.location_on, widget.farm.location),
+                          _buildChip(Icons.location_on, widget.farm.location, isLocation: true),
                           _buildChip(Icons.emoji_nature, widget.lot.variety),
                           _buildChip(Icons.landscape, '${widget.lot.area} ha'),
                         ],
@@ -508,8 +505,12 @@ class _LotHistoryScreenState extends State<LotHistoryScreen> {
     );
   }
 
-  Widget _buildChip(IconData icon, String label) {
+  // ✅ CHIP CORREGIDO - con límite de ancho para evitar overflow
+  Widget _buildChip(IconData icon, String label, {bool isLocation = false}) {
     return Container(
+      constraints: BoxConstraints(
+        maxWidth: isLocation ? 120 : double.infinity, // ✅ Limitar ancho para ubicación
+      ),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: Colors.grey.withOpacity(0.1),
@@ -520,11 +521,15 @@ class _LotHistoryScreenState extends State<LotHistoryScreen> {
         children: [
           Icon(icon, size: 10, color: AppTheme.darkCoffee.withOpacity(0.5)),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              color: AppTheme.darkCoffee.withOpacity(0.6),
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: AppTheme.darkCoffee.withOpacity(0.6),
+              ),
+              overflow: TextOverflow.ellipsis, // ✅ Cortar texto si es muy largo
+              maxLines: 1,
             ),
           ),
         ],

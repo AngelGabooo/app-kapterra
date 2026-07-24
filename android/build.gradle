@@ -1,14 +1,14 @@
-// android/build.gradle
 buildscript {
-    ext.kotlin_version = '2.0.20'  // ✅ Cambiar a 2.0.20 (soporta Flutter)
+    ext.kotlin_version = '2.0.20'
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.5.0'  // ✅ Cambiar a 8.5.0
+        classpath 'com.android.tools.build:gradle:8.5.0'
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath 'com.google.gms:google-services:4.3.15'  // ✅ ESTO DEBE ESTAR AQUÍ
     }
 }
 
@@ -27,6 +27,6 @@ subprojects {
     project.evaluationDependsOn(':app')
 }
 
-tasks.register('clean', Delete) {
+tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }

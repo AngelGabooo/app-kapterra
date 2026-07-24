@@ -1,4 +1,5 @@
 // lib/features/auth/presentation/screens/login_screen.dart
+
 import 'dart:convert';
 import 'dart:ui';
 
@@ -11,6 +12,7 @@ import 'package:kaabcafe/core/providers/user_provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/mixins/session_timeout_mixin.dart';
 import 'package:kaabcafe/core/services/login_attempt_service.dart';
+import 'package:kaabcafe/core/services/google_sign_in_service.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_logo.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_form.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/social_login_button.dart';
@@ -27,6 +29,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
 
   @override
   void initState() {
@@ -95,31 +98,42 @@ class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
             return;
           }
 
+          await userProvider.loadUserPhone(email);
+          final currentPhone = userProvider.userPhone;
+
           userProvider.setUserInfo(
             type: userType,
             email: email,
             name: userName,
+            phone: currentPhone,
           );
 
           String destinationRoute;
-          switch (userType) {
-            case UserType.producer:
-              destinationRoute = RouteNames.setupProfile;
-              break;
-            case UserType.cooperative:
-              destinationRoute = RouteNames.cooperativeDashboard;
-              break;
-            case UserType.buyer:
-              destinationRoute = RouteNames.marketplace;
-              break;
-            case UserType.technician:
-              destinationRoute = RouteNames.technicianDashboard;
-              break;
-            default:
-              destinationRoute = RouteNames.selectUserType;
+
+          if (userType == UserType.producer &&
+              (currentPhone == null || currentPhone.isEmpty)) {
+            destinationRoute = RouteNames.setupProfile;
+          } else {
+            switch (userType) {
+              case UserType.producer:
+                destinationRoute = RouteNames.dashboard;
+                break;
+              case UserType.cooperative:
+                destinationRoute = RouteNames.cooperativeDashboard;
+                break;
+              case UserType.buyer:
+                destinationRoute = RouteNames.marketplace;
+                break;
+              case UserType.technician:
+                destinationRoute = RouteNames.technicianDashboard;
+                break;
+              default:
+                destinationRoute = RouteNames.selectUserType;
+            }
           }
 
           debugPrint('✅ Navegando a: $destinationRoute');
+          debugPrint('📞 Teléfono del usuario: ${userProvider.userPhone}');
           context.go(destinationRoute);
         }
       } else {
@@ -180,7 +194,8 @@ class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
     }
   }
 
-  void _handleGoogleLogin() async {
+  // ✅ MÉTODO PARA LOGIN CON GOOGLE - MEJORADO
+  Future<void> _handleGoogleLogin() async {
     final service = Provider.of<LoginAttemptService>(context, listen: false);
 
     if (service.isPermanentlyBlocked) {
@@ -199,36 +214,135 @@ class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
     }
 
     setState(() {
-      _isLoading = true;
+      _isGoogleLoading = true;
     });
 
-    await Future.delayed(const Duration(seconds: 2));
-
-    setState(() {
-      _isLoading = false;
-    });
-
-    if (mounted) {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      final email = 'usuario_google@ejemplo.com';
-      final userType = await userProvider.loadSavedUserTypeForEmail(email);
-
-      if (userType == null) {
-        userProvider.setUserEmail(email);
-        context.go(RouteNames.selectUserType);
+    try {
+      // ✅ 1. Verificar si Google Play Services está disponible
+      try {
+        await GoogleSignInService.isSignedIn();
+      } catch (e) {
+        setState(() {
+          _isGoogleLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Google Play Services no está disponible.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
         return;
       }
 
-      userProvider.setUserInfo(
-        type: userType,
-        email: email,
-        name: 'Usuario Google',
-      );
+      // ✅ 2. Iniciar sesión con Google
+      final account = await GoogleSignInService.signIn();
 
-      String destinationRoute;
-      switch (userType) {
+      if (account == null) {
+        setState(() {
+          _isGoogleLoading = false;
+        });
+        return; // Usuario canceló
+      }
+
+      // ✅ 3. Obtener datos del usuario
+      final userData = await GoogleSignInService.getUserData(account);
+      final email = userData['email'] ?? '';
+      final displayName = userData['displayName'] ?? 'Usuario Google';
+      final idToken = userData['idToken'] ?? '';
+
+      debugPrint('✅ Google Sign-In exitoso: $email');
+      debugPrint('✅ Nombre: $displayName');
+
+      // ✅ 4. Intentar autenticar con el backend
+      try {
+        final url = Uri.parse('${AppConstants.apiBaseUrl}/api/auth/google');
+        final response = await http.post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'idToken': idToken,
+            'email': email,
+            'name': displayName,
+          }),
+        ).timeout(const Duration(seconds: 10));
+
+        setState(() {
+          _isGoogleLoading = false;
+        });
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          // ✅ Login exitoso con Google
+          await _handleGoogleLoginSuccess(email, displayName);
+        } else {
+          // ❌ Error en el backend
+          String errorMessage = 'Error al autenticar con Google.';
+          try {
+            final errorBody = jsonDecode(response.body);
+            errorMessage = errorBody['message'] ?? errorMessage;
+          } catch (_) {}
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ $errorMessage'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        setState(() {
+          _isGoogleLoading = false;
+        });
+
+        // ✅ Si el backend no está disponible, hacer login local con los datos de Google
+        debugPrint('⚠️ Backend no disponible, usando login local con Google');
+        await _handleGoogleLoginSuccess(email, displayName);
+      }
+    } catch (e) {
+      setState(() {
+        _isGoogleLoading = false;
+      });
+
+      debugPrint('❌ Error en Google Login: $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al iniciar sesión con Google: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // ✅ Método auxiliar para manejar el login exitoso con Google
+  Future<void> _handleGoogleLoginSuccess(String email, String displayName) async {
+    if (!mounted) return;
+
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final userType = await userProvider.loadSavedUserTypeForEmail(email);
+
+    // ✅ Guardar usuario en el provider
+    await userProvider.loadUserPhone(email);
+    final currentPhone = userProvider.userPhone;
+
+    userProvider.setUserInfo(
+      type: userType ?? UserType.producer,
+      email: email,
+      name: displayName,
+      phone: currentPhone,
+    );
+
+    String destinationRoute;
+
+    // ✅ Verificar si el usuario ya tiene teléfono
+    if (userType == UserType.producer &&
+        (currentPhone == null || currentPhone.isEmpty)) {
+      destinationRoute = RouteNames.setupProfile;
+    } else {
+      switch (userType ?? UserType.producer) {
         case UserType.producer:
-          destinationRoute = RouteNames.setupProfile;
+          destinationRoute = RouteNames.dashboard;
           break;
         case UserType.cooperative:
           destinationRoute = RouteNames.cooperativeDashboard;
@@ -242,9 +356,20 @@ class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
         default:
           destinationRoute = RouteNames.selectUserType;
       }
-
-      context.go(destinationRoute);
     }
+
+    debugPrint('✅ Google Login - Navegando a: $destinationRoute');
+
+    // ✅ Mostrar mensaje de éxito
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('✅ Inicio de sesión con Google exitoso'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    context.go(destinationRoute);
   }
 
   void _handleRegister() {
@@ -316,9 +441,10 @@ class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
                   ),
                   const SizedBox(height: 24),
                   SocialLoginButton(
-                    text: 'Continuar con Google',
+                    text: _isGoogleLoading ? 'Cargando...' : 'Continuar con Google',
                     imageAsset: 'assets/img/google_logo.png',
-                    onPressed: _handleGoogleLogin,
+                    onPressed: _isGoogleLoading ? null : _handleGoogleLogin,
+                    isLoading: _isGoogleLoading,
                   ),
                   const SizedBox(height: 32),
                   Row(

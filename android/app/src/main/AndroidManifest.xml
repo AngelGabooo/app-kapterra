@@ -7,27 +7,27 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.VIBRATE" />
-    <!-- ✅ Permiso para Android 10+ (API 29+) -->
     <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-
-    <!-- ✅ Permiso para Android 11+ (API 30+) -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
 
     <application
         android:label="kaabcafe"
-        android:name="${applicationName}"
+        android:name="android.app.Application"
         android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="true"
         android:usesCleartextTraffic="true"
         tools:targetApi="29">
 
-        <!-- File Provider para compartir archivos -->
+        <!-- ✅ META-DATA PARA GOOGLE SIGN-IN -->
+        <meta-data
+            android:name="com.google.android.gms.auth.api.signin.API"
+            android:value="com.google.android.gms.auth.api.signin.GoogleSignInApi" />
+
+        <!-- File Provider -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -56,7 +56,6 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
-            <!-- ✅ Para abrir archivos PDF -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -77,7 +76,6 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
-        <!-- ✅ Para compartir archivos -->
         <intent>
             <action android:name="android.intent.action.SEND" />
             <data android:mimeType="*/*" />
@@ -86,12 +84,10 @@
             <action android:name="android.intent.action.SEND_MULTIPLE" />
             <data android:mimeType="*/*" />
         </intent>
-        <!-- ✅ Para abrir PDF con otras apps -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:mimeType="application/pdf" />
         </intent>
-        <!-- ✅ Para abrir archivos -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="file" />

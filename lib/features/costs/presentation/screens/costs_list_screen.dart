@@ -1,4 +1,3 @@
-// lib/features/costs/presentation/screens/costs_list_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -209,12 +208,20 @@ class _CostsListScreenState extends State<CostsListScreen> {
     );
   }
 
+  /// ✅ Navegación corregida: ahora vuelve al Dashboard o a la vista anterior
   void _goBack() {
     if (widget.lotId != null) {
-      // Volver a lot_detail_screen
+      // Si viene desde el detalle de un lote, volver a esa pantalla
       Navigator.pop(context);
     } else {
-      context.go(RouteNames.myFarms);
+      // ✅ Si viene desde el Dashboard (push), usar pop para volver
+      // Si no se puede hacer pop, ir al Dashboard como fallback
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      } else {
+        // Fallback: ir al Dashboard
+        context.go(RouteNames.dashboard);
+      }
     }
   }
 
@@ -325,9 +332,7 @@ class _CostsListScreenState extends State<CostsListScreen> {
           );
         },
       ),
-      floatingActionButton: _buildModernFAB(isDark),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      // ✅ Eliminamos la barra de navegación inferior
     );
   }
 
@@ -338,7 +343,7 @@ class _CostsListScreenState extends State<CostsListScreen> {
       padding: const EdgeInsets.fromLTRB(12, 20, 20, 0),
       child: Row(
         children: [
-          // ✅ Botón de regreso
+          // ✅ Botón de regreso corregido
           IconButton(
             onPressed: _goBack,
             icon: Icon(Icons.arrow_back, color: textColor),
@@ -597,16 +602,6 @@ class _CostsListScreenState extends State<CostsListScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildModernFAB(bool isDark) {
-    return NeumorphicActionButton(
-      label: 'Registrar Actividad',
-      icon: Icons.add,
-      isDark: isDark,
-      onPressed: _navigateToRegisterCost,
-      accentColor: AppTheme.primaryGreen,
     );
   }
 

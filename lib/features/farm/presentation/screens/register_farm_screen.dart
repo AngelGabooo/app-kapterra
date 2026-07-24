@@ -1,4 +1,5 @@
 // lib/features/farm/presentation/screens/register_farm_screen.dart
+
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -29,7 +30,8 @@ class _RegisterFarmScreenState extends State<RegisterFarmScreen> {
   FarmModel? _farm;
   final GlobalKey<FarmFormState> _formKey = GlobalKey<FarmFormState>();
 
-  // ✅ Inicializar _farm en initState
+  final GlobalKey<FarmMapState> _mapKey = GlobalKey<FarmMapState>();
+
   @override
   void initState() {
     super.initState();
@@ -53,10 +55,10 @@ class _RegisterFarmScreenState extends State<RegisterFarmScreen> {
         imageUrl: 'assets/img/default_farm.png',
         latitude: farm.latitude ?? 16.7525,
         longitude: farm.longitude ?? -93.1167,
+        altitude: farm.altitude,
       );
       farmProvider.addFarm(newFarm);
 
-      // ✅ Mostrar mensaje de éxito
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('✅ Finca registrada correctamente'),
@@ -101,6 +103,21 @@ class _RegisterFarmScreenState extends State<RegisterFarmScreen> {
 
   void _goBack() => context.pop();
   void _submitForm() => _formKey.currentState?.submitForm();
+
+  void _onLocationSelected(double lat, double lng) {
+    setState(() {
+      if (_farm != null) {
+        _farm!.latitude = lat;
+        _farm!.longitude = lng;
+        _farm!.location = 'Ubicación seleccionada (${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)})';
+      }
+    });
+    _formKey.currentState?.updateLocationFromMap(lat, lng);
+  }
+
+  void _updateMapLocation(double lat, double lng) {
+    _mapKey.currentState?.updateLocation(lat, lng);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -207,11 +224,11 @@ class _RegisterFarmScreenState extends State<RegisterFarmScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
-                        // ✅ Pasar el farm al formulario
                         FarmForm(
                           key: _formKey,
                           onSave: _handleSave,
                           initialFarm: _farm,
+                          onLocationChanged: _updateMapLocation,
                         ),
                         const SizedBox(height: 28),
                         Text(
@@ -241,17 +258,10 @@ class _RegisterFarmScreenState extends State<RegisterFarmScreen> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(16),
                             child: FarmMap(
-                              onLocationSelected: (lat, lng) {
-                                setState(() {
-                                  if (_farm != null) {
-                                    _farm!.latitude = lat;
-                                    _farm!.longitude = lng;
-                                    _farm!.location = 'Ubicación seleccionada (${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)})';
-                                  }
-                                });
-                              },
-                              initialLat: _farm?.latitude,
-                              initialLng: _farm?.longitude,
+                              key: _mapKey,
+                              onLocationSelected: _onLocationSelected,
+                              initialLat: _farm?.latitude ?? 16.7525,
+                              initialLng: _farm?.longitude ?? -93.1167,
                             ),
                           ),
                         ),

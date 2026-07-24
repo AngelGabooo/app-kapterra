@@ -1,22 +1,24 @@
+// lib/features/farm/presentation/widgets/farm_map.dart
+
 import 'package:flutter/material.dart';
 
 class FarmMap extends StatefulWidget {
   final Function(double lat, double lng) onLocationSelected;
-  final double? initialLat;
-  final double? initialLng;
+  final double initialLat;
+  final double initialLng;
 
   const FarmMap({
     super.key,
     required this.onLocationSelected,
-    this.initialLat,
-    this.initialLng,
+    this.initialLat = 16.7525,
+    this.initialLng = -93.1167,
   });
 
   @override
-  State<FarmMap> createState() => _FarmMapState();
+  State<FarmMap> createState() => FarmMapState();
 }
 
-class _FarmMapState extends State<FarmMap> {
+class FarmMapState extends State<FarmMap> {
   late double _latitude;
   late double _longitude;
   bool _isSatelliteView = false;
@@ -24,8 +26,16 @@ class _FarmMapState extends State<FarmMap> {
   @override
   void initState() {
     super.initState();
-    _latitude = widget.initialLat ?? 16.7525; // Base Chiapas por defecto
-    _longitude = widget.initialLng ?? -93.1167;
+    _latitude = widget.initialLat;
+    _longitude = widget.initialLng;
+  }
+
+  // ✅ Método público para actualizar la ubicación desde fuera
+  void updateLocation(double lat, double lng) {
+    setState(() {
+      _latitude = lat;
+      _longitude = lng;
+    });
   }
 
   void _updateLocation(double lat, double lng) {
@@ -75,8 +85,6 @@ class _FarmMapState extends State<FarmMap> {
                     size: Size.infinite,
                     painter: MapGridPainter(theme: theme),
                   ),
-
-                  // Marcador de Ubicación
                   Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -101,8 +109,6 @@ class _FarmMapState extends State<FarmMap> {
                       ],
                     ),
                   ),
-
-                  // Controles de Mapa
                   Positioned(
                     top: 16,
                     right: 16,
@@ -116,16 +122,14 @@ class _FarmMapState extends State<FarmMap> {
                       ],
                     ),
                   ),
-
                   Positioned(
                     bottom: 16,
                     right: 16,
-                    child: _buildMapControl(icon: Icons.my_location, theme: theme, onTap: () => _updateLocation(16.7525, -93.1167)),
+                    child: _buildMapControl(icon: Icons.my_location, theme: theme, onTap: () {}),
                   ),
                 ],
               ),
             ),
-
             Positioned(
               bottom: 16,
               left: 16,

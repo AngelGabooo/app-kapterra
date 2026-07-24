@@ -10,8 +10,17 @@ const Color _kCardCreamLightAlt = Color(0xFFF6ECDA);
 
 class SetupProfileForm extends StatefulWidget {
   final Function(SetupProfileModel) onComplete;
+  final String initialFullName;
+  final String initialPhone;
+  final String initialEmail;
 
-  const SetupProfileForm({super.key, required this.onComplete});
+  const SetupProfileForm({
+    super.key,
+    required this.onComplete,
+    this.initialFullName = '',
+    this.initialPhone = '',
+    this.initialEmail = '',
+  });
 
   @override
   State<SetupProfileForm> createState() => SetupProfileFormState();
@@ -21,13 +30,34 @@ class SetupProfileFormState extends State<SetupProfileForm> {
   final _formKey = GlobalKey<FormState>();
   late SetupProfileModel _profile;
 
+  final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+
   final _yearsExperienceOptions = ['Menos de 1 año', '1 a 5 años', '5 a 10 años', 'Más de 10 años'];
   final _coffeeVarietyOptions = ['Arábica', 'Robusta', 'Bourbon', 'Typica', 'Catuaí', 'Geisha', 'Otra'];
 
   @override
   void initState() {
     super.initState();
-    _profile = SetupProfileModel();
+
+    _profile = SetupProfileModel(
+      fullName: widget.initialFullName,
+      phoneNumber: widget.initialPhone,
+      email: widget.initialEmail,
+    );
+
+    _fullNameController.text = widget.initialFullName;
+    _phoneController.text = widget.initialPhone;
+    _emailController.text = widget.initialEmail;
+  }
+
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
+    super.dispose();
   }
 
   void submitForm() {
@@ -36,7 +66,6 @@ class SetupProfileFormState extends State<SetupProfileForm> {
     }
   }
 
-  /// Decoración flat pensada para vivir dentro de un NeumorphicBox.inset.
   InputDecoration _buildInputDecoration({required IconData icon, required String hintText, required ThemeData theme}) {
     return InputDecoration(
       prefixIcon: Icon(icon, color: theme.colorScheme.secondary),
@@ -130,6 +159,7 @@ class SetupProfileFormState extends State<SetupProfileForm> {
                   borderRadius: 18,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: TextFormField(
+                    controller: _fullNameController,
                     onChanged: (value) => _profile.fullName = value,
                     style: TextStyle(color: theme.colorScheme.onSurface),
                     decoration: _buildInputDecoration(icon: Icons.person_outline, hintText: 'Juan Pérez', theme: theme),
@@ -143,6 +173,7 @@ class SetupProfileFormState extends State<SetupProfileForm> {
                   borderRadius: 18,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: TextFormField(
+                    controller: _phoneController,
                     onChanged: (value) => _profile.phoneNumber = value,
                     keyboardType: TextInputType.phone,
                     style: TextStyle(color: theme.colorScheme.onSurface),
@@ -157,6 +188,7 @@ class SetupProfileFormState extends State<SetupProfileForm> {
                   borderRadius: 18,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: TextFormField(
+                    controller: _emailController,
                     onChanged: (value) => _profile.email = value,
                     keyboardType: TextInputType.emailAddress,
                     style: TextStyle(color: theme.colorScheme.onSurface),
@@ -251,9 +283,7 @@ class SetupProfileFormState extends State<SetupProfileForm> {
                     items: _coffeeVarietyOptions.map((option) => DropdownMenuItem(value: option, child: Text(option))).toList(),
                     onChanged: (value) {
                       setState(() => _profile.coffeeVariety = value ?? '');
-                      if (value != null && value.isNotEmpty) {
-                        submitForm(); // Ejecuta la validación nativa automática al seleccionar
-                      }
+                      // ✅ ELIMINADA LA LLAMADA AUTOMÁTICA A submitForm()
                     },
                     validator: (value) => (value == null || value.isEmpty) ? 'Por favor selecciona una variedad' : null,
                   ),

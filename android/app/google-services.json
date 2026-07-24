@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "331111201680",
+    "project_id": "kaapterra-74039",
+    "storage_bucket": "kaapterra-74039.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:331111201680:android:a8900bfea7b6efa5a9d115",
+        "android_client_info": {
+          "package_name": "com.kaabterra.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCEvdvAr2eSqDqLGiBpQ14XBJ2Z7Xw492s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

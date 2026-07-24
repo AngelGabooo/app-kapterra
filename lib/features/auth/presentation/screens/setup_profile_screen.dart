@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:kaabcafe/core/providers/user_provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/auth/data/models/setup_profile_model.dart';
@@ -28,15 +30,33 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
       _isLoading = true;
     });
 
-    debugPrint('Perfil completado de forma segura');
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      // ✅ Guardar el teléfono en UserProvider asociado al email
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      await userProvider.saveUserPhoneForCurrentEmail(profile.phoneNumber);
 
-    setState(() {
-      _isLoading = false;
-    });
+      debugPrint('📞 Teléfono guardado: ${profile.phoneNumber}');
+      debugPrint('✅ Perfil completado de forma segura');
 
-    if (mounted) {
-      context.go(RouteNames.registerFarm);
+      if (mounted) {
+        context.go(RouteNames.dashboard);
+      }
+    } catch (e) {
+      debugPrint('Error guardando perfil: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al guardar el perfil: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -61,7 +81,7 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              context.go(RouteNames.registerFarm);
+              context.go(RouteNames.dashboard);
             },
             style: TextButton.styleFrom(foregroundColor: theme.colorScheme.tertiary),
             child: const Text('Omitir'),
@@ -79,17 +99,22 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
     final isDark = theme.brightness == Brightness.dark;
     final progress = (_currentStep / _totalSteps);
 
-    // ✅ Color crema - consistente con el login
     final creamColor = isDark
         ? AppTheme.coffeeDeep
         : const Color(0xFFF0E8D8);
+
+    // ✅ OBTENER DATOS DEL USUARIO DESDE USERPROVIDER
+    final userProvider = Provider.of<UserProvider>(context);
+    final userName = userProvider.userName ?? '';
+    final userPhone = userProvider.userPhone ?? '';
+    final userEmail = userProvider.userEmail ?? '';
 
     return Scaffold(
       body: Stack(
         children: [
           Positioned.fill(
             child: Container(
-              color: creamColor, // ✅ Fondo crema
+              color: creamColor,
             ),
           ),
           Positioned.fill(
@@ -98,12 +123,10 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
           SafeArea(
             child: Column(
               children: [
-                // ── Barra superior ──────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
                     children: [
-                      // ✅ Botón de regreso corregido - SIN BRILLO
                       GestureDetector(
                         onTap: _goBack,
                         child: Container(
@@ -119,7 +142,7 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                                   : AppTheme.darkCoffee.withOpacity(0.06),
                               width: 0.5,
                             ),
-                            boxShadow: const [], // ✅ SIN SOMBRAS
+                            boxShadow: const [],
                           ),
                           child: Icon(
                             Icons.arrow_back,
@@ -146,7 +169,6 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                   ),
                 ),
 
-                // ── Contenido con scroll ──────────────────────────
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -199,16 +221,19 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
                         ),
                         const SizedBox(height: 32),
 
+                        // ✅ PASAR LOS DATOS DEL USUARIO AL FORMULARIO
                         SetupProfileForm(
                           key: _formKey,
                           onComplete: _handleComplete,
+                          initialFullName: userName,
+                          initialPhone: userPhone,
+                          initialEmail: userEmail,
                         ),
                       ],
                     ),
                   ),
                 ),
 
-                // ── Botón continuar ──────────────────────────────────
                 Container(
                   padding: const EdgeInsets.all(24.0),
                   color: Colors.transparent,
@@ -230,7 +255,6 @@ class _SetupProfileScreenState extends State<SetupProfileScreen> {
   }
 }
 
-/// Barra de progreso "hundida" (groove neumórfico) - SIN BRILLO
 class _ProgressGroove extends StatelessWidget {
   final double progress;
   final ThemeData theme;
@@ -257,7 +281,7 @@ class _ProgressGroove extends StatelessWidget {
               : AppTheme.darkCoffee.withOpacity(0.06),
           width: 0.5,
         ),
-        boxShadow: const [], // ✅ SIN SOMBRAS
+        boxShadow: const [],
       ),
       child: SizedBox(
         height: 10,
@@ -285,7 +309,6 @@ class _ProgressGroove extends StatelessWidget {
   }
 }
 
-/// Fondo tipo "aurora / espacial" - igual que en Login y Register.
 class _AuroraBackground extends StatelessWidget {
   final ThemeData theme;
   const _AuroraBackground({required this.theme});

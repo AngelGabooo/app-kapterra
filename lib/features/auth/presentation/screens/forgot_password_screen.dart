@@ -1,3 +1,5 @@
+// lib/features/auth/presentation/screens/forgot_password_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
@@ -11,9 +13,22 @@ class ForgotPasswordScreen extends StatefulWidget {
 }
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+  bool _isLoading = false;
+
   Future<void> _sendResetLink(String email) async {
-    debugPrint('Enviando enlace de recuperación a: $email');
+    setState(() {
+      _isLoading = true;
+    });
+
+    // ⏳ SIMULACIÓN DE ENVÍO (para cuando el backend esté listo)
+    // TODO: Reemplazar con llamada real a la API cuando el endpoint esté disponible
+    // POST /api/auth/forgot-password
+
     await Future.delayed(const Duration(seconds: 2));
+
+    setState(() {
+      _isLoading = false;
+    });
 
     if (mounted) {
       _showSuccessDialog(email);
@@ -147,7 +162,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         ),
         child: SafeArea(
-          // Quitamos la separación de columnas rota para empaquetarlo todo en un scroll único responsivo
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             physics: const BouncingScrollPhysics(),
@@ -159,18 +173,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                     child: IconButton(
-                      onPressed: _goToLogin,
+                      onPressed: _isLoading ? null : _goToLogin,
                       icon: const Icon(Icons.arrow_back),
                       color: theme.colorScheme.onSurface,
                     ),
                   ),
                 ),
-
-                // 🚨 COLCHÓN DE CONTROL DE ALTURA
-                // Cambia este número (90, 110, 130...) para asentar el bloque central a tu gusto exacto
-                const SizedBox(height: 90),
-
-                // Imagen ilustrativa adaptada
+                const SizedBox(height: 60),
                 Center(
                   child: Container(
                     width: 200,
@@ -216,8 +225,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                   ),
                 ),
-
-                // Título adaptable
                 Text(
                   '¿Olvidaste tu contraseña?',
                   style: TextStyle(
@@ -227,10 +234,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-
                 const SizedBox(height: 12),
-
-                // Subtítulo adaptable
                 Text(
                   'No te preocupes. Ingresa tu correo electrónico y te enviaremos instrucciones para restablecer tu contraseña.',
                   style: TextStyle(
@@ -240,15 +244,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
-
                 const SizedBox(height: 36),
-
-                // Formulario dinámico
-                ForgotPasswordForm(onSendResetLink: _sendResetLink),
-
+                ForgotPasswordForm(
+                  onSendResetLink: _sendResetLink,
+                  isLoading: _isLoading,
+                ),
                 const SizedBox(height: 40),
-
-                // Enlace inferior integrado al scroll
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -264,7 +265,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                     Flexible(
                       child: TextButton(
-                        onPressed: _goToLogin,
+                        onPressed: _isLoading ? null : _goToLogin,
                         style: TextButton.styleFrom(
                           foregroundColor: theme.colorScheme.tertiary,
                           padding: EdgeInsets.zero,
@@ -282,8 +283,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 40), // Cierre de scroll seguro
+                const SizedBox(height: 40),
               ],
             ),
           ),

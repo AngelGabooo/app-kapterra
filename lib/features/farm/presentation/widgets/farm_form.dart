@@ -1,15 +1,24 @@
 // lib/features/farm/presentation/widgets/farm_form.dart
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
+import 'package:kaabcafe/core/services/elevation_service.dart';
 import 'package:kaabcafe/features/farm/data/models/farm_model.dart';
 import '../../../../core/widgets/neumorphic_widgets.dart';
 
 class FarmForm extends StatefulWidget {
   final Function(FarmModel) onSave;
+  final FarmModel? initialFarm;
+  final Function(double lat, double lng)? onLocationChanged; // ✅ CORREGIDO: hacer opcional
 
-  const FarmForm({super.key, required this.onSave, FarmModel? initialFarm});
+  const FarmForm({
+    super.key,
+    required this.onSave,
+    this.initialFarm,
+    this.onLocationChanged,
+  });
 
   @override
   State<FarmForm> createState() => FarmFormState();
@@ -19,13 +28,31 @@ class FarmFormState extends State<FarmForm> {
   final _formKey = GlobalKey<FormState>();
   late FarmModel _farm;
   bool _isLoadingLocation = false;
+  bool _isLoadingElevation = false;
+
+  final TextEditingController _altitudeController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController(); // ✅ AGREGADO
 
   final _coffeeVarietyOptions = ['Arábica', 'Robusta', 'Bourbon', 'Typica', 'Catuaí', 'Geisha', 'Otra'];
 
   @override
   void initState() {
     super.initState();
-    _farm = FarmModel();
+    _farm = widget.initialFarm ?? FarmModel();
+
+    if (_farm.altitude > 0) {
+      _altitudeController.text = _farm.altitude.toString();
+    }
+    if (_farm.location.isNotEmpty) {
+      _locationController.text = _farm.location;
+    }
+  }
+
+  @override
+  void dispose() {
+    _altitudeController.dispose();
+    _locationController.dispose();
+    super.dispose();
   }
 
   void submitForm() {
@@ -35,12 +62,22 @@ class FarmFormState extends State<FarmForm> {
     }
   }
 
+  // ✅ Método para actualizar la ubicación desde el mapa
+  void updateLocationFromMap(double lat, double lng) {
+    setState(() {
+      _farm.latitude = lat;
+      _farm.longitude = lng;
+      _farm.location = 'Ubicación seleccionada (${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)})';
+      _locationController.text = _farm.location; // ✅ ACTUALIZAR controlador
+    });
+    _fetchElevation(lat, lng);
+  }
+
   // ✅ Método para obtener la ubicación actual
   Future<void> _getCurrentLocation() async {
     setState(() => _isLoadingLocation = true);
 
     try {
-      // 1. Verificar permisos
       final status = await Permission.location.request();
 
       if (status.isDenied) {
@@ -65,19 +102,23 @@ class FarmFormState extends State<FarmForm> {
         return;
       }
 
-      // 2. Obtener la ubicación
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      // 3. Actualizar el modelo con las coordenadas
       setState(() {
         _farm.latitude = position.latitude;
         _farm.longitude = position.longitude;
-        // También actualizar el campo de ubicación con un nombre genérico
         _farm.location = 'Ubicación actual (${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)})';
+        _locationController.text = _farm.location; // ✅ ACTUALIZAR controlador
         _isLoadingLocation = false;
       });
+
+      // ✅ Obtener altitud desde las coordenadas
+      await _fetchElevation(position.latitude, position.longitude);
+
+      // ✅ NOTIFICAR AL PADRE PARA ACTUALIZAR EL MAPA
+      widget.onLocationChanged?.call(position.latitude, position.longitude);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -94,6 +135,30 @@ class FarmFormState extends State<FarmForm> {
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  // ✅ Método para obtener altitud desde coordenadas
+  Future<void> _fetchElevation(double lat, double lng) async {
+    setState(() => _isLoadingElevation = true);
+
+    try {
+      final elevation = await ElevationService.getElevation(lat, lng);
+
+      if (elevation != null) {
+        setState(() {
+          _farm.altitude = elevation.round();
+          _altitudeController.text = elevation.round().toString();
+          _isLoadingElevation = false;
+        });
+        debugPrint('✅ Altitud obtenida: ${elevation.round()} msnm');
+      } else {
+        setState(() => _isLoadingElevation = false);
+        debugPrint('⚠️ No se pudo obtener la altitud');
+      }
+    } catch (e) {
+      setState(() => _isLoadingElevation = false);
+      debugPrint('Error obteniendo altitud: $e');
     }
   }
 
@@ -209,6 +274,7 @@ class FarmFormState extends State<FarmForm> {
                 boxShadow: const [],
               ),
               child: TextFormField(
+                initialValue: _farm.name,
                 onChanged: (value) => _farm.name = value,
                 style: TextStyle(color: textColor),
                 decoration: _buildInputDecoration(
@@ -240,11 +306,9 @@ class FarmFormState extends State<FarmForm> {
                 boxShadow: const [],
               ),
               child: TextFormField(
+                controller: _locationController, // ✅ USAR CONTROLLER
                 onChanged: (value) => _farm.location = value,
                 style: TextStyle(color: textColor),
-                controller: TextEditingController(
-                  text: _farm.location.isNotEmpty ? _farm.location : null,
-                ),
                 decoration: _buildInputDecoration(
                   icon: Icons.location_on_outlined,
                   hintText: 'Ej. Motozintla, Chiapas',
@@ -258,7 +322,7 @@ class FarmFormState extends State<FarmForm> {
 
             const SizedBox(height: 12),
 
-            // ✅ Botón de ubicación actual mejorado
+            // ✅ Botón de ubicación actual
             SizedBox(
               width: double.infinity,
               child: GestureDetector(
@@ -313,6 +377,7 @@ class FarmFormState extends State<FarmForm> {
 
             const SizedBox(height: 20),
 
+            // ✅ Campo de Altitud con carga automática
             Text('Altitud (msnm)', style: labelStyle),
             const SizedBox(height: 8),
             Container(
@@ -328,18 +393,41 @@ class FarmFormState extends State<FarmForm> {
                 ),
                 boxShadow: const [],
               ),
-              child: TextFormField(
-                onChanged: (value) => _farm.altitude = int.tryParse(value) ?? 0,
-                keyboardType: TextInputType.number,
-                style: TextStyle(color: textColor),
-                decoration: _buildInputDecoration(
-                  icon: Icons.height,
-                  hintText: 'Ej: 1200',
-                  theme: theme,
-                  isDark: isDark,
-                ),
-                validator: (value) =>
-                (value == null || value.isEmpty) ? 'Por favor ingresa la altitud' : null,
+              child: Stack(
+                children: [
+                  TextFormField(
+                    controller: _altitudeController,
+                    onChanged: (value) {
+                      _farm.altitude = int.tryParse(value) ?? 0;
+                    },
+                    keyboardType: TextInputType.number,
+                    style: TextStyle(color: textColor),
+                    decoration: _buildInputDecoration(
+                      icon: Icons.height,
+                      hintText: 'Ej: 1200',
+                      theme: theme,
+                      isDark: isDark,
+                    ),
+                    validator: (value) =>
+                    (value == null || value.isEmpty) ? 'Por favor ingresa la altitud' : null,
+                  ),
+                  if (_isLoadingElevation)
+                    Positioned(
+                      right: 16,
+                      top: 0,
+                      bottom: 0,
+                      child: Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppTheme.primaryGreen,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
 
@@ -361,6 +449,7 @@ class FarmFormState extends State<FarmForm> {
                 boxShadow: const [],
               ),
               child: TextFormField(
+                initialValue: _farm.surface > 0 ? _farm.surface.toString() : '',
                 onChanged: (value) => _farm.surface = double.tryParse(value) ?? 0,
                 keyboardType: TextInputType.number,
                 style: TextStyle(color: textColor),
@@ -394,6 +483,7 @@ class FarmFormState extends State<FarmForm> {
                 boxShadow: const [],
               ),
               child: TextFormField(
+                initialValue: _farm.numberOfLots > 0 ? _farm.numberOfLots.toString() : '',
                 onChanged: (value) => _farm.numberOfLots = int.tryParse(value) ?? 0,
                 keyboardType: TextInputType.number,
                 style: TextStyle(color: textColor),
@@ -469,7 +559,7 @@ class FarmFormState extends State<FarmForm> {
                 boxShadow: const [],
               ),
               child: DropdownButtonFormField<int>(
-                value: _farm.establishmentYear,
+                value: _farm.establishmentYear > 0 ? _farm.establishmentYear : null,
                 dropdownColor: isDark ? AppTheme.coffeeDeep : const Color(0xFFF0E8D8),
                 style: TextStyle(color: textColor),
                 hint: Text(

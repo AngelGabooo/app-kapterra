@@ -70,6 +70,8 @@ import 'package:kaabcafe/features/farms/presentation/screens/lot_public_screen.d
 import 'package:kaabcafe/features/buyer/presentation/screens/reports/reports_screen.dart';
 import 'package:kaabcafe/features/marketplace/presentation/screens/purchases_screen.dart';
 
+import '../../features/dashboard/presentation/screens/indicators_screen.dart';
+
 
 class AppRouter {
   static final router = GoRouter(
@@ -422,6 +424,11 @@ class AppRouter {
         name: RouteNames.purchases,
         path: RouteNames.purchases,
         builder: (context, state) => const PurchasesScreen(),
+      ),
+      GoRoute(
+        path: RouteNames.indicators,
+        name: RouteNames.indicators,
+        builder: (context, state) => const IndicatorsScreen(),
       ),
     ],
     errorBuilder: (context, state) => const Scaffold(

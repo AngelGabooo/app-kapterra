@@ -45,6 +45,7 @@ class RouteNames {
   static const String technicianLotCertification = '/technician/lot-certification';
   static const String lotPublic = '/lot-public';
   static const String purchases = '/purchases';
+  static const String indicators = '/indicators';
 
   // ✅ NUEVA RUTA PARA PIN DE SEGURIDAD
   static const String pinSecurity = '/pin-security';

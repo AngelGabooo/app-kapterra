@@ -1,3 +1,6 @@
+// lib/features/farms/presentation/screens/edit_lot_screen.dart
+
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
@@ -27,8 +30,10 @@ class _EditLotScreenState extends State<EditLotScreen> {
   String _selectedStatus = '';
   List<String> _images = [];
   bool _isSaving = false;
+  bool _isLoadingImages = false;
 
   final List<String> _varietyOptions = [
+    'Arábica',
     'Bourbon',
     'Typica',
     'Catuaí',
@@ -38,46 +43,48 @@ class _EditLotScreenState extends State<EditLotScreen> {
   ];
 
   final List<String> _statusOptions = [
-    'Excelente',
-    'Bueno',
+    'Saludable',
     'Atención',
     'Riesgo',
   ];
 
   final Map<String, IconData> _statusIcons = {
-    'Excelente': Icons.emoji_events,
-    'Bueno': Icons.thumb_up,
+    'Saludable': Icons.emoji_events,
     'Atención': Icons.warning,
     'Riesgo': Icons.error,
   };
 
   final Map<String, Color> _statusColors = {
-    'Excelente': const Color(0xFF2E7D32),
-    'Bueno': const Color(0xFFD4A017),
+    'Saludable': const Color(0xFF2E7D32),
     'Atención': const Color(0xFFF57C00),
     'Riesgo': const Color(0xFFD32F2F),
   };
 
-  final List<Map<String, dynamic>> _modificationHistory = [
-    {'action': 'Área actualizada', 'date': '12 de junio de 2026', 'user': 'Ángel García', 'icon': Icons.landscape},
-    {'action': 'Fotografía agregada', 'date': '10 de junio de 2026', 'user': 'Ángel García', 'icon': Icons.camera_alt},
-    {'action': 'Cambio de variedad', 'date': '5 de junio de 2026', 'user': 'Ángel García', 'icon': Icons.emoji_nature},
-    {'action': 'Corrección de ubicación', 'date': '1 de junio de 2026', 'user': 'Ángel García', 'icon': Icons.location_on},
-  ];
-
   @override
   void initState() {
     super.initState();
+    // ✅ CARGAR DATOS REALES DEL LOTE
     _nameController = TextEditingController(text: widget.lot.name);
-    _descriptionController = TextEditingController(text: 'Lote principal de la finca con producción constante.');
+    _descriptionController = TextEditingController(text: widget.lot.description ?? '');
     _areaController = TextEditingController(text: widget.lot.area.toString());
-    _altitudeController = TextEditingController(text: '1350');
-    _ageController = TextEditingController(text: '4');
-    _densityController = TextEditingController(text: '5000');
+    _altitudeController = TextEditingController(text: widget.lot.altitude?.toString() ?? '');
+    _ageController = TextEditingController(text: widget.lot.age?.toString() ?? '');
+    _densityController = TextEditingController(text: widget.lot.density?.toString() ?? '');
     _selectedVariety = widget.lot.variety;
-    _selectedStatus = widget.lot.status == LotStatus.healthy ? 'Excelente' :
-    widget.lot.status == LotStatus.attention ? 'Atención' : 'Riesgo';
-    _images = ['image1', 'image2'];
+    _images = List.from(widget.lot.imageUrls ?? []);
+
+    // ✅ MAPEAR ESTADO REAL
+    switch (widget.lot.status) {
+      case LotStatus.healthy:
+        _selectedStatus = 'Saludable';
+        break;
+      case LotStatus.attention:
+        _selectedStatus = 'Atención';
+        break;
+      case LotStatus.risk:
+        _selectedStatus = 'Riesgo';
+        break;
+    }
   }
 
   @override
@@ -89,6 +96,29 @@ class _EditLotScreenState extends State<EditLotScreen> {
     _ageController.dispose();
     _densityController.dispose();
     super.dispose();
+  }
+
+  // ✅ MÉTODO PARA AGREGAR IMAGEN (SIMULADO - SIN image_picker)
+  void _addImage() {
+    // En una implementación real, aquí usarías image_picker
+    // Por ahora, agregamos una imagen de ejemplo
+    setState(() {
+      _images.add('assets/img/default_farm.png');
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('✅ Imagen agregada (demo)'),
+        backgroundColor: AppTheme.primaryGreen,
+      ),
+    );
+  }
+
+  // ✅ MÉTODO PARA ELIMINAR IMAGEN
+  void _removeImage(int index) {
+    setState(() {
+      _images.removeAt(index);
+    });
   }
 
   void _saveChanges() async {
@@ -142,7 +172,7 @@ class _EditLotScreenState extends State<EditLotScreen> {
             ),
             const SizedBox(height: 12),
             const Text(
-              'La información del lote ha sido actualizada y sincronizada correctamente.',
+              'La información del lote ha sido actualizada correctamente.',
               style: TextStyle(
                 fontSize: 14,
                 color: AppTheme.darkCoffee,
@@ -344,7 +374,7 @@ class _EditLotScreenState extends State<EditLotScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _nameController.text,
+                              _nameController.text.isEmpty ? 'Nuevo Lote' : _nameController.text,
                               style: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -364,11 +394,14 @@ class _EditLotScreenState extends State<EditLotScreen> {
                               children: [
                                 Icon(Icons.location_on, size: 14, color: Colors.white70),
                                 const SizedBox(width: 4),
-                                Text(
-                                  widget.farm.location,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.white.withOpacity(0.8),
+                                Expanded(
+                                  child: Text(
+                                    widget.farm.location,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.white.withOpacity(0.8),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
@@ -378,6 +411,11 @@ class _EditLotScreenState extends State<EditLotScreen> {
                       ),
 
                       const SizedBox(height: 20),
+
+                      // Sección de imágenes
+                      _buildImageSection(),
+
+                      const SizedBox(height: 16),
 
                       // Información general
                       _buildSection(
@@ -505,6 +543,148 @@ class _EditLotScreenState extends State<EditLotScreen> {
     );
   }
 
+  // ✅ SECCIÓN DE IMÁGENES
+  Widget _buildImageSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Imágenes del lote',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.darkCoffee,
+                ),
+              ),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: _addImage,
+                icon: const Icon(Icons.add_photo_alternate, color: AppTheme.primaryGreen),
+                label: const Text(
+                  'Agregar',
+                  style: TextStyle(color: AppTheme.primaryGreen),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_images.isEmpty)
+            Container(
+              height: 100,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.grey.withOpacity(0.2),
+                  // ✅ CORREGIDO: usar BorderStyle.solid en lugar de dashed
+                  style: BorderStyle.solid,
+                ),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.image_outlined, size: 32, color: Colors.grey.withOpacity(0.5)),
+                    const SizedBox(height: 8),
+                    Text(
+                      'No hay imágenes',
+                      style: TextStyle(
+                        color: Colors.grey.withOpacity(0.5),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              height: 100,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _images.length,
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: _images[index].startsWith('assets/')
+                              ? Image.asset(
+                            _images[index],
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                width: 100,
+                                height: 100,
+                                color: Colors.grey.withOpacity(0.1),
+                                child: Icon(Icons.broken_image, color: Colors.grey.withOpacity(0.5)),
+                              );
+                            },
+                          )
+                              : Image.file(
+                            File(_images[index]),
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                width: 100,
+                                height: 100,
+                                color: Colors.grey.withOpacity(0.1),
+                                child: Icon(Icons.broken_image, color: Colors.grey.withOpacity(0.5)),
+                              );
+                            },
+                          ),
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: GestureDetector(
+                            onTap: () => _removeImage(index),
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.close,
+                                size: 14,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   // Widgets auxiliares
   Widget _buildSection(String title, Widget content) {
     return Container(
@@ -612,11 +792,14 @@ class _EditLotScreenState extends State<EditLotScreen> {
             children: [
               Icon(icon, size: 20, color: AppTheme.primaryGreen),
               const SizedBox(width: 12),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppTheme.darkCoffee,
+              Expanded(
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.darkCoffee,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -640,7 +823,7 @@ class _EditLotScreenState extends State<EditLotScreen> {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: value,
+          value: value.isNotEmpty ? value : null,
           decoration: InputDecoration(
             prefixIcon: Icon(Icons.emoji_nature, size: 20, color: AppTheme.primaryGreen),
             border: OutlineInputBorder(

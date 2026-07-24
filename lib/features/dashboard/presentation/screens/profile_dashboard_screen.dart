@@ -1,4 +1,5 @@
 // lib/features/dashboard/presentation/screens/profile_dashboard_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -27,6 +28,7 @@ class _ProfileDashboardScreenState extends State<ProfileDashboardScreen> {
     final userProvider = Provider.of<UserProvider>(context);
     final userName = userProvider.userName ?? 'Usuario';
     final userEmail = userProvider.userEmail ?? 'Sin correo registrado';
+    final userPhone = userProvider.userPhone ?? 'No registrado';
     final userType = userProvider.selectedUserType;
 
     // Obtener iniciales para el avatar
@@ -77,7 +79,14 @@ class _ProfileDashboardScreenState extends State<ProfileDashboardScreen> {
                     NeumorphicIconButton(
                       icon: Icons.arrow_back,
                       isDark: isDark,
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () {
+                        // ✅ Volver al Dashboard correctamente
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        } else {
+                          context.go(RouteNames.dashboard);
+                        }
+                      },
                       size: 44,
                       iconSize: 20,
                       color: textColor,
@@ -113,6 +122,7 @@ class _ProfileDashboardScreenState extends State<ProfileDashboardScreen> {
 
                 const SizedBox(height: 24),
 
+                // ── Tarjeta de perfil ────────────────────────────
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
@@ -176,6 +186,14 @@ class _ProfileDashboardScreenState extends State<ProfileDashboardScreen> {
                           color: textColor.withOpacity(0.6),
                         ),
                       ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '📱 $userPhone',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: textColor.withOpacity(0.6),
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -204,7 +222,14 @@ class _ProfileDashboardScreenState extends State<ProfileDashboardScreen> {
                   title: 'Información personal',
                   subtitle: 'Datos de tu cuenta',
                   isDark: isDark,
-                  onTap: () {},
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Próximamente: Editar información personal'),
+                        backgroundColor: AppTheme.primaryGreen,
+                      ),
+                    );
+                  },
                 ),
 
                 _buildMenuItem(
@@ -232,7 +257,14 @@ class _ProfileDashboardScreenState extends State<ProfileDashboardScreen> {
                   title: 'Idioma',
                   subtitle: 'Español (México)',
                   isDark: isDark,
-                  onTap: () {},
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Próximamente: Cambiar idioma'),
+                        backgroundColor: AppTheme.primaryGreen,
+                      ),
+                    );
+                  },
                 ),
 
                 _buildMenuItem(
@@ -240,7 +272,14 @@ class _ProfileDashboardScreenState extends State<ProfileDashboardScreen> {
                   title: 'Ayuda y soporte',
                   subtitle: 'Centro de ayuda, preguntas frecuentes',
                   isDark: isDark,
-                  onTap: () {},
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Próximamente: Centro de ayuda'),
+                        backgroundColor: AppTheme.primaryGreen,
+                      ),
+                    );
+                  },
                 ),
 
                 const SizedBox(height: 24),

@@ -54,13 +54,6 @@ class CostEmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
-            NeumorphicActionButton(
-              label: 'Registrar Costo',
-              icon: Icons.add,
-              isDark: isDark,
-              onPressed: onRegister,
-              accentColor: AppTheme.primaryGreen,
-            ),
           ],
         ),
       ),

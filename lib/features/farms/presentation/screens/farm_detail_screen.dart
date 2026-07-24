@@ -1,3 +1,5 @@
+// lib/features/farms/presentation/screens/farm_detail_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -26,7 +28,7 @@ class FarmDetailScreen extends StatelessWidget {
     final List<LotModel> lots = farmProvider.getLotsForFarm(updatedFarm.id);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor, // Dinámico
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
@@ -71,8 +73,34 @@ class FarmDetailScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            Text('Lotes de la finca',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colorScheme.onSurface)),
+            Row(
+              children: [
+                Text(
+                  'Lotes de la finca',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${lots.length} lotes',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
 
             if (lots.isEmpty)
@@ -87,14 +115,35 @@ class FarmDetailScreen extends StatelessWidget {
     );
   }
 
+  // ✅ CORREGIDO: Usar Expanded para evitar overflow
   Widget _buildInfoRow(IconData icon, String label, String value, ThemeData theme) {
     return Row(
       children: [
         Icon(icon, size: 20, color: theme.colorScheme.primary),
         const SizedBox(width: 12),
-        Text(label, style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface.withOpacity(0.7))),
+        SizedBox(
+          width: 80,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
+            ),
+          ),
+        ),
         const SizedBox(width: 8),
-        Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
+            ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+        ),
       ],
     );
   }
@@ -102,12 +151,26 @@ class FarmDetailScreen extends StatelessWidget {
   Widget _buildEmptyLots(BuildContext context, ThemeData theme) {
     return Container(
       padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(color: theme.colorScheme.surfaceVariant, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceVariant,
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Column(
         children: [
-          Icon(Icons.view_module, size: 64, color: theme.colorScheme.onSurface.withOpacity(0.3)),
+          Icon(
+            Icons.view_module,
+            size: 64,
+            color: theme.colorScheme.onSurface.withOpacity(0.3),
+          ),
           const SizedBox(height: 16),
-          Text('No hay lotes registrados', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface)),
+          Text(
+            'No hay lotes registrados',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: () => context.push(RouteNames.createLot, extra: farm),
@@ -126,7 +189,10 @@ class FarmDetailScreen extends StatelessWidget {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(16)),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       confirmDismiss: (direction) async {
@@ -136,7 +202,10 @@ class FarmDetailScreen extends StatelessWidget {
             title: const Text('Eliminar Lote'),
             content: const Text('¿Estás seguro de eliminar este lote?'),
             actions: [
-              TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancelar'),
+              ),
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(true),
                 child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
@@ -147,26 +216,68 @@ class FarmDetailScreen extends StatelessWidget {
       },
       onDismissed: (direction) {
         Provider.of<FarmProvider>(context, listen: false).deleteLotFromFarm(farm.id, lot.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Lote "${lot.name}" eliminado'),
+            backgroundColor: Colors.green,
+          ),
+        );
       },
       child: Card(
         margin: const EdgeInsets.only(bottom: 12),
         color: theme.colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: InkWell(
-          onTap: () => context.push(RouteNames.lotDetail, extra: {'lot': lot, 'farm': farm}),
+          onTap: () => context.push(
+            RouteNames.lotDetail,
+            extra: {'lot': lot, 'farm': farm},
+          ),
+          borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Container(width: 10, height: 10, decoration: BoxDecoration(color: lot.statusColor, shape: BoxShape.circle)),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(lot.name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface))),
-                  ],
+                // ✅ Indicador de estado
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: lot.statusColor,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-                const SizedBox(height: 8),
-                Text('Variedad: ${lot.variety} | Área: ${lot.area} ha', style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withOpacity(0.7))),
+                const SizedBox(width: 12),
+                // ✅ Información del lote
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        lot.name,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Variedad: ${lot.variety} • Área: ${lot.area} ha',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // ✅ Flecha de navegación
+                Icon(
+                  Icons.chevron_right,
+                  color: theme.colorScheme.onSurface.withOpacity(0.3),
+                ),
               ],
             ),
           ),
