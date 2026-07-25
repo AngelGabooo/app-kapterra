@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -30,6 +31,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
   bool _isLoading = false;
   bool _isGoogleLoading = false;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
   void initState() {
@@ -42,6 +44,7 @@ class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
     });
   }
 
+  // ✅ LOGIN CON FIREBASE AUTH
   Future<void> _handleLogin(String email, String password) async {
     final service = Provider.of<LoginAttemptService>(context, listen: false);
 
@@ -67,115 +70,135 @@ class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
     debugPrint('Login intentado con: $email');
 
     try {
-      final url = Uri.parse('${AppConstants.apiBaseUrl}/api/auth/login');
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-        }),
+      // ✅ LOGIN CON FIREBASE AUTHENTICATION
+      final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
       );
 
       setState(() {
         _isLoading = false;
       });
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(response.body);
-        final userData = responseData['user'] ?? {};
-        final userName = userData['fullName'] ?? userData['name'] ?? 'Usuario';
+      debugPrint('✅ Login exitoso en Firebase: ${userCredential.user?.email}');
+      debugPrint('✅ UID: ${userCredential.user?.uid}');
+      debugPrint('✅ Nombre: ${userCredential.user?.displayName}');
 
-        await service.resetBlock();
+      await service.resetBlock();
 
-        if (mounted) {
-          final userProvider = Provider.of<UserProvider>(context, listen: false);
-          final userType = await userProvider.loadSavedUserTypeForEmail(email);
+      if (mounted) {
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        final userEmail = userCredential.user?.email ?? email;
+        final userName = userCredential.user?.displayName ?? 'Usuario';
 
-          if (userType == null) {
-            userProvider.setUserEmail(email);
-            context.go(RouteNames.selectUserType);
-            return;
-          }
+        // ✅ Cargar el tipo de usuario guardado
+        final userType = await userProvider.loadSavedUserTypeForEmail(userEmail);
 
-          await userProvider.loadUserPhone(email);
-          final currentPhone = userProvider.userPhone;
-
-          userProvider.setUserInfo(
-            type: userType,
-            email: email,
-            name: userName,
-            phone: currentPhone,
-          );
-
-          String destinationRoute;
-
-          if (userType == UserType.producer &&
-              (currentPhone == null || currentPhone.isEmpty)) {
-            destinationRoute = RouteNames.setupProfile;
-          } else {
-            switch (userType) {
-              case UserType.producer:
-                destinationRoute = RouteNames.dashboard;
-                break;
-              case UserType.cooperative:
-                destinationRoute = RouteNames.cooperativeDashboard;
-                break;
-              case UserType.buyer:
-                destinationRoute = RouteNames.marketplace;
-                break;
-              case UserType.technician:
-                destinationRoute = RouteNames.technicianDashboard;
-                break;
-              default:
-                destinationRoute = RouteNames.selectUserType;
-            }
-          }
-
-          debugPrint('✅ Navegando a: $destinationRoute');
-          debugPrint('📞 Teléfono del usuario: ${userProvider.userPhone}');
-          context.go(destinationRoute);
+        if (userType == null) {
+          userProvider.setUserEmail(userEmail);
+          context.go(RouteNames.selectUserType);
+          return;
         }
-      } else {
-        final errorBody = jsonDecode(response.body);
-        final errorMessage = errorBody['message'] ?? errorBody['detail'] ?? 'Credenciales incorrectas';
 
-        final (isBlocked, isPermanentlyBlocked, remaining) = await service.registerFailedAttempt();
+        // ✅ Cargar el teléfono guardado
+        await userProvider.loadUserPhone(userEmail);
+        final currentPhone = userProvider.userPhone;
 
-        if (mounted) {
-          if (isPermanentlyBlocked) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('🔒 Cuenta bloqueada. Verifica tu identidad con el PIN.'),
-                backgroundColor: Colors.orange,
-                duration: Duration(seconds: 2),
-              ),
-            );
-            context.go(RouteNames.pinSecurity);
-            return;
+        // ✅ Guardar información del usuario
+        userProvider.setUserInfo(
+          type: userType,
+          email: userEmail,
+          name: userName,
+          phone: currentPhone,
+        );
+
+        String destinationRoute;
+
+        // ✅ Verificar si el usuario es productor y NO tiene teléfono
+        if (userType == UserType.producer &&
+            (currentPhone == null || currentPhone.isEmpty)) {
+          destinationRoute = RouteNames.setupProfile;
+        } else {
+          switch (userType) {
+            case UserType.producer:
+              destinationRoute = RouteNames.dashboard;
+              break;
+            case UserType.cooperative:
+              destinationRoute = RouteNames.cooperativeDashboard;
+              break;
+            case UserType.buyer:
+              destinationRoute = RouteNames.marketplace;
+              break;
+            case UserType.technician:
+              destinationRoute = RouteNames.technicianDashboard;
+              break;
+            default:
+              destinationRoute = RouteNames.selectUserType;
           }
+        }
 
-          if (isBlocked) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('⏳ Demasiados intentos. Espera ${remaining ?? 30}s. Intentos: ${service.attempts}/6'),
-                backgroundColor: Colors.orange,
-                duration: const Duration(seconds: 3),
-              ),
-            );
-            return;
-          }
+        debugPrint('✅ Navegando a: $destinationRoute');
+        debugPrint('📞 Teléfono del usuario: ${userProvider.userPhone}');
+        context.go(destinationRoute);
+      }
+    } on FirebaseAuthException catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
 
+      // ✅ Manejar errores específicos de Firebase
+      String errorMessage = 'Credenciales incorrectas';
+
+      if (e.code == 'user-not-found') {
+        errorMessage = 'No existe una cuenta con este correo electrónico.';
+      } else if (e.code == 'wrong-password') {
+        errorMessage = 'Contraseña incorrecta. Verifica tus datos.';
+      } else if (e.code == 'too-many-requests') {
+        errorMessage = 'Demasiados intentos. Por favor, espera un momento.';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'El correo electrónico no es válido.';
+      } else if (e.code == 'user-disabled') {
+        errorMessage = 'Esta cuenta ha sido deshabilitada.';
+      } else if (e.code == 'network-request-failed') {
+        errorMessage = 'Error de conexión. Verifica tu internet.';
+      }
+
+      // ✅ Registrar intento fallido
+      final (isBlocked, isPermanentlyBlocked, remaining) = await service.registerFailedAttempt();
+
+      if (mounted) {
+        if (isPermanentlyBlocked) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('🔒 Cuenta bloqueada. Verifica tu identidad con el PIN.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          context.go(RouteNames.pinSecurity);
+          return;
+        }
+
+        if (isBlocked) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                '❌ $errorMessage. Intentos restantes: ${6 - service.attempts}',
-              ),
-              backgroundColor: Colors.red,
+              content: Text('⏳ Demasiados intentos. Espera ${remaining ?? 30}s.'),
+              backgroundColor: Colors.orange,
               duration: const Duration(seconds: 3),
             ),
           );
+          return;
         }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '❌ $errorMessage. Intentos restantes: ${6 - service.attempts}',
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
     } catch (e) {
       setState(() {
@@ -194,7 +217,7 @@ class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
     }
   }
 
-  // ✅ MÉTODO PARA LOGIN CON GOOGLE - MEJORADO
+  // ✅ MÉTODO PARA LOGIN CON GOOGLE - CON FIREBASE
   Future<void> _handleGoogleLogin() async {
     final service = Provider.of<LoginAttemptService>(context, listen: false);
 
@@ -218,23 +241,7 @@ class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
     });
 
     try {
-      // ✅ 1. Verificar si Google Play Services está disponible
-      try {
-        await GoogleSignInService.isSignedIn();
-      } catch (e) {
-        setState(() {
-          _isGoogleLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Google Play Services no está disponible.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      // ✅ 2. Iniciar sesión con Google
+      // ✅ 1. Iniciar sesión con Google
       final account = await GoogleSignInService.signIn();
 
       if (account == null) {
@@ -244,7 +251,7 @@ class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
         return; // Usuario canceló
       }
 
-      // ✅ 3. Obtener datos del usuario
+      // ✅ 2. Obtener datos del usuario
       final userData = await GoogleSignInService.getUserData(account);
       final email = userData['email'] ?? '';
       final displayName = userData['displayName'] ?? 'Usuario Google';
@@ -253,50 +260,22 @@ class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
       debugPrint('✅ Google Sign-In exitoso: $email');
       debugPrint('✅ Nombre: $displayName');
 
-      // ✅ 4. Intentar autenticar con el backend
-      try {
-        final url = Uri.parse('${AppConstants.apiBaseUrl}/api/auth/google');
-        final response = await http.post(
-          url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'idToken': idToken,
-            'email': email,
-            'name': displayName,
-          }),
-        ).timeout(const Duration(seconds: 10));
+      // ✅ 3. Autenticar con Firebase usando el token de Google
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        idToken: idToken,
+      );
 
-        setState(() {
-          _isGoogleLoading = false;
-        });
+      final UserCredential userCredential = await _auth.signInWithCredential(credential);
 
-        if (response.statusCode == 200 || response.statusCode == 201) {
-          // ✅ Login exitoso con Google
-          await _handleGoogleLoginSuccess(email, displayName);
-        } else {
-          // ❌ Error en el backend
-          String errorMessage = 'Error al autenticar con Google.';
-          try {
-            final errorBody = jsonDecode(response.body);
-            errorMessage = errorBody['message'] ?? errorMessage;
-          } catch (_) {}
+      debugPrint('✅ Firebase Auth con Google exitoso: ${userCredential.user?.uid}');
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('❌ $errorMessage'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      } catch (e) {
-        setState(() {
-          _isGoogleLoading = false;
-        });
+      setState(() {
+        _isGoogleLoading = false;
+      });
 
-        // ✅ Si el backend no está disponible, hacer login local con los datos de Google
-        debugPrint('⚠️ Backend no disponible, usando login local con Google');
-        await _handleGoogleLoginSuccess(email, displayName);
-      }
+      // ✅ 4. Login exitoso
+      await _handleGoogleLoginSuccess(email, displayName);
+
     } catch (e) {
       setState(() {
         _isGoogleLoading = false;

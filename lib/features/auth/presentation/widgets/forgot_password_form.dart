@@ -68,7 +68,7 @@ class _ForgotPasswordFormState extends State<ForgotPasswordForm> {
                   Icons.email_outlined,
                   color: theme.colorScheme.secondary,
                 ),
-                hintText: 'ejemplo@kaabterra.com',
+                hintText: 'correo@kaabterra.com',
                 hintStyle: TextStyle(
                   color: theme.colorScheme.onSurface.withOpacity(0.4),
                 ),

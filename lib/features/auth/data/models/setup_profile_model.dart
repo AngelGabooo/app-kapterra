@@ -17,7 +17,7 @@ class SetupProfileModel {
     this.municipality = '',
     this.region = '',
     this.yearsExperience = '',
-    this.hectares = '',  // ✅ Corregido: hectares (no hectareas)
+    this.hectares = '',
     this.coffeeVariety = '',
     this.belongsToCooperative = false,
     this.profileImagePath,

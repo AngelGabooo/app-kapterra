@@ -1,5 +1,6 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:kaabcafe/core/providers/farm_provider.dart';
 import 'package:kaabcafe/core/providers/user_provider.dart';
@@ -14,7 +15,9 @@ import 'package:kaabcafe/core/services/notification_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ Inicializar el servicio de notificaciones
+  await Firebase.initializeApp();
+  debugPrint('✅ Firebase inicializado correctamente');
+
   final notificationService = NotificationService();
   await notificationService.init();
 
@@ -32,7 +35,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => FarmProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => LoginAttemptService()),
-        ChangeNotifierProvider(create: (_) => AppointmentProvider()), // ✅ NUEVO
+        ChangeNotifierProvider(create: (_) => AppointmentProvider()),
       ],
       child: MaterialApp.router(
         routerConfig: AppRouter.router,

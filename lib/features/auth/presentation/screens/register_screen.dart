@@ -1,7 +1,9 @@
 // lib/features/auth/presentation/screens/register_screen.dart
+
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -23,48 +25,68 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   void _handleRegister(RegisterData data) async {
     setState(() {
       _isLoading = true;
     });
+
     try {
-      final url = Uri.parse('${AppConstants.apiBaseUrl}/api/auth/register');
-      final bodyMap = {
-        'fullName': data.fullName,
-        'email': data.email,
-        'phoneNumber': data.phoneNumber,
-        'password': data.password,
-        'acceptTerms': data.acceptTerms,
-      };
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(bodyMap),
+      // ✅ 1. REGISTRAR EN FIREBASE AUTHENTICATION
+      final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: data.email.trim(),
+        password: data.password,
       );
-      if (response.statusCode == 201) {
-        debugPrint('Usuario registrado con éxito en la nube.');
 
-        // ✅ GUARDAR EN USERPROVIDER CON EL TELÉFONO
-        final userProvider = Provider.of<UserProvider>(context, listen: false);
-        await userProvider.setUserInfo(
-          type: UserType.producer, // ⚠️ Temporal, luego se seleccionará
-          email: data.email,
-          name: data.fullName,
-          phone: data.phoneNumber, // ✅ PASAR EL TELÉFONO
-        );
+      // ✅ 2. ACTUALIZAR PERFIL DEL USUARIO EN FIREBASE (nombre)
+      await userCredential.user?.updateDisplayName(data.fullName);
+      await userCredential.user?.reload();
 
-        debugPrint('✅ Teléfono guardado en UserProvider: ${data.phoneNumber}');
+      debugPrint('✅ Usuario registrado en Firebase: ${userCredential.user?.uid}');
+      debugPrint('✅ Email: ${userCredential.user?.email}');
+      debugPrint('✅ Nombre: ${userCredential.user?.displayName}');
 
-        if (mounted) {
-          context.go(RouteNames.selectUserType);
-        }
-      } else {
-        final errorBody = jsonDecode(response.body);
-        _showSnackBar(errorBody['detail'] ?? 'Error al registrar el usuario', isError: true);
+      // ✅ 3. GUARDAR EN USERPROVIDER CON EL TELÉFONO
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      await userProvider.setUserInfo(
+        type: UserType.producer,
+        email: data.email,
+        name: data.fullName,
+        phone: data.phoneNumber,
+      );
+
+      debugPrint('✅ Teléfono guardado en UserProvider: ${data.phoneNumber}');
+
+      // ✅ 4. MOSTRAR MENSAJE DE ÉXITO
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Cuenta creada exitosamente'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      if (mounted) {
+        context.go(RouteNames.selectUserType);
       }
+    } on FirebaseAuthException catch (e) {
+      // ✅ Manejar errores de Firebase
+      String errorMessage = 'Error al registrar el usuario.';
+
+      if (e.code == 'email-already-in-use') {
+        errorMessage = 'Este correo electrónico ya está registrado.';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'El correo electrónico no es válido.';
+      } else if (e.code == 'weak-password') {
+        errorMessage = 'La contraseña es demasiado débil.';
+      } else if (e.code == 'network-request-failed') {
+        errorMessage = 'Error de conexión. Verifica tu internet.';
+      }
+
+      _showSnackBar(errorMessage, isError: true);
     } catch (e) {
-      debugPrint('Error de red en Registro: $e');
+      debugPrint('Error en Registro: $e');
       _showSnackBar('Error de conexión con el servidor', isError: true);
     } finally {
       if (mounted) {
@@ -105,6 +127,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       SnackBar(
         content: Text(message),
         backgroundColor: isError ? Theme.of(context).colorScheme.error : Colors.green,
+        duration: const Duration(seconds: 3),
       ),
     );
   }

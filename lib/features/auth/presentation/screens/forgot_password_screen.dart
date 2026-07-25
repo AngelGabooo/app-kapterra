@@ -1,6 +1,7 @@
 // lib/features/auth/presentation/screens/forgot_password_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/forgot_password_form.dart';
@@ -14,24 +15,53 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _isLoading = false;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   Future<void> _sendResetLink(String email) async {
     setState(() {
       _isLoading = true;
     });
 
-    // ⏳ SIMULACIÓN DE ENVÍO (para cuando el backend esté listo)
-    // TODO: Reemplazar con llamada real a la API cuando el endpoint esté disponible
-    // POST /api/auth/forgot-password
+    try {
+      // ✅ ENVIAR ENLACE DE RECUPERACIÓN CON FIREBASE
+      await _auth.sendPasswordResetEmail(
+        email: email.trim(),
+      );
 
-    await Future.delayed(const Duration(seconds: 2));
+      setState(() {
+        _isLoading = false;
+      });
 
-    setState(() {
-      _isLoading = false;
-    });
+      if (mounted) {
+        _showSuccessDialog(email);
+      }
+    } on FirebaseAuthException catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
 
-    if (mounted) {
-      _showSuccessDialog(email);
+      String errorMessage = 'Error al enviar el enlace de recuperación.';
+
+      // ✅ Manejar errores específicos de Firebase
+      if (e.code == 'user-not-found') {
+        errorMessage = 'No existe una cuenta con este correo electrónico.';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'El correo electrónico no es válido.';
+      } else if (e.code == 'too-many-requests') {
+        errorMessage = 'Demasiados intentos. Por favor, espera un momento.';
+      }
+
+      if (mounted) {
+        _showErrorDialog(errorMessage);
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (mounted) {
+        _showErrorDialog('Error de conexión. Verifica tu internet e intenta nuevamente.');
+      }
     }
   }
 
@@ -129,6 +159,81 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                   ),
                   child: const Text('Volver a iniciar sesión'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    final theme = Theme.of(context);
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => AlertDialog(
+        backgroundColor: theme.colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        contentPadding: const EdgeInsets.all(24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.error_outline,
+                color: Colors.red,
+                size: 48,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Error',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              style: TextStyle(
+                fontSize: 14,
+                color: theme.colorScheme.onSurface.withOpacity(0.8),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Intentar de nuevo'),
                 ),
               ),
             ],

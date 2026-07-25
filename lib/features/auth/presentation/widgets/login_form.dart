@@ -134,7 +134,7 @@ class _LoginFormState extends State<LoginForm> {
               enabled: !service.isBlocked && !service.isPermanentlyBlocked,
               decoration: _decoration(
                 theme,
-                hint: 'ejemplo@kaabterra.com',
+                hint: 'correo@kaabterra.com',
                 icon: Icons.email_outlined,
               ),
               validator: (value) {
