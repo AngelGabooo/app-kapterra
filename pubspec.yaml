@@ -46,14 +46,25 @@ dependencies:
   firebase_auth: ^5.5.1
   firebase_core: ^3.12.1
 
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1  # ✅ AGREGAR ESTA LÍNEA
 
 flutter:
   uses-material-design: true
 
   assets:
     - assets/img/
+
+# ✅ AGREGAR ESTA CONFIGURACIÓN
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/img/logo_kaab_terra.png"
+  adaptive_icon_background: "#F0E8D8"
+  adaptive_icon_foreground: "assets/img/logo_kaab_terra.png"  # ✅ UNA SOLA VEZ
+  image_padding: 20
+  remove_alpha_ios: true
+  min_sdk_android: 21
