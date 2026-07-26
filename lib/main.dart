@@ -11,6 +11,10 @@ import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/core/widgets/session_timeout_widget.dart';
 import 'package:kaabcafe/features/activities/presentation/providers/activities_provider.dart';
 import 'package:kaabcafe/core/services/notification_service.dart';
+import 'package:kaabcafe/features/buyer/providers/cooperative_producers_provider.dart'; // ✅ AGREGAR
+import 'package:kaabcafe/features/buyer/providers/technicians_provider.dart';
+import 'package:kaabcafe/features/technician/providers/technician_producers_provider.dart';
+import 'package:kaabcafe/features/technician/providers/technician_reports_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +40,11 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => LoginAttemptService()),
         ChangeNotifierProvider(create: (_) => AppointmentProvider()),
+        ChangeNotifierProvider(create: (_) => CooperativeProducersProvider()), // ✅ AGREGAR
+        ChangeNotifierProvider(create: (_) => TechniciansProvider()), // ✅ AGREGAR ESTA LÍNEA
+        ChangeNotifierProvider(create: (_) => TechnicianProducersProvider()),
+        ChangeNotifierProvider(create: (_) => TechnicianReportsProvider()),
+
       ],
       child: MaterialApp.router(
         routerConfig: AppRouter.router,

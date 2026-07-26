@@ -479,7 +479,7 @@ class _TechnicianDashboardScreenState extends State<TechnicianDashboardScreen> {
           if (index == 0) {
             context.go(RouteNames.technicianDashboard);
           } else if (index == 1) {
-            // context.go(RouteNames.technicianProducers);
+            context.go(RouteNames.technicianProducers);
           } else if (index == 2) {
             context.go(RouteNames.technicianAgenda);
           } else if (index == 3) {

@@ -92,7 +92,6 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
     return 0;
   }
 
-  // Calcula la producción estimada basada en el área y edad
   double _calculateEstimatedProduction() {
     final area = double.tryParse(_areaController.text) ?? 0.0;
     final age = double.tryParse(_ageController.text) ?? 0.0;
@@ -116,7 +115,6 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
   }
 
   void _createLot() {
-    // Validaciones
     if (_nameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

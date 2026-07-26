@@ -31,7 +31,7 @@ class RouteNames {
   static const String registerActivity = '/register-activity';
   static const String notifications = '/notifications';
   static const String profile = '/profile';
-  static const String profileDashboard = '/profile-dashboard';  // ✅ NUEVO: Perfil del dashboard
+  static const String profileDashboard = '/profile-dashboard';
   static const String home = '/home';
   static const String activities = '/activities';
   static const String editActivity = '/edit-activity';
@@ -46,6 +46,8 @@ class RouteNames {
   static const String lotPublic = '/lot-public';
   static const String purchases = '/purchases';
   static const String indicators = '/indicators';
+  static const String technicians = '/technicians';
+  static const String technicianProducers = '/technician-producers';
 
   // ✅ NUEVA RUTA PARA PIN DE SEGURIDAD
   static const String pinSecurity = '/pin-security';

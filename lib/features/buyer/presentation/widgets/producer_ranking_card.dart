@@ -1,3 +1,5 @@
+// lib/features/buyer/presentation/widgets/producer_ranking_card.dart
+
 import 'package:flutter/material.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/buyer/data/models/producer_summary_model.dart';
@@ -5,20 +7,22 @@ import 'package:kaabcafe/features/buyer/data/models/producer_summary_model.dart'
 class ProducerRankingCard extends StatelessWidget {
   final ProducerSummaryModel? producer;
   final bool isDark;
+  final int? rank; // ✅ Agregar rank como parámetro
 
   const ProducerRankingCard({
     super.key,
     this.producer,
     required this.isDark,
+    this.rank,
   });
 
   String get _medal {
-    if (producer == null) return '--';
-    switch (producer!.rank) {
+    if (rank == null) return '--';
+    switch (rank) {
       case 1: return '🥇';
       case 2: return '🥈';
       case 3: return '🥉';
-      default: return '${producer!.rank}';
+      default: return '$rank';
     }
   }
 
@@ -104,11 +108,12 @@ class ProducerRankingCard extends StatelessWidget {
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    _buildChip(Icons.eco, '${producer!.production} kg', Colors.green),
+                    // ✅ Usar campos existentes
+                    _buildChip(Icons.eco, '${producer!.totalProduction.toStringAsFixed(0)} kg', Colors.green),
                     const SizedBox(width: 6),
-                    _buildChip(Icons.qr_code, '${producer!.traceability}%', AppTheme.goldCoffee),
+                    _buildChip(Icons.agriculture, '${producer!.farmsCount} fincas', AppTheme.goldCoffee),
                     const SizedBox(width: 6),
-                    _buildChip(Icons.trending_up, '${producer!.profitability}%', AppTheme.secondaryGreen),
+                    _buildChip(Icons.people, '${producer!.lotsCount} lotes', AppTheme.secondaryGreen),
                   ],
                 ),
               ],

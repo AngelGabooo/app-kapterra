@@ -69,6 +69,8 @@ import 'package:kaabcafe/features/auth/presentation/screens/pin_security_screen.
 import 'package:kaabcafe/features/farms/presentation/screens/lot_public_screen.dart';
 import 'package:kaabcafe/features/buyer/presentation/screens/reports/reports_screen.dart';
 import 'package:kaabcafe/features/marketplace/presentation/screens/purchases_screen.dart';
+import 'package:kaabcafe/features/buyer/presentation/screens/technicians_screen.dart';
+import 'package:kaabcafe/features/technician/presentation/screens/technician_producers_screen.dart';
 
 import '../../features/dashboard/presentation/screens/indicators_screen.dart';
 
@@ -429,6 +431,16 @@ class AppRouter {
         path: RouteNames.indicators,
         name: RouteNames.indicators,
         builder: (context, state) => const IndicatorsScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.technicians,
+        path: RouteNames.technicians,
+        builder: (context, state) => const TechniciansScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.technicianProducers,
+        path: RouteNames.technicianProducers,
+        builder: (context, state) => const TechnicianProducersScreen(),
       ),
     ],
     errorBuilder: (context, state) => const Scaffold(
