@@ -33,7 +33,7 @@ class NextVisitCard extends StatelessWidget {
               : AppTheme.darkCoffee.withOpacity(0.04),
           width: 0.5,
         ),
-        boxShadow: const [], // ✅ SIN SOMBRAS
+        boxShadow: const [],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,7 +187,7 @@ class NextVisitCard extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    elevation: 0, // ✅ SIN ELEVACIÓN
+                    elevation: 0,
                   ),
                   child: const Text(
                     'Iniciar Visita',
@@ -212,7 +212,7 @@ class NextVisitCard extends StatelessWidget {
                       color: AppTheme.goldCoffee.withOpacity(0.4),
                       width: 1.5,
                     ),
-                    elevation: 0, // ✅ SIN ELEVACIÓN
+                    elevation: 0,
                   ),
                   child: const Text(
                     'Ver Productor',

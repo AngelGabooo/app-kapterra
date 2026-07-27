@@ -90,13 +90,27 @@ class _LotInspectionFormState extends State<LotInspectionForm> {
   // ── Progreso ──────────────────────────────────────────────────
   double _progress = 0.0;
 
+  // ── Controladores para validación ────────────────────────────
+  final TextEditingController _producerNameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+
   final List<String> _cropHealthOptions = [
     'Excelente', 'Bueno', 'Regular', 'Requiere atención', 'Crítico'
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _producerNameController.text = widget.producerName;
+  }
+
+  @override
   void dispose() {
     _observationsController.dispose();
+    _producerNameController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -146,11 +160,84 @@ class _LotInspectionFormState extends State<LotInspectionForm> {
     });
   }
 
+  // ── VALIDACIONES ──────────────────────────────────────────────
+
+  String? _validateName(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'El nombre es obligatorio';
+    }
+    final RegExp nameRegex = RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$');
+    if (!nameRegex.hasMatch(value)) {
+      return 'El nombre solo debe contener letras y espacios';
+    }
+    return null;
+  }
+
+  String? _validatePhone(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'El número de celular es obligatorio';
+    }
+    final RegExp phoneRegex = RegExp(r'^[0-9]+$');
+    if (!phoneRegex.hasMatch(value)) {
+      return 'El número de celular solo debe contener números';
+    }
+    if (value.length > 10) {
+      return 'El número de celular no debe tener más de 10 dígitos';
+    }
+    if (value.length < 7) {
+      return 'El número de celular debe tener al menos 7 dígitos';
+    }
+    return null;
+  }
+
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'El correo electrónico es obligatorio';
+    }
+    final RegExp emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    if (!emailRegex.hasMatch(value)) {
+      return 'El correo debe contener "@" y un dominio válido';
+    }
+    return null;
+  }
+
   void _submitForm() {
+    // Validar campos
+    final nameError = _validateName(_producerNameController.text);
+    final phoneError = _validatePhone(_phoneController.text);
+    final emailError = _validateEmail(_emailController.text);
+
+    if (nameError != null || phoneError != null || emailError != null) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Error de validación'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (nameError != null) Text('• $nameError'),
+              if (phoneError != null) Text('• $phoneError'),
+              if (emailError != null) Text('• $emailError'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Aceptar'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     final data = {
       'lotName': widget.lotName,
       'farmName': widget.farmName,
-      'producerName': widget.producerName,
+      'producerName': _producerNameController.text,
+      'phone': _phoneController.text,
+      'email': _emailController.text,
       'location': widget.location,
       'cropHealth': _cropHealthOptions[_cropHealth],
       'cropEvaluation': _cropEvaluation,
@@ -170,6 +257,36 @@ class _LotInspectionFormState extends State<LotInspectionForm> {
   }
 
   void _showConfirmDialog() {
+    // Validar antes de mostrar diálogo
+    final nameError = _validateName(_producerNameController.text);
+    final phoneError = _validatePhone(_phoneController.text);
+    final emailError = _validateEmail(_emailController.text);
+
+    if (nameError != null || phoneError != null || emailError != null) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Campos incompletos o inválidos'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (nameError != null) Text('• $nameError'),
+              if (phoneError != null) Text('• $phoneError'),
+              if (emailError != null) Text('• $emailError'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Corregir'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -266,181 +383,337 @@ class _LotInspectionFormState extends State<LotInspectionForm> {
   Widget build(BuildContext context) {
     final textColor = widget.isDark ? Colors.white : AppTheme.darkCoffee;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionTitle(title: 'Información del lote', isDark: widget.isDark),
-        const SizedBox(height: 8),
-        LotInfoCard(
-          isDark: widget.isDark,
-          lotName: widget.lotName,
-          farmName: widget.farmName,
-          producerName: widget.producerName,
-          location: widget.location,
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionTitle(title: 'Información del productor', isDark: widget.isDark),
+          const SizedBox(height: 8),
+          _buildProducerForm(),
+          const SizedBox(height: 20),
+
+          SectionTitle(title: 'Información del lote', isDark: widget.isDark),
+          const SizedBox(height: 8),
+          LotInfoCard(
+            isDark: widget.isDark,
+            lotName: widget.lotName,
+            farmName: widget.farmName,
+            producerName: _producerNameController.text.isNotEmpty
+                ? _producerNameController.text
+                : widget.producerName,
+            location: widget.location,
+          ),
+          const SizedBox(height: 20),
+
+          SectionTitle(title: 'Progreso de la inspección', isDark: widget.isDark),
+          const SizedBox(height: 8),
+          InspectionProgress(
+            isDark: widget.isDark,
+            progress: _progress,
+          ),
+          const SizedBox(height: 20),
+
+          SectionTitle(title: 'Estado general del cultivo', isDark: widget.isDark),
+          const SizedBox(height: 8),
+          CropHealthSelector(
+            isDark: widget.isDark,
+            value: _cropHealth,
+            onChanged: (value) {
+              setState(() {
+                _cropHealth = value;
+                _updateProgress();
+              });
+            },
+          ),
+          const SizedBox(height: 20),
+
+          SectionTitle(title: 'Evaluación del cultivo', isDark: widget.isDark),
+          const SizedBox(height: 8),
+          CropEvaluationList(
+            isDark: widget.isDark,
+            items: _cropEvaluation,
+            onChanged: (index, value) {
+              setState(() {
+                _cropEvaluation[index]['value'] = value;
+                _updateProgress();
+              });
+            },
+          ),
+          const SizedBox(height: 20),
+
+          SectionTitle(title: 'Sanidad del cultivo', isDark: widget.isDark),
+          const SizedBox(height: 8),
+          PestsChecklist(
+            isDark: widget.isDark,
+            pests: _pests,
+            affectionPercentage: _affectionPercentage,
+            onPestToggled: _togglePest,
+            onPercentageChanged: (value) {
+              setState(() => _affectionPercentage = value);
+            },
+          ),
+          const SizedBox(height: 20),
+
+          SectionTitle(title: 'Condiciones ambientales', isDark: widget.isDark),
+          const SizedBox(height: 8),
+          EnvironmentalConditions(
+            isDark: widget.isDark,
+            temperature: _temperature,
+            humidity: _humidity,
+            weatherCondition: _weatherCondition,
+            shadeLevel: _shadeLevel,
+            irrigationStatus: _irrigationStatus,
+            onTemperatureChanged: (v) {
+              setState(() {
+                _temperature = v;
+                _updateProgress();
+              });
+            },
+            onHumidityChanged: (v) {
+              setState(() {
+                _humidity = v;
+                _updateProgress();
+              });
+            },
+            onWeatherChanged: (v) {
+              setState(() {
+                _weatherCondition = v;
+                _updateProgress();
+              });
+            },
+            onShadeChanged: (v) {
+              setState(() {
+                _shadeLevel = v;
+                _updateProgress();
+              });
+            },
+            onIrrigationChanged: (v) {
+              setState(() {
+                _irrigationStatus = v;
+                _updateProgress();
+              });
+            },
+          ),
+          const SizedBox(height: 20),
+
+          SectionTitle(title: 'Fertilización y manejo', isDark: widget.isDark),
+          const SizedBox(height: 8),
+          ManagementChecklist(
+            isDark: widget.isDark,
+            items: _management,
+            onChanged: (index, value) {
+              setState(() {
+                _management[index]['value'] = value;
+                _updateProgress();
+              });
+            },
+          ),
+          const SizedBox(height: 20),
+
+          SectionTitle(title: 'Evidencias fotográficas', isDark: widget.isDark),
+          const SizedBox(height: 8),
+          PhotoGallery(
+            isDark: widget.isDark,
+            photos: _photos,
+            onAddPhoto: () {
+              setState(() => _photos.add('📷 Foto ${_photos.length + 1}'));
+            },
+            onAddImage: () {
+              setState(() => _photos.add('🖼 Imagen ${_photos.length + 1}'));
+            },
+            onRemovePhoto: (index) {
+              setState(() => _photos.removeAt(index));
+            },
+          ),
+          const SizedBox(height: 20),
+
+          SectionTitle(title: 'Observaciones técnicas', isDark: widget.isDark),
+          const SizedBox(height: 8),
+          _buildObservationsField(),
+          const SizedBox(height: 20),
+
+          SectionTitle(title: 'Nivel de prioridad', isDark: widget.isDark),
+          const SizedBox(height: 8),
+          PrioritySelector(
+            isDark: widget.isDark,
+            value: _priorityLevel,
+            onChanged: (value) {
+              setState(() {
+                _priorityLevel = value;
+                _updateProgress();
+              });
+            },
+          ),
+          const SizedBox(height: 20),
+
+          SectionTitle(title: 'Asistente IA', isDark: widget.isDark),
+          const SizedBox(height: 8),
+          AIAssistantCard(isDark: widget.isDark),
+          const SizedBox(height: 20),
+
+          SectionTitle(title: 'Resumen automático', isDark: widget.isDark),
+          const SizedBox(height: 8),
+          InspectionSummaryCard(
+            isDark: widget.isDark,
+            cropHealth: _cropHealth,
+            pests: _pests,
+            photosCount: _photos.length,
+            hasObservations: _observationsController.text.isNotEmpty,
+            priority: _priorityLevel,
+          ),
+          const SizedBox(height: 24),
+
+          _buildActionButtons(),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
+
+  // ── NUEVO: Formulario de productor con validaciones ──────────
+
+  Widget _buildProducerForm() {
+    final textColor = widget.isDark ? Colors.white : AppTheme.darkCoffee;
+    final cardColor = widget.isDark
+        ? AppTheme.coffeeDeep.withOpacity(0.7)
+        : const Color(0xFFE8E0D5).withOpacity(0.9);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: textColor.withOpacity(0.06),
+          width: 0.5,
         ),
-        const SizedBox(height: 20),
+        boxShadow: const [],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Nombre del productor
+          TextFormField(
+            controller: _producerNameController,
+            style: TextStyle(color: textColor, fontSize: 14),
+            decoration: InputDecoration(
+              labelText: 'Nombre del productor',
+              labelStyle: TextStyle(color: textColor.withOpacity(0.6), fontSize: 13),
+              hintText: 'Ingresa el nombre completo',
+              hintStyle: TextStyle(color: textColor.withOpacity(0.4), fontSize: 13),
+              prefixIcon: Icon(Icons.person, color: AppTheme.primaryGreen, size: 20),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: textColor.withOpacity(0.1)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: textColor.withOpacity(0.1)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.primaryGreen),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.berryRed),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.berryRed),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            ),
+            validator: _validateName,
+            onChanged: (value) => setState(() {}),
+          ),
+          const SizedBox(height: 12),
 
-        SectionTitle(title: 'Progreso de la inspección', isDark: widget.isDark),
-        const SizedBox(height: 8),
-        InspectionProgress(
-          isDark: widget.isDark,
-          progress: _progress,
-        ),
-        const SizedBox(height: 20),
+          // Número de celular
+          TextFormField(
+            controller: _phoneController,
+            style: TextStyle(color: textColor, fontSize: 14),
+            keyboardType: TextInputType.number,
+            maxLength: 10,
+            decoration: InputDecoration(
+              labelText: 'Número de celular',
+              labelStyle: TextStyle(color: textColor.withOpacity(0.6), fontSize: 13),
+              hintText: 'Ingresa 10 dígitos',
+              hintStyle: TextStyle(color: textColor.withOpacity(0.4), fontSize: 13),
+              prefixIcon: Icon(Icons.phone, color: AppTheme.primaryGreen, size: 20),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: textColor.withOpacity(0.1)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: textColor.withOpacity(0.1)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.primaryGreen),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.berryRed),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.berryRed),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              counterText: '',
+            ),
+            validator: _validatePhone,
+            onChanged: (value) {
+              if (value.isNotEmpty && !RegExp(r'^[0-9]+$').hasMatch(value)) {
+                _phoneController.text = value.replaceAll(RegExp(r'[^0-9]'), '');
+                _phoneController.selection = TextSelection.fromPosition(
+                  TextPosition(offset: _phoneController.text.length),
+                );
+              }
+              setState(() {});
+            },
+          ),
+          const SizedBox(height: 12),
 
-        SectionTitle(title: 'Estado general del cultivo', isDark: widget.isDark),
-        const SizedBox(height: 8),
-        CropHealthSelector(
-          isDark: widget.isDark,
-          value: _cropHealth,
-          onChanged: (value) {
-            setState(() {
-              _cropHealth = value;
-              _updateProgress();
-            });
-          },
-        ),
-        const SizedBox(height: 20),
-
-        SectionTitle(title: 'Evaluación del cultivo', isDark: widget.isDark),
-        const SizedBox(height: 8),
-        CropEvaluationList(
-          isDark: widget.isDark,
-          items: _cropEvaluation,
-          onChanged: (index, value) {
-            setState(() {
-              _cropEvaluation[index]['value'] = value;
-              _updateProgress();
-            });
-          },
-        ),
-        const SizedBox(height: 20),
-
-        SectionTitle(title: 'Sanidad del cultivo', isDark: widget.isDark),
-        const SizedBox(height: 8),
-        PestsChecklist(
-          isDark: widget.isDark,
-          pests: _pests,
-          affectionPercentage: _affectionPercentage,
-          onPestToggled: _togglePest,
-          onPercentageChanged: (value) {
-            setState(() => _affectionPercentage = value);
-          },
-        ),
-        const SizedBox(height: 20),
-
-        SectionTitle(title: 'Condiciones ambientales', isDark: widget.isDark),
-        const SizedBox(height: 8),
-        EnvironmentalConditions(
-          isDark: widget.isDark,
-          temperature: _temperature,
-          humidity: _humidity,
-          weatherCondition: _weatherCondition,
-          shadeLevel: _shadeLevel,
-          irrigationStatus: _irrigationStatus,
-          onTemperatureChanged: (v) {
-            setState(() {
-              _temperature = v;
-              _updateProgress();
-            });
-          },
-          onHumidityChanged: (v) {
-            setState(() {
-              _humidity = v;
-              _updateProgress();
-            });
-          },
-          onWeatherChanged: (v) {
-            setState(() {
-              _weatherCondition = v;
-              _updateProgress();
-            });
-          },
-          onShadeChanged: (v) {
-            setState(() {
-              _shadeLevel = v;
-              _updateProgress();
-            });
-          },
-          onIrrigationChanged: (v) {
-            setState(() {
-              _irrigationStatus = v;
-              _updateProgress();
-            });
-          },
-        ),
-        const SizedBox(height: 20),
-
-        SectionTitle(title: 'Fertilización y manejo', isDark: widget.isDark),
-        const SizedBox(height: 8),
-        ManagementChecklist(
-          isDark: widget.isDark,
-          items: _management,
-          onChanged: (index, value) {
-            setState(() {
-              _management[index]['value'] = value;
-              _updateProgress();
-            });
-          },
-        ),
-        const SizedBox(height: 20),
-
-        SectionTitle(title: 'Evidencias fotográficas', isDark: widget.isDark),
-        const SizedBox(height: 8),
-        PhotoGallery(
-          isDark: widget.isDark,
-          photos: _photos,
-          onAddPhoto: () {
-            setState(() => _photos.add('📷 Foto ${_photos.length + 1}'));
-          },
-          onAddImage: () {
-            setState(() => _photos.add('🖼 Imagen ${_photos.length + 1}'));
-          },
-          onRemovePhoto: (index) {
-            setState(() => _photos.removeAt(index));
-          },
-        ),
-        const SizedBox(height: 20),
-
-        SectionTitle(title: 'Observaciones técnicas', isDark: widget.isDark),
-        const SizedBox(height: 8),
-        _buildObservationsField(),
-        const SizedBox(height: 20),
-
-        SectionTitle(title: 'Nivel de prioridad', isDark: widget.isDark),
-        const SizedBox(height: 8),
-        PrioritySelector(
-          isDark: widget.isDark,
-          value: _priorityLevel,
-          onChanged: (value) {
-            setState(() {
-              _priorityLevel = value;
-              _updateProgress();
-            });
-          },
-        ),
-        const SizedBox(height: 20),
-
-        SectionTitle(title: 'Asistente IA', isDark: widget.isDark),
-        const SizedBox(height: 8),
-        AIAssistantCard(isDark: widget.isDark),
-        const SizedBox(height: 20),
-
-        SectionTitle(title: 'Resumen automático', isDark: widget.isDark),
-        const SizedBox(height: 8),
-        InspectionSummaryCard(
-          isDark: widget.isDark,
-          cropHealth: _cropHealth,
-          pests: _pests,
-          photosCount: _photos.length,
-          hasObservations: _observationsController.text.isNotEmpty,
-          priority: _priorityLevel,
-        ),
-        const SizedBox(height: 24),
-
-        _buildActionButtons(),
-        const SizedBox(height: 16),
-      ],
+          // Correo electrónico
+          TextFormField(
+            controller: _emailController,
+            style: TextStyle(color: textColor, fontSize: 14),
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(
+              labelText: 'Correo electrónico',
+              labelStyle: TextStyle(color: textColor.withOpacity(0.6), fontSize: 13),
+              hintText: 'ejemplo@dominio.com',
+              hintStyle: TextStyle(color: textColor.withOpacity(0.4), fontSize: 13),
+              prefixIcon: Icon(Icons.email, color: AppTheme.primaryGreen, size: 20),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: textColor.withOpacity(0.1)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: textColor.withOpacity(0.1)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.primaryGreen),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.berryRed),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.berryRed),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            ),
+            validator: _validateEmail,
+            onChanged: (value) => setState(() {}),
+          ),
+        ],
+      ),
     );
   }
 

@@ -58,7 +58,7 @@ class TechnicianProducerCard extends StatelessWidget {
                 : AppTheme.darkCoffee.withOpacity(0.04),
             width: 0.5,
           ),
-          boxShadow: const [], // ✅ SIN SOMBRAS
+          boxShadow: const [],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

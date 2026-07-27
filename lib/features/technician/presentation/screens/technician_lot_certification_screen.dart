@@ -44,9 +44,9 @@ class _TechnicianLotCertificationScreenState
   int _currentIndex = 3;
   bool _isGeneratingPDF = false;
 
-  // Estados
+  // Estados - Inicializados vacíos
   int _selectedCertificationType = 0;
-  int _evaluationResult = 0;
+  int _evaluationResult = -1; // -1 indica que no se ha seleccionado
   final TextEditingController _observationsController = TextEditingController();
 
   final List<Map<String, dynamic>> _evaluationOptions = [
@@ -64,16 +64,18 @@ class _TechnicianLotCertificationScreenState
     {'label': '🛡 Buenas Prácticas Agrícolas', 'icon': Icons.shield},
   ];
 
+  // Checklist inicializado con todos los items en false
   final List<Map<String, dynamic>> _checklistItems = [
-    {'label': 'Historial de actividades completo', 'checked': true},
-    {'label': 'Evidencias fotográficas registradas', 'checked': true},
-    {'label': 'Costos documentados', 'checked': true},
-    {'label': 'Trazabilidad activa', 'checked': true},
-    {'label': 'QR generado', 'checked': true},
-    {'label': 'Diagnóstico técnico aprobado', 'checked': true},
+    {'label': 'Historial de actividades completo', 'checked': false},
+    {'label': 'Evidencias fotográficas registradas', 'checked': false},
+    {'label': 'Costos documentados', 'checked': false},
+    {'label': 'Trazabilidad activa', 'checked': false},
+    {'label': 'QR generado', 'checked': false},
+    {'label': 'Diagnóstico técnico aprobado', 'checked': false},
     {'label': 'Documentos pendientes', 'checked': false},
   ];
 
+  // Correcciones inicializadas vacías
   final List<Map<String, dynamic>> _corrections = [
     {'label': 'Completar evidencia fotográfica.', 'checked': false},
     {'label': 'Actualizar historial de actividades.', 'checked': false},
@@ -81,43 +83,91 @@ class _TechnicianLotCertificationScreenState
     {'label': 'Programar nueva inspección.', 'checked': false},
   ];
 
+  // Documentos inicializados como pendientes
   final List<Map<String, dynamic>> _documents = [
-    {'label': 'Reporte técnico', 'status': 'Subido', 'icon': Icons.description},
+    {'label': 'Reporte técnico', 'status': 'Pendiente', 'icon': Icons.description},
     {'label': 'Evidencias de campo', 'status': 'Pendiente', 'icon': Icons.photo_library},
-    {'label': 'Resultados de laboratorio', 'status': 'Subido', 'icon': Icons.science},
+    {'label': 'Resultados de laboratorio', 'status': 'Pendiente', 'icon': Icons.science},
     {'label': 'Constancia de productor', 'status': 'Pendiente', 'icon': Icons.assignment},
-    {'label': 'Certificados previos', 'status': 'Subido', 'icon': Icons.verified},
+    {'label': 'Certificados previos', 'status': 'Pendiente', 'icon': Icons.verified},
   ];
+
+  // ── VALIDACIONES ──────────────────────────────────────────────
+
+  String? _validateObservations(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Las observaciones son obligatorias';
+    }
+    if (value.length < 10) {
+      return 'Las observaciones deben tener al menos 10 caracteres';
+    }
+    return null;
+  }
+
+  bool _isCertificationComplete() {
+    // Verificar que se haya seleccionado una evaluación
+    if (_evaluationResult == -1) return false;
+
+    // Verificar que al menos algunos checklist items estén marcados
+    final checkedItems = _checklistItems.where((item) => item['checked'] == true).length;
+    if (checkedItems < 3) return false;
+
+    // Verificar que haya observaciones
+    if (_observationsController.text.trim().isEmpty) return false;
+    if (_observationsController.text.length < 10) return false;
+
+    return true;
+  }
 
   // ── Función para generar y abrir certificado ──────────────────
   Future<void> _generateAndOpenCertificate() async {
+    // Validar que el certificado esté completo
+    if (!_isCertificationComplete()) {
+      _showValidationDialog();
+      return;
+    }
+
+    // Validar observaciones
+    final obsError = _validateObservations(_observationsController.text);
+    if (obsError != null) {
+      _showValidationDialog();
+      return;
+    }
+
     setState(() {
       _isGeneratingPDF = true;
     });
 
     try {
       final certificationType = _certificationTypes[_selectedCertificationType]['label'] as String;
-      final evaluationLabel = _evaluationOptions[_evaluationResult]['label'] as String;
+      final evaluationLabel = _evaluationResult >= 0
+          ? _evaluationOptions[_evaluationResult]['label'] as String
+          : 'No evaluado';
+
+      // Datos reales de los parámetros o valores por defecto
+      final lotName = widget.lotName?.isNotEmpty == true ? widget.lotName! : 'Lote sin nombre';
+      final farmName = widget.farmName?.isNotEmpty == true ? widget.farmName! : 'Finca sin nombre';
+      final producerName = widget.producerName?.isNotEmpty == true ? widget.producerName! : 'Productor sin nombre';
+      final location = widget.location?.isNotEmpty == true ? widget.location! : 'Ubicación no especificada';
+      final variety = widget.variety?.isNotEmpty == true ? widget.variety! : 'Variedad no especificada';
 
       // Generar el PDF
       final file = await CertificatePDFGenerator.generateCertificate(
-        lotName: widget.lotName ?? 'Lote Norte',
-        farmName: widget.farmName ?? 'El Mirador',
-        producerName: widget.producerName ?? 'Juan Pérez',
-        location: widget.location ?? 'Motozintla, Chiapas',
-        variety: widget.variety ?? 'Bourbon',
+        lotName: lotName,
+        farmName: farmName,
+        producerName: producerName,
+        location: location,
+        variety: variety,
         certificationType: certificationType,
         evaluationResult: evaluationLabel,
-        date: '15 junio 2026',
-        expiryDate: '15 junio 2027',
-        certificateCode: 'KAAB-2026-001',
+        date: _getFormattedDate(DateTime.now()),
+        expiryDate: _getFormattedDate(DateTime.now().add(const Duration(days: 365))),
+        certificateCode: 'KAAB-${DateTime.now().year}-${_generateCertificateNumber()}',
       );
 
       if (mounted) {
-        // ✅ Abrir y compartir el PDF
         try {
           await openAndShareCertificatePDF(file);
-          // Si llegamos aquí, se abrió o compartió correctamente
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text('✅ Certificado generado correctamente'),
@@ -129,7 +179,6 @@ class _TechnicianLotCertificationScreenState
             ),
           );
         } catch (e) {
-          // Si falla, mostrar diálogo con la ruta
           _showFileInfoDialog(file);
         }
       }
@@ -144,6 +193,109 @@ class _TechnicianLotCertificationScreenState
         });
       }
     }
+  }
+
+  String _getFormattedDate(DateTime date) {
+    return '${date.day} ${_getMonthName(date.month)} ${date.year}';
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+    ];
+    return months[month - 1];
+  }
+
+  String _generateCertificateNumber() {
+    return DateTime.now().millisecondsSinceEpoch.toString().substring(8, 13);
+  }
+
+  void _showValidationDialog() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    List<String> errors = [];
+
+    if (_evaluationResult == -1) {
+      errors.add('• Selecciona una evaluación para la certificación');
+    }
+
+    final checkedItems = _checklistItems.where((item) => item['checked'] == true).length;
+    if (checkedItems < 3) {
+      errors.add('• Completa al menos 3 elementos del checklist');
+    }
+
+    if (_observationsController.text.trim().isEmpty) {
+      errors.add('• Agrega observaciones técnicas');
+    } else if (_observationsController.text.length < 10) {
+      errors.add('• Las observaciones deben tener al menos 10 caracteres');
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        backgroundColor: isDark ? AppTheme.coffeeDeep : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.alertOrange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.warning_amber_rounded,
+                  size: 48,
+                  color: AppTheme.alertOrange,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '⚠️ Información incompleta',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : AppTheme.darkCoffee,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...errors.map((error) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text(
+                  error,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: (isDark ? Colors.white : AppTheme.darkCoffee).withOpacity(0.8),
+                  ),
+                  textAlign: TextAlign.left,
+                ),
+              )),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGreen,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text('Completar información'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showFileInfoDialog(File file) {
@@ -268,7 +420,6 @@ class _TechnicianLotCertificationScreenState
     );
   }
 
-  // ✅ Diálogo de error
   void _showErrorDialog(String error) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -335,6 +486,13 @@ class _TechnicianLotCertificationScreenState
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
 
+    // Usar datos reales o mostrar placeholders vacíos
+    final lotName = widget.lotName?.isNotEmpty == true ? widget.lotName! : '---';
+    final farmName = widget.farmName?.isNotEmpty == true ? widget.farmName! : '---';
+    final producerName = widget.producerName?.isNotEmpty == true ? widget.producerName! : '---';
+    final location = widget.location?.isNotEmpty == true ? widget.location! : '---';
+    final variety = widget.variety?.isNotEmpty == true ? widget.variety! : '---';
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       extendBody: true,
@@ -353,11 +511,11 @@ class _TechnicianLotCertificationScreenState
                   delegate: SliverChildListDelegate([
                     CertificationInfoCard(
                       isDark: isDark,
-                      lotName: widget.lotName ?? 'Lote Norte',
-                      farmName: widget.farmName ?? 'El Mirador',
-                      producerName: widget.producerName ?? 'Juan Pérez',
-                      location: widget.location ?? 'Motozintla, Chiapas',
-                      variety: widget.variety ?? 'Bourbon',
+                      lotName: lotName,
+                      farmName: farmName,
+                      producerName: producerName,
+                      location: location,
+                      variety: variety,
                     ),
                     const SizedBox(height: 20),
                   ]),
@@ -470,8 +628,8 @@ class _TechnicianLotCertificationScreenState
                   delegate: SliverChildListDelegate([
                     CertificationPreview(
                       isDark: isDark,
-                      lotName: widget.lotName ?? 'Lote Norte',
-                      producerName: widget.producerName ?? 'Juan Pérez',
+                      lotName: lotName,
+                      producerName: producerName,
                       certificationType: _certificationTypes[_selectedCertificationType]['label'] as String,
                     ),
                     const SizedBox(height: 20),
@@ -523,6 +681,8 @@ class _TechnicianLotCertificationScreenState
   }
 
   Widget _buildHeader(bool isDark, Color textColor) {
+    final bool isComplete = _isCertificationComplete();
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       child: Row(
@@ -563,22 +723,36 @@ class _TechnicianLotCertificationScreenState
               ],
             ),
           ),
-          NeumorphicIconButton(
-            icon: Icons.picture_as_pdf_outlined,
-            isDark: isDark,
-            onPressed: () {},
-            size: 40,
-            iconSize: 18,
-            color: AppTheme.primaryGreen,
+          // Botón PDF - Usando GestureDetector en lugar de NeumorphicIconButton
+          GestureDetector(
+            onTap: isComplete ? _generateAndOpenCertificate : null,
+            child: Opacity(
+              opacity: isComplete ? 1.0 : 0.4,
+              child: NeumorphicIconButton(
+                icon: Icons.picture_as_pdf_outlined,
+                isDark: isDark,
+                onPressed: () {}, // Esta función no se usará porque GestureDetector maneja el tap
+                size: 40,
+                iconSize: 18,
+                color: isComplete ? AppTheme.primaryGreen : Colors.grey,
+              ),
+            ),
           ),
           const SizedBox(width: 4),
-          NeumorphicIconButton(
-            icon: Icons.share_outlined,
-            isDark: isDark,
-            onPressed: () {},
-            size: 40,
-            iconSize: 18,
-            color: AppTheme.primaryGreen,
+          // Botón Share - Usando GestureDetector en lugar de NeumorphicIconButton
+          GestureDetector(
+            onTap: isComplete ? _generateAndOpenCertificate : null,
+            child: Opacity(
+              opacity: isComplete ? 1.0 : 0.4,
+              child: NeumorphicIconButton(
+                icon: Icons.share_outlined,
+                isDark: isDark,
+                onPressed: () {}, // Esta función no se usará porque GestureDetector maneja el tap
+                size: 40,
+                iconSize: 18,
+                color: isComplete ? AppTheme.primaryGreen : Colors.grey,
+              ),
+            ),
           ),
         ],
       ),
@@ -586,11 +760,18 @@ class _TechnicianLotCertificationScreenState
   }
 
   Widget _buildKPIs(bool isDark) {
+    // KPIs dinámicos basados en el estado actual
+    final checklistProgress = _checklistItems.where((item) => item['checked'] == true).length;
+    final totalChecklist = _checklistItems.length;
+    final hasEvaluation = _evaluationResult != -1;
+    final hasObservations = _observationsController.text.trim().isNotEmpty &&
+        _observationsController.text.length >= 10;
+
     final kpis = [
-      {'label': '📊 Diagnóstico', 'value': '82/100', 'color': AppTheme.primaryGreen},
-      {'label': '🔎 Trazabilidad', 'value': '96%', 'color': AppTheme.goldCoffee},
-      {'label': '☕ Calidad', 'value': '88/100', 'color': AppTheme.secondaryGreen},
-      {'label': '🌱 Sostenibilidad', 'value': '91%', 'color': AppTheme.primaryGreen},
+      {'label': '📊 Checklist', 'value': '$checklistProgress/$totalChecklist', 'color': AppTheme.primaryGreen},
+      {'label': '📝 Evaluación', 'value': hasEvaluation ? '✅' : '⏳', 'color': hasEvaluation ? AppTheme.primaryGreen : AppTheme.goldCoffee},
+      {'label': '✍️ Observaciones', 'value': hasObservations ? '✅' : '⏳', 'color': hasObservations ? AppTheme.primaryGreen : AppTheme.goldCoffee},
+      {'label': '📋 Documentos', 'value': '0/5', 'color': AppTheme.secondaryGreen},
     ];
 
     return Wrap(
@@ -642,13 +823,25 @@ class _TechnicianLotCertificationScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Observaciones técnicas',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: textColor,
-            ),
+          Row(
+            children: [
+              Text(
+                'Observaciones técnicas *',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: textColor,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '(requerido)',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.berryRed.withOpacity(0.7),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           TextFormField(
@@ -656,13 +849,30 @@ class _TechnicianLotCertificationScreenState
             maxLines: 4,
             style: TextStyle(color: textColor, fontSize: 14),
             decoration: InputDecoration(
-              hintText: 'Escribe las observaciones técnicas de la certificación...',
+              hintText: 'Describe las observaciones técnicas de la certificación... (mínimo 10 caracteres)',
               hintStyle: TextStyle(color: textColor.withOpacity(0.4), fontSize: 14),
               border: InputBorder.none,
               counterText: '',
+              errorStyle: TextStyle(
+                fontSize: 12,
+                color: AppTheme.berryRed,
+              ),
             ),
             maxLength: 500,
+            onChanged: (_) => setState(() {}),
+            validator: _validateObservations,
           ),
+          if (_observationsController.text.isNotEmpty && _observationsController.text.length < 10)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Mínimo 10 caracteres (${_observationsController.text.length}/10)',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.alertOrange.withOpacity(0.7),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -861,6 +1071,9 @@ class _TechnicianLotCertificationScreenState
   }
 
   Widget _buildQuickActions(bool isDark) {
+    final bool isComplete = _isCertificationComplete();
+    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
+
     final actions = [
       {'icon': Icons.description, 'label': 'Ver diagnóstico', 'color': AppTheme.primaryGreen},
       {'icon': Icons.qr_code, 'label': 'Ver pasaporte', 'color': AppTheme.goldCoffee},
@@ -890,7 +1103,7 @@ class _TechnicianLotCertificationScreenState
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
-              color: isDark ? Colors.white : AppTheme.darkCoffee,
+              color: textColor,
             ),
           ),
           const SizedBox(height: 12),
@@ -899,15 +1112,21 @@ class _TechnicianLotCertificationScreenState
             runSpacing: 8,
             children: actions.map((action) {
               final color = action['color'] as Color;
+              final label = action['label'] as String;
+
               return GestureDetector(
-                onTap: () {},
+                onTap: isComplete ? () {
+                  if (label == 'Compartir certificado') {
+                    _generateAndOpenCertificate();
+                  }
+                } : null,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withOpacity(isComplete ? 0.1 : 0.05),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: color.withOpacity(0.2),
+                      color: color.withOpacity(isComplete ? 0.2 : 0.05),
                       width: 1,
                     ),
                   ),
@@ -917,15 +1136,17 @@ class _TechnicianLotCertificationScreenState
                       Icon(
                         action['icon'] as IconData,
                         size: 16,
-                        color: color,
+                        color: isComplete ? color : color.withOpacity(0.3),
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        action['label'] as String,
+                        label,
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white : AppTheme.darkCoffee,
+                          color: isComplete
+                              ? textColor
+                              : textColor.withOpacity(0.3),
                         ),
                       ),
                     ],
@@ -940,16 +1161,16 @@ class _TechnicianLotCertificationScreenState
   }
 
   Widget _buildMainButtons() {
+    final bool isComplete = _isCertificationComplete();
+
     return Column(
       children: [
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: () {
-              _showConfirmDialog();
-            },
+            onPressed: isComplete ? _showConfirmDialog : _showValidationDialog,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryGreen,
+              backgroundColor: isComplete ? AppTheme.primaryGreen : Colors.grey,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(

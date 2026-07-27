@@ -1,26 +1,28 @@
 // lib/features/technician/presentation/widgets/visit_registration_form.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:kaabcafe/core/providers/user_provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/core/widgets/neumorphic_widgets.dart';
 
 class VisitRegistrationForm extends StatefulWidget {
   final bool isDark;
-  final String producerName;
-  final String farmName;
-  final String lotName;
-  final String location;
+  final String? producerName;
+  final String? farmName;
+  final String? lotName;
+  final String? location;
   final Function(Map<String, dynamic>) onSave;
   final VoidCallback onSaveDraft;
 
   const VisitRegistrationForm({
     super.key,
     required this.isDark,
-    required this.producerName,
-    required this.farmName,
-    required this.lotName,
-    required this.location,
+    this.producerName,
+    this.farmName,
+    this.lotName,
+    this.location,
     required this.onSave,
     required this.onSaveDraft,
   });
@@ -34,6 +36,11 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
   final _observationsController = TextEditingController();
   final _followUpController = TextEditingController();
 
+  // Controladores para los campos con validación
+  final _producerNameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _emailController = TextEditingController();
+
   String? _selectedObjective;
   int _cropHealth = 2;
   DateTime _selectedDate = DateTime.now();
@@ -42,6 +49,10 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
   TimeOfDay? _nextVisitTime;
   String _nextVisitReason = '';
   double _checklistProgress = 0.0;
+
+  // Datos del técnico (se llenarán desde el provider)
+  String _technicianName = '';
+  String _technicianEmail = '';
 
   final List<Map<String, dynamic>> _checklistItems = [
     {'label': 'Productor presente', 'checked': false},
@@ -74,10 +85,35 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    // Cargar datos del técnico desde el provider
+    _loadTechnicianData();
+
+    // Inicializar campos con los datos recibidos (pueden estar vacíos)
+    _producerNameController.text = widget.producerName ?? '';
+    _phoneController.text = '';
+    _emailController.text = '';
+  }
+
+  void _loadTechnicianData() {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    if (userProvider.userName != null) {
+      _technicianName = userProvider.userName!;
+    }
+    if (userProvider.userEmail != null) {
+      _technicianEmail = userProvider.userEmail!;
+    }
+  }
+
+  @override
   void dispose() {
     _objectiveController.dispose();
     _observationsController.dispose();
     _followUpController.dispose();
+    _producerNameController.dispose();
+    _phoneController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -95,40 +131,160 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
     _updateChecklistProgress();
   }
 
+  // VALIDACIONES
+  String? _validateName(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'El nombre es obligatorio';
+    }
+    final RegExp nameRegex = RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$');
+    if (!nameRegex.hasMatch(value)) {
+      return 'El nombre solo debe contener letras y espacios';
+    }
+    return null;
+  }
+
+  String? _validatePhone(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'El número de celular es obligatorio';
+    }
+    final RegExp phoneRegex = RegExp(r'^[0-9]+$');
+    if (!phoneRegex.hasMatch(value)) {
+      return 'El número de celular solo debe contener números';
+    }
+    if (value.length > 10) {
+      return 'El número de celular no debe tener más de 10 dígitos';
+    }
+    if (value.length < 7) {
+      return 'El número de celular debe tener al menos 7 dígitos';
+    }
+    return null;
+  }
+
+  String? _validateEmail(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'El correo electrónico es obligatorio';
+    }
+    final RegExp emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    if (!emailRegex.hasMatch(value)) {
+      return 'El correo debe contener "@" y un dominio válido';
+    }
+    return null;
+  }
+
+  bool _isFormComplete() {
+    final nameError = _validateName(_producerNameController.text);
+    final phoneError = _validatePhone(_phoneController.text);
+    final emailError = _validateEmail(_emailController.text);
+
+    if (nameError != null || phoneError != null || emailError != null) {
+      return false;
+    }
+
+    if (_selectedObjective == null) return false;
+    if (_observationsController.text.trim().isEmpty) return false;
+
+    return true;
+  }
+
   void _submitForm() {
+    // Validar todos los campos antes de enviar
+    final nameError = _validateName(_producerNameController.text);
+    final phoneError = _validatePhone(_phoneController.text);
+    final emailError = _validateEmail(_emailController.text);
+
+    if (nameError != null || phoneError != null || emailError != null) {
+      _showValidationDialog();
+      return;
+    }
+
     final data = {
-      'producerName': widget.producerName,
-      'farmName': widget.farmName,
-      'lotName': widget.lotName,
-      'location': widget.location,
+      'producerName': _producerNameController.text.trim(),
+      'phone': _phoneController.text.trim(),
+      'email': _emailController.text.trim(),
+      'farmName': widget.farmName ?? '',
+      'lotName': widget.lotName ?? '',
+      'location': widget.location ?? '',
       'objective': _selectedObjective,
       'cropHealth': _cropHealthOptions[_cropHealth]['label'],
-      'observations': _observationsController.text,
+      'observations': _observationsController.text.trim(),
       'photos': _photos,
       'attachments': _attachments,
       'checklist': _checklistItems,
-      'followUp': _followUpController.text,
+      'followUp': _followUpController.text.trim(),
       'nextVisitDate': _nextVisitDate,
       'nextVisitTime': _nextVisitTime,
       'nextVisitReason': _nextVisitReason,
+      'technicianName': _technicianName,
+      'technicianEmail': _technicianEmail,
     };
     widget.onSave(data);
   }
 
   void _navigateToLotInspection() {
-    // ✅ CONEXIÓN: Navegar a la inspección del lote
     context.push(
       RouteNames.technicianLotInspection,
       extra: {
-        'lotName': widget.lotName,
-        'farmName': widget.farmName,
-        'producerName': widget.producerName,
-        'location': widget.location,
+        'lotName': widget.lotName ?? '',
+        'farmName': widget.farmName ?? '',
+        'producerName': _producerNameController.text.trim(),
+        'location': widget.location ?? '',
+        'phone': _phoneController.text.trim(),
+        'email': _emailController.text.trim(),
       },
     );
   }
 
+  void _showValidationDialog() {
+    final nameError = _validateName(_producerNameController.text);
+    final phoneError = _validatePhone(_phoneController.text);
+    final emailError = _validateEmail(_emailController.text);
+    List<String> errors = [];
+
+    if (nameError != null) errors.add('• $nameError');
+    if (phoneError != null) errors.add('• $phoneError');
+    if (emailError != null) errors.add('• $emailError');
+    if (_selectedObjective == null) errors.add('• Selecciona un objetivo para la visita');
+    if (_observationsController.text.trim().isEmpty) errors.add('• Agrega observaciones de la visita');
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          '⚠️ Información incompleta',
+          style: TextStyle(
+            color: widget.isDark ? Colors.white : AppTheme.darkCoffee,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: errors.map((error) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Text(
+              error,
+              style: TextStyle(
+                color: widget.isDark ? Colors.white.withOpacity(0.8) : AppTheme.darkCoffee.withOpacity(0.8),
+              ),
+            ),
+          )).toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Completar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showConfirmDialog() {
+    // Validar antes de mostrar el diálogo
+    if (!_isFormComplete()) {
+      _showValidationDialog();
+      return;
+    }
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -199,7 +355,6 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
                       onPressed: () {
                         Navigator.pop(context);
                         _submitForm();
-                        // ✅ Después de guardar, navegar a la inspección
                         _navigateToLotInspection();
                       },
                       style: ElevatedButton.styleFrom(
@@ -278,73 +433,75 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
         ? AppTheme.coffeeDeep.withOpacity(0.7)
         : const Color(0xFFE8E0D5).withOpacity(0.9);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ── Información del productor ──────────────────────────
-        _buildSectionTitle('Información del productor', textColor),
-        const SizedBox(height: 8),
-        _buildProducerCard(cardColor, textColor),
-        const SizedBox(height: 20),
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Información del productor ──────────────────────────
+          _buildSectionTitle('Información del productor', textColor),
+          const SizedBox(height: 8),
+          _buildProducerForm(cardColor, textColor),
+          const SizedBox(height: 20),
 
-        // ── Información automática ──────────────────────────────
-        _buildSectionTitle('Información automática', textColor),
-        const SizedBox(height: 8),
-        _buildAutoInfoCard(cardColor, textColor),
-        const SizedBox(height: 20),
+          // ── Información automática ──────────────────────────────
+          _buildSectionTitle('Información automática', textColor),
+          const SizedBox(height: 8),
+          _buildAutoInfoCard(cardColor, textColor),
+          const SizedBox(height: 20),
 
-        // ── Objetivo de la visita ────────────────────────────────
-        _buildSectionTitle('Objetivo de la visita', textColor),
-        const SizedBox(height: 8),
-        _buildObjectiveDropdown(cardColor, textColor),
-        const SizedBox(height: 20),
+          // ── Objetivo de la visita ────────────────────────────────
+          _buildSectionTitle('Objetivo de la visita', textColor),
+          const SizedBox(height: 8),
+          _buildObjectiveDropdown(cardColor, textColor),
+          const SizedBox(height: 20),
 
-        // ── Estado general del cultivo ────────────────────────────
-        _buildSectionTitle('Estado general del cultivo', textColor),
-        const SizedBox(height: 8),
-        _buildCropHealthSelector(cardColor, textColor),
-        const SizedBox(height: 20),
+          // ── Estado general del cultivo ────────────────────────────
+          _buildSectionTitle('Estado general del cultivo', textColor),
+          const SizedBox(height: 8),
+          _buildCropHealthSelector(cardColor, textColor),
+          const SizedBox(height: 20),
 
-        // ── Observaciones ────────────────────────────────────────
-        _buildSectionTitle('Observaciones', textColor),
-        const SizedBox(height: 8),
-        _buildObservationsField(cardColor, textColor),
-        const SizedBox(height: 20),
+          // ── Observaciones ────────────────────────────────────────
+          _buildSectionTitle('Observaciones', textColor),
+          const SizedBox(height: 8),
+          _buildObservationsField(cardColor, textColor),
+          const SizedBox(height: 20),
 
-        // ── Evidencias fotográficas ──────────────────────────────
-        _buildSectionTitle('Evidencias fotográficas', textColor),
-        const SizedBox(height: 8),
-        _buildPhotoGallery(cardColor, textColor),
-        const SizedBox(height: 20),
+          // ── Evidencias fotográficas ──────────────────────────────
+          _buildSectionTitle('Evidencias fotográficas', textColor),
+          const SizedBox(height: 8),
+          _buildPhotoGallery(cardColor, textColor),
+          const SizedBox(height: 20),
 
-        // ── Checklist de visita ──────────────────────────────────
-        _buildSectionTitle('Checklist de visita', textColor),
-        const SizedBox(height: 8),
-        _buildChecklist(cardColor, textColor),
-        const SizedBox(height: 20),
+          // ── Checklist de visita ──────────────────────────────────
+          _buildSectionTitle('Checklist de visita', textColor),
+          const SizedBox(height: 8),
+          _buildChecklist(cardColor, textColor),
+          const SizedBox(height: 20),
 
-        // ── Notas de seguimiento ──────────────────────────────────
-        _buildSectionTitle('Notas de seguimiento', textColor),
-        const SizedBox(height: 8),
-        _buildFollowUpField(cardColor, textColor),
-        const SizedBox(height: 20),
+          // ── Notas de seguimiento ──────────────────────────────────
+          _buildSectionTitle('Notas de seguimiento', textColor),
+          const SizedBox(height: 8),
+          _buildFollowUpField(cardColor, textColor),
+          const SizedBox(height: 20),
 
-        // ── Programar próxima visita ──────────────────────────────
-        _buildSectionTitle('Programar próxima visita', textColor),
-        const SizedBox(height: 8),
-        _buildNextVisitCard(cardColor, textColor),
-        const SizedBox(height: 20),
+          // ── Programar próxima visita ──────────────────────────────
+          _buildSectionTitle('Programar próxima visita', textColor),
+          const SizedBox(height: 8),
+          _buildNextVisitCard(cardColor, textColor),
+          const SizedBox(height: 20),
 
-        // ── Resumen de la visita ──────────────────────────────────
-        _buildSectionTitle('Resumen de la visita', textColor),
-        const SizedBox(height: 8),
-        _buildSummaryCard(cardColor, textColor),
-        const SizedBox(height: 24),
+          // ── Resumen de la visita ──────────────────────────────────
+          _buildSectionTitle('Resumen de la visita', textColor),
+          const SizedBox(height: 8),
+          _buildSummaryCard(cardColor, textColor),
+          const SizedBox(height: 24),
 
-        // ── Botones de acción ────────────────────────────────────
-        _buildActionButtons(),
-        const SizedBox(height: 16),
-      ],
+          // ── Botones de acción ────────────────────────────────────
+          _buildActionButtons(),
+          const SizedBox(height: 16),
+        ],
+      ),
     );
   }
 
@@ -374,77 +531,134 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
     );
   }
 
-  Widget _buildProducerCard(Color cardColor, Color textColor) {
+  // Formulario de productor con validaciones
+  Widget _buildProducerForm(Color cardColor, Color textColor) {
     return NeumorphicBox(
       isDark: widget.isDark,
       borderRadius: 20,
       padding: const EdgeInsets.all(16),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppTheme.primaryGreen, AppTheme.secondaryGreen],
+          // Nombre del productor
+          TextFormField(
+            controller: _producerNameController,
+            style: TextStyle(color: textColor, fontSize: 14),
+            decoration: InputDecoration(
+              labelText: 'Nombre del productor *',
+              labelStyle: TextStyle(color: textColor.withOpacity(0.6), fontSize: 13),
+              hintText: 'Ingresa el nombre completo',
+              hintStyle: TextStyle(color: textColor.withOpacity(0.4), fontSize: 13),
+              prefixIcon: Icon(Icons.person, color: AppTheme.primaryGreen, size: 20),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: textColor.withOpacity(0.1)),
               ),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Center(
-              child: Text(
-                widget.producerName.split(' ').map((e) => e[0]).take(2).join().toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: textColor.withOpacity(0.1)),
               ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.primaryGreen),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.berryRed),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.berryRed),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             ),
+            validator: _validateName,
+            onChanged: (value) => setState(() {}),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.producerName,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: textColor,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '🌱 ${widget.farmName}  •  ☕ ${widget.lotName}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: textColor.withOpacity(0.6),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Row(
-                  children: [
-                    Icon(Icons.location_on, size: 12, color: textColor.withOpacity(0.4)),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        widget.location,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: textColor.withOpacity(0.5),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+          const SizedBox(height: 12),
+
+          // Número de celular
+          TextFormField(
+            controller: _phoneController,
+            style: TextStyle(color: textColor, fontSize: 14),
+            keyboardType: TextInputType.number,
+            maxLength: 10,
+            decoration: InputDecoration(
+              labelText: 'Número de celular *',
+              labelStyle: TextStyle(color: textColor.withOpacity(0.6), fontSize: 13),
+              hintText: 'Ingresa 10 dígitos',
+              hintStyle: TextStyle(color: textColor.withOpacity(0.4), fontSize: 13),
+              prefixIcon: Icon(Icons.phone, color: AppTheme.primaryGreen, size: 20),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: textColor.withOpacity(0.1)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: textColor.withOpacity(0.1)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.primaryGreen),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.berryRed),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.berryRed),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              counterText: '',
             ),
+            validator: _validatePhone,
+            onChanged: (value) {
+              if (value.isNotEmpty && !RegExp(r'^[0-9]+$').hasMatch(value)) {
+                _phoneController.text = value.replaceAll(RegExp(r'[^0-9]'), '');
+                _phoneController.selection = TextSelection.fromPosition(
+                  TextPosition(offset: _phoneController.text.length),
+                );
+              }
+              setState(() {});
+            },
+          ),
+          const SizedBox(height: 12),
+
+          // Correo electrónico
+          TextFormField(
+            controller: _emailController,
+            style: TextStyle(color: textColor, fontSize: 14),
+            keyboardType: TextInputType.emailAddress,
+            decoration: InputDecoration(
+              labelText: 'Correo electrónico *',
+              labelStyle: TextStyle(color: textColor.withOpacity(0.6), fontSize: 13),
+              hintText: 'ejemplo@dominio.com',
+              hintStyle: TextStyle(color: textColor.withOpacity(0.4), fontSize: 13),
+              prefixIcon: Icon(Icons.email, color: AppTheme.primaryGreen, size: 20),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: textColor.withOpacity(0.1)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: textColor.withOpacity(0.1)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.primaryGreen),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.berryRed),
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.berryRed),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            ),
+            validator: _validateEmail,
+            onChanged: (value) => setState(() {}),
           ),
         ],
       ),
@@ -453,6 +667,10 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
 
   Widget _buildAutoInfoCard(Color cardColor, Color textColor) {
     final now = DateTime.now();
+
+    // Usar el nombre del técnico desde el provider o un placeholder
+    final technicianName = _technicianName.isNotEmpty ? _technicianName : 'Cargando...';
+
     return NeumorphicBox(
       isDark: widget.isDark,
       borderRadius: 20,
@@ -468,11 +686,16 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
             textColor,
           ),
           const SizedBox(height: 8),
-          _buildAutoInfoRow(Icons.location_on, 'Coordenadas GPS', '15.1234° N, 92.5678° W', textColor),
+          _buildAutoInfoRow(
+            Icons.location_on,
+            'Ubicación',
+            widget.location?.isNotEmpty == true ? widget.location! : 'No especificada',
+            textColor,
+          ),
           const SizedBox(height: 8),
-          _buildAutoInfoRow(Icons.wb_sunny, 'Condiciones climáticas', 'Soleado, 28°C', textColor),
+          _buildAutoInfoRow(Icons.person, 'Responsable', technicianName, textColor),
           const SizedBox(height: 8),
-          _buildAutoInfoRow(Icons.person, 'Responsable', 'Carlos Técnico', textColor),
+          _buildAutoInfoRow(Icons.email, 'Correo técnico', _technicianEmail.isNotEmpty ? _technicianEmail : 'No disponible', textColor),
         ],
       ),
     );
@@ -521,7 +744,7 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
         dropdownColor: widget.isDark ? AppTheme.coffeeDeep : Colors.white,
         style: TextStyle(color: textColor, fontSize: 14),
         decoration: InputDecoration(
-          hintText: 'Selecciona el objetivo',
+          hintText: 'Selecciona el objetivo *',
           hintStyle: TextStyle(color: textColor.withOpacity(0.4), fontSize: 14),
           border: InputBorder.none,
           prefixIcon: Icon(Icons.flag_outlined, color: AppTheme.primaryGreen),
@@ -533,6 +756,7 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
           );
         }).toList(),
         onChanged: (value) => setState(() => _selectedObjective = value),
+        validator: (value) => value == null ? 'Selecciona un objetivo' : null,
       ),
     );
   }
@@ -594,17 +818,44 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
       isDark: widget.isDark,
       borderRadius: 20,
       padding: const EdgeInsets.all(14),
-      child: TextFormField(
-        controller: _observationsController,
-        maxLines: 4,
-        style: TextStyle(color: textColor, fontSize: 14),
-        decoration: InputDecoration(
-          hintText: 'Describe las condiciones observadas durante la visita...',
-          hintStyle: TextStyle(color: textColor.withOpacity(0.4), fontSize: 14),
-          border: InputBorder.none,
-          counterText: '',
-        ),
-        maxLength: 500,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Observaciones *',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: textColor,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '(requerido)',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: AppTheme.berryRed.withOpacity(0.7),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: _observationsController,
+            maxLines: 4,
+            style: TextStyle(color: textColor, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'Describe las condiciones observadas durante la visita...',
+              hintStyle: TextStyle(color: textColor.withOpacity(0.4), fontSize: 14),
+              border: InputBorder.none,
+              counterText: '',
+            ),
+            maxLength: 500,
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
       ),
     );
   }
@@ -955,15 +1206,23 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
       padding: const EdgeInsets.all(14),
       child: Column(
         children: [
-          _buildSummaryRow('👨‍🌾 Productor', widget.producerName, textColor),
+          _buildSummaryRow('👨‍🌾 Productor', _producerNameController.text.isNotEmpty ? _producerNameController.text : 'No registrado', textColor),
           const SizedBox(height: 6),
-          _buildSummaryRow('🌱 Finca', widget.farmName, textColor),
+          _buildSummaryRow('📱 Celular', _phoneController.text.isNotEmpty ? _phoneController.text : 'No registrado', textColor),
           const SizedBox(height: 6),
-          _buildSummaryRow('☕ Lote', widget.lotName, textColor),
+          _buildSummaryRow('✉️ Email', _emailController.text.isNotEmpty ? _emailController.text : 'No registrado', textColor),
+          const SizedBox(height: 6),
+          _buildSummaryRow('🌱 Finca', widget.farmName?.isNotEmpty == true ? widget.farmName! : 'No registrada', textColor),
+          const SizedBox(height: 6),
+          _buildSummaryRow('☕ Lote', widget.lotName?.isNotEmpty == true ? widget.lotName! : 'No registrado', textColor),
+          const SizedBox(height: 6),
+          _buildSummaryRow('📍 Ubicación', widget.location?.isNotEmpty == true ? widget.location! : 'No especificada', textColor),
           const SizedBox(height: 6),
           _buildSummaryRow('📷 Fotografías', '$_photos tomadas', textColor),
           const SizedBox(height: 6),
           _buildSummaryRow('📋 Checklist', '$totalChecklist/${_checklistItems.length} completados', textColor),
+          const SizedBox(height: 6),
+          _buildSummaryRow('👤 Responsable', _technicianName.isNotEmpty ? _technicianName : 'No asignado', textColor),
         ],
       ),
     );
