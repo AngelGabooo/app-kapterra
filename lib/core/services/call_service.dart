@@ -1,66 +1,57 @@
 // lib/core/services/call_service.dart
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class CallService {
-  static const String _baseUrl = 'https://biobot-six.vercel.app';
-
-  /// Inicia una llamada desde el bot al cliente y luego al productor
-  static Future<bool> makeCall({
-    required String clientPhoneNumber,  // Número del cliente (usuario de la app)
-    required String producerPhone,      // Número del productor
-    String? producerName,
-  }) async {
+  /// Inicia una llamada telefónica directamente al número proporcionado
+  static Future<bool> makeDirectCall(String phoneNumber) async {
     try {
-      print('📞 ===== INICIANDO LLAMADA =====');
-      print('📞 Cliente: $clientPhoneNumber');
-      print('📞 Productor: $producerPhone');
-      print('📞 Productor Nombre: $producerName');
-
-      final url = Uri.parse('$_baseUrl/make-call');
-
-      // Enviar ambos números como parámetros
-      final fullUrl = url.replace(queryParameters: {
-        'clientPhone': clientPhoneNumber,
-        'producerPhone': producerPhone,
-        'producerName': producerName ?? 'Productor',
-      });
-
-      print('📞 URL completa: $fullUrl');
-
-      final response = await http.get(fullUrl);
-
-      print('📞 Status code: ${response.statusCode}');
-      print('📞 Response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['status'] == 'success') {
-          print('✅ Llamada iniciada exitosamente');
-          return true;
-        }
-        print('❌ Error en la respuesta: ${data['message']}');
+      final phone = phoneNumber.trim();
+      if (phone.isEmpty) {
+        debugPrint('❌ Número de teléfono vacío');
         return false;
+      }
+
+      // Limpiar el número: eliminar espacios, guiones, etc.
+      final cleanPhone = phone.replaceAll(RegExp(r'[^0-9+]'), '');
+
+      if (cleanPhone.isEmpty) {
+        debugPrint('❌ Número de teléfono inválido después de limpiar');
+        return false;
+      }
+
+      final Uri phoneUri = Uri(
+        scheme: 'tel',
+        path: cleanPhone,
+      );
+
+      debugPrint('📞 Llamando a: $cleanPhone');
+
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+        return true;
       } else {
-        print('❌ Error HTTP: ${response.statusCode}');
+        debugPrint('❌ No se puede iniciar la llamada a: $cleanPhone');
         return false;
       }
     } catch (e) {
-      print('❌ Error al hacer la llamada: $e');
+      debugPrint('❌ Error al realizar la llamada: $e');
       return false;
     }
   }
 
-  /// Verifica si el bot está disponible
-  static Future<bool> isBotAvailable() async {
+  /// Verifica si el dispositivo puede realizar llamadas
+  static Future<bool> canMakeCall(String phoneNumber) async {
     try {
-      final url = Uri.parse('$_baseUrl/');
-      final response = await http.get(url);
-      print('📞 Bot disponible: ${response.statusCode == 200}');
-      return response.statusCode == 200;
+      final phone = phoneNumber.trim().replaceAll(RegExp(r'[^0-9+]'), '');
+      if (phone.isEmpty) return false;
+
+      final Uri phoneUri = Uri(
+        scheme: 'tel',
+        path: phone,
+      );
+      return await canLaunchUrl(phoneUri);
     } catch (e) {
-      print('❌ Error verificando bot: $e');
       return false;
     }
   }

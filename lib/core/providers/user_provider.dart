@@ -1,9 +1,9 @@
 // lib/core/providers/user_provider.dart
-
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/features/auth/data/models/user_type_model.dart';
+import 'package:kaabcafe/core/providers/cooperatives_provider.dart';
 
 class UserProvider extends ChangeNotifier {
   UserType? _selectedUserType;
@@ -12,11 +12,42 @@ class UserProvider extends ChangeNotifier {
   String? _userPhone;
   bool _isLoggedIn = false;
 
+  // ✅ Referencia al provider de cooperativas
+  CooperativesProvider? _cooperativesProvider;
+
   UserType? get selectedUserType => _selectedUserType;
   String? get userEmail => _userEmail;
   String? get userName => _userName;
   String? get userPhone => _userPhone;
   bool get isLoggedIn => _isLoggedIn;
+
+  // ✅ Método para inicializar con el provider de cooperativas
+  void setCooperativesProvider(CooperativesProvider provider) {
+    _cooperativesProvider = provider;
+    debugPrint('✅ CooperativesProvider vinculado a UserProvider');
+  }
+
+  // ✅ Método para registrar una cooperativa manualmente
+  void registerCooperative({
+    required String id,
+    required String name,
+    required String email,
+    required String location,
+    required String phone,
+  }) {
+    if (_cooperativesProvider != null) {
+      debugPrint('✅ Registrando cooperativa manualmente: $name ($email)');
+      _cooperativesProvider!.loadCooperativeFromUser(
+        id: id,
+        name: name,
+        email: email,
+        location: location,
+        phone: phone,
+      );
+    } else {
+      debugPrint('⚠️ CooperativesProvider no disponible para registrar: $name');
+    }
+  }
 
   // ============================================================
   // ✅ MÉTODOS DE GUARDADO
@@ -34,6 +65,14 @@ class UserProvider extends ChangeNotifier {
       _userEmail = email;
     }
     await _saveUserType(type, email: email);
+
+    // ✅ Si es cooperativa, registrarla en el provider de cooperativas
+    _registerCooperativeIfNeeded(
+      email: _userEmail ?? email ?? 'sin-email',
+      name: _userName ?? 'Cooperativa',
+      phone: _userPhone ?? '',
+    );
+
     notifyListeners();
   }
 
@@ -54,6 +93,14 @@ class UserProvider extends ChangeNotifier {
     if (phone != null && phone.isNotEmpty) {
       await _saveUserPhone(phone);
     }
+
+    // ✅ Si es cooperativa, registrarla en el provider de cooperativas
+    _registerCooperativeIfNeeded(
+      email: email,
+      name: name,
+      phone: phone ?? '',
+    );
+
     notifyListeners();
   }
 
@@ -104,6 +151,13 @@ class UserProvider extends ChangeNotifier {
           _userPhone = prefs.getString('user_phone');
         }
 
+        // ✅ Si es cooperativa, registrarla en el provider de cooperativas
+        _registerCooperativeIfNeeded(
+          email: email,
+          name: _userName ?? 'Cooperativa',
+          phone: _userPhone ?? '',
+        );
+
         notifyListeners();
         return _selectedUserType;
       }
@@ -132,6 +186,13 @@ class UserProvider extends ChangeNotifier {
           if (_userPhone == null || _userPhone!.isEmpty) {
             _userPhone = prefs.getString('user_phone');
           }
+
+          // ✅ Si es cooperativa, registrarla en el provider de cooperativas
+          _registerCooperativeIfNeeded(
+            email: email,
+            name: _userName ?? 'Cooperativa',
+            phone: _userPhone ?? '',
+          );
 
           _isLoggedIn = true;
           notifyListeners();
@@ -298,9 +359,15 @@ class UserProvider extends ChangeNotifier {
           final phoneKey = 'user_phone_${_sanitizeEmail(email)}';
           _userPhone = prefs.getString(phoneKey);
           if (_userPhone == null || _userPhone!.isEmpty) {
-            // Fallback al teléfono global
             _userPhone = prefs.getString('user_phone');
           }
+
+          // ✅ Si es cooperativa, registrarla en el provider de cooperativas
+          _registerCooperativeIfNeeded(
+            email: email,
+            name: _userName ?? 'Cooperativa',
+            phone: _userPhone ?? '',
+          );
 
           _isLoggedIn = true;
           notifyListeners();
@@ -337,5 +404,45 @@ class UserProvider extends ChangeNotifier {
   /// ✅ Método para verificar si el usuario tiene perfil completo
   bool hasCompleteProfile() {
     return _userPhone != null && _userPhone!.isNotEmpty;
+  }
+
+  // ============================================================
+  // ✅ MÉTODO PRIVADO PARA REGISTRAR COOPERATIVA
+  // ============================================================
+
+  void _registerCooperativeIfNeeded({
+    required String email,
+    required String name,
+    required String phone,
+  }) {
+    // Solo registrar si es cooperativa
+    if (_selectedUserType != UserType.cooperative) {
+      return;
+    }
+
+    if (_cooperativesProvider == null) {
+      debugPrint('⚠️ CooperativesProvider es null, no se puede registrar cooperativa: $name');
+      return;
+    }
+
+    debugPrint('✅ Registrando cooperativa: $name ($email)');
+    _cooperativesProvider!.loadCooperativeFromUser(
+      id: email,
+      name: name,
+      email: email,
+      location: 'Ubicación no especificada',
+      phone: phone,
+    );
+  }
+
+  /// ✅ Método para forzar la recarga de la cooperativa actual
+  void refreshCooperativeRegistration() {
+    if (_selectedUserType == UserType.cooperative && _userEmail != null) {
+      _registerCooperativeIfNeeded(
+        email: _userEmail!,
+        name: _userName ?? 'Cooperativa',
+        phone: _userPhone ?? '',
+      );
+    }
   }
 }

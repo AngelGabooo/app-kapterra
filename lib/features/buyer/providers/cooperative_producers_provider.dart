@@ -1,20 +1,63 @@
 // lib/features/buyer/providers/cooperative_producers_provider.dart
-
 import 'package:flutter/material.dart';
 import 'package:kaabcafe/features/buyer/data/models/producer_summary_model.dart';
+import 'package:kaabcafe/core/providers/cooperative_contact_provider.dart';
+import 'package:kaabcafe/features/dashboard/data/models/cooperative_contact_request_model.dart';
 
 class CooperativeProducersProvider extends ChangeNotifier {
   final List<ProducerSummaryModel> _producers = [];
+  CooperativeContactProvider? _contactProvider;
 
   List<ProducerSummaryModel> get producers => List.unmodifiable(_producers);
   int get count => _producers.length;
   int get activeCount => _producers.where((p) => p.status == 'Activo').length;
   int get inactiveCount => _producers.where((p) => p.status == 'Inactivo').length;
+  int get pendingCount => _producers.where((p) => p.status == 'Pendiente').length;
 
   double get totalProduction => _producers.fold(0, (sum, p) => sum + p.totalProduction);
   double get averageProduction => count > 0 ? totalProduction / count : 0;
 
-  // ✅ Agregar productor
+  // ✅ Inicializar con el provider de contactos
+  void init(CooperativeContactProvider contactProvider) {
+    _contactProvider = contactProvider;
+    // Cargar productores desde las solicitudes pendientes
+    _loadProducersFromRequests();
+  }
+
+  // ✅ Cargar productores desde las solicitudes de contacto
+  void _loadProducersFromRequests() {
+    if (_contactProvider == null) return;
+    final pendingRequests = _contactProvider!.pendingRequests;
+    for (final request in pendingRequests) {
+      _addProducerFromRequest(request);
+    }
+  }
+
+  // ✅ Convertir una solicitud en un productor
+  void _addProducerFromRequest(CooperativeContactRequestModel request) {
+    // Verificar si ya existe
+    final exists = _producers.any((p) => p.email == request.producerEmail);
+    if (!exists) {
+      final producer = ProducerSummaryModel(
+        id: request.id,
+        name: request.producerName,
+        email: request.producerEmail,
+        phone: request.producerPhone,
+        status: 'Pendiente', // Estado pendiente hasta que la cooperativa lo acepte
+        farmsCount: 0,
+        lotsCount: 0,
+        totalProduction: 0,
+        averageQuality: 0,
+        location: request.location,
+        requestId: request.id, // Guardamos el ID de la solicitud
+        cooperativeName: request.cooperativeName,
+      );
+      _producers.add(producer);
+      notifyListeners();
+    }
+  }
+
+  // ✅ Agregar productor manualmente
   void addProducer(ProducerSummaryModel producer) {
     _producers.add(producer);
     notifyListeners();
@@ -33,6 +76,26 @@ class CooperativeProducersProvider extends ChangeNotifier {
       _producers[index] = producer;
       notifyListeners();
     }
+  }
+
+  // ✅ Aceptar un productor pendiente (cambiar estado a Activo)
+  void acceptProducer(String producerId) {
+    final index = _producers.indexWhere((p) => p.id == producerId);
+    if (index != -1) {
+      final producer = _producers[index];
+      if (producer.status == 'Pendiente') {
+        _producers[index] = producer.copyWith(
+          status: 'Activo',
+        );
+        notifyListeners();
+      }
+    }
+  }
+
+  // ✅ Rechazar un productor pendiente (eliminarlo)
+  void rejectProducer(String producerId) {
+    _producers.removeWhere((p) => p.id == producerId);
+    notifyListeners();
   }
 
   // ✅ Obtener productor por ID
@@ -61,47 +124,6 @@ class CooperativeProducersProvider extends ChangeNotifier {
     return _producers.where((p) => p.status == status).toList();
   }
 
-  // ✅ Cargar productores de ejemplo (para demo)
-  void loadSampleProducers() {
-    _producers.clear();
-    _producers.addAll([
-      ProducerSummaryModel(
-        id: '1',
-        name: 'Juan Pérez Gómez',
-        email: 'juan.perez@email.com',
-        phone: '+52 123 456 7890',
-        status: 'Activo',
-        farmsCount: 3,
-        lotsCount: 8,
-        totalProduction: 2450,
-        averageQuality: 85.5,
-        location: 'Motozintla, Chiapas',
-      ),
-      ProducerSummaryModel(
-        id: '2',
-        name: 'María López Hernández',
-        email: 'maria.lopez@email.com',
-        phone: '+52 987 654 3210',
-        status: 'Activo',
-        farmsCount: 2,
-        lotsCount: 5,
-        totalProduction: 1800,
-        averageQuality: 92.0,
-        location: 'Tapachula, Chiapas',
-      ),
-      ProducerSummaryModel(
-        id: '3',
-        name: 'Carlos Sánchez Ruiz',
-        email: 'carlos.sanchez@email.com',
-        phone: '+52 555 123 4567',
-        status: 'Pendiente',
-        farmsCount: 0,
-        lotsCount: 0,
-        totalProduction: 0,
-        averageQuality: 0,
-        location: 'Comitán, Chiapas',
-      ),
-    ]);
-    notifyListeners();
-  }
+// ✅ Cargar productores de ejemplo - ELIMINADO, ahora viene de las solicitudes
+// Ya no se cargan datos de ejemplo
 }

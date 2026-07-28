@@ -1,8 +1,9 @@
 // lib/features/buyer/presentation/screens/producers_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:kaabcafe/core/providers/cooperative_contact_provider.dart';
+import 'package:kaabcafe/core/providers/technician_contact_provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/buyer/providers/cooperative_producers_provider.dart';
@@ -10,6 +11,8 @@ import 'package:kaabcafe/features/buyer/providers/technicians_provider.dart';
 import 'package:kaabcafe/features/buyer/presentation/widgets/register_producer_dialog.dart';
 import 'package:kaabcafe/features/buyer/presentation/widgets/assign_technician_dialog.dart';
 import 'package:kaabcafe/features/buyer/data/models/producer_summary_model.dart';
+import 'package:kaabcafe/features/technician/data/models/technician_model.dart';
+import 'package:kaabcafe/features/technician/providers/technician_producers_provider.dart';
 
 class ProducersScreen extends StatefulWidget {
   const ProducersScreen({super.key});
@@ -34,9 +37,13 @@ class _ProducersScreenState extends State<ProducersScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<CooperativeProducersProvider>(context, listen: false);
-      if (provider.producers.isEmpty) {
-        provider.loadSampleProducers();
-      }
+      final contactProvider = Provider.of<CooperativeContactProvider>(context, listen: false);
+
+      // ✅ Inicializar el provider con el contactProvider para cargar solicitudes
+      provider.init(contactProvider);
+
+      // ❌ ELIMINADO: provider.loadSampleProducers();
+      // Ahora los productores vienen de las solicitudes de contacto
     });
   }
 
@@ -156,6 +163,9 @@ class _ProducersScreenState extends State<ProducersScreen> {
         // ✅ Asignar técnico al productor
         techniciansProvider.assignProducerToTechnician(selectedTechnicianId, producer.id);
 
+        // ✅ NOTIFICAR AL TÉCNICO - Agregar el productor a su lista
+        _notifyTechnicianOfAssignment(selectedTechnicianId, producer);
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('✅ Técnico asignado a "${producer.name}" correctamente'),
@@ -164,6 +174,88 @@ class _ProducersScreenState extends State<ProducersScreen> {
         );
       }
     });
+  }
+
+  // ✅ NOTIFICAR AL TÉCNICO DE LA ASIGNACIÓN
+  void _notifyTechnicianOfAssignment(String technicianId, ProducerSummaryModel producer) {
+    try {
+      // Obtener el provider de productores del técnico
+      final technicianProducersProvider = Provider.of<TechnicianProducersProvider>(context, listen: false);
+
+      // Obtener el técnico para tener su información
+      final techniciansProvider = Provider.of<TechniciansProvider>(context, listen: false);
+      final technician = techniciansProvider.getTechnicianById(technicianId);
+
+      if (technician == null) {
+        debugPrint('⚠️ Técnico no encontrado: $technicianId');
+        return;
+      }
+
+      // En _notifyTechnicianOfAssignment
+      final technicianProducer = TechnicianProducerModel(
+        id: producer.id,
+        name: producer.name,
+        email: producer.email,
+        phone: technician.phone, // ✅ Asegurar que el teléfono del técnico se guarda
+        location: producer.location ?? 'Sin ubicación',
+        production: producer.totalProduction,
+        traceability: 0,
+        status: ProducerStatus.excellent,
+        lastVisit: DateTime.now().toIso8601String().split('T').first,
+        farmName: 'Finca asignada',
+        lotName: 'Lote asignado',
+      );
+      // Agregar el productor a la lista del técnico
+      technicianProducersProvider.addProducer(technicianProducer);
+
+      debugPrint('✅ Productor "${producer.name}" asignado al técnico "${technician.fullName}"');
+      debugPrint('📢 Notificación enviada al técnico');
+
+    } catch (e) {
+      debugPrint('❌ Error al notificar al técnico: $e');
+    }
+  }
+
+  // ✅ ACEPTAR PRODUCTOR PENDIENTE
+  void _acceptProducer(ProducerSummaryModel producer) {
+    final provider = Provider.of<CooperativeProducersProvider>(context, listen: false);
+    final contactProvider = Provider.of<CooperativeContactProvider>(context, listen: false);
+
+    // Aceptar en el provider de productores
+    provider.acceptProducer(producer.id);
+
+    // Actualizar el estado de la solicitud
+    if (producer.requestId != null) {
+      contactProvider.updateRequestStatus(producer.requestId!, 'accepted');
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('✅ Productor "${producer.name}" aceptado'),
+        backgroundColor: AppTheme.primaryGreen,
+      ),
+    );
+  }
+
+  // ✅ RECHAZAR PRODUCTOR PENDIENTE
+  void _rejectProducer(ProducerSummaryModel producer) {
+    final provider = Provider.of<CooperativeProducersProvider>(context, listen: false);
+    final contactProvider = Provider.of<CooperativeContactProvider>(context, listen: false);
+
+    // Actualizar el estado de la solicitud
+    if (producer.requestId != null) {
+      contactProvider.updateRequestStatus(producer.requestId!, 'rejected');
+    }
+
+    // Eliminar el productor
+    provider.rejectProducer(producer.id);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('❌ Productor "${producer.name}" rechazado'),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   @override
@@ -335,7 +427,8 @@ class _ProducersScreenState extends State<ProducersScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Comienza registrando el primer productor para la cooperativa.',
+              'Los productores que soliciten contacto aparecerán aquí.\n'
+                  'También puedes registrarlos manualmente.',
               style: TextStyle(
                 fontSize: 14,
                 color: textColor.withOpacity(0.6),
@@ -380,19 +473,19 @@ class _ProducersScreenState extends State<ProducersScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
-          // KPIs
+          // KPIs - Con tamaño reducido para evitar overflow
           Row(
             children: [
               _buildKPI('Productores', '$count', Icons.people, isDark ? AppTheme.coffeeGoldLight : AppTheme.primaryGreen, isDark),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               _buildKPI('Activos', '$activeCount', Icons.check_circle, isDark ? AppTheme.coffeeGoldLight : AppTheme.secondaryGreen, isDark),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             children: [
               _buildKPI('Producción', '${totalProduction.toStringAsFixed(0)} kg', Icons.eco, isDark ? AppTheme.coffeeGoldLight : AppTheme.goldCoffee, isDark),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               _buildKPI('Promedio', '${(totalProduction / (count > 0 ? count : 1)).toStringAsFixed(0)} kg', Icons.trending_up, isDark ? AppTheme.coffeeGoldLight : AppTheme.primaryGreen, isDark),
             ],
           ),
@@ -531,8 +624,10 @@ class _ProducersScreenState extends State<ProducersScreen> {
     );
   }
 
-  // ✅ TARJETA DE PRODUCTOR INDIVIDUAL
+  // ✅ TARJETA DE PRODUCTOR INDIVIDUAL (con Wrap para evitar overflow)
   Widget _buildProducerCard(ProducerSummaryModel producer, bool isDark, Color textColor) {
+    final isPending = producer.status == 'Pendiente';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -540,10 +635,13 @@ class _ProducersScreenState extends State<ProducersScreen> {
         color: isDark ? AppTheme.coffeeDark : AppTheme.lightBeige.withOpacity(0.5),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.grey.withOpacity(0.1),
+          color: isPending
+              ? Colors.orange.withOpacity(0.3)
+              : Colors.grey.withOpacity(0.1),
         ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Info del productor
           Row(
@@ -553,7 +651,11 @@ class _ProducersScreenState extends State<ProducersScreen> {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: isPending
+                      ? LinearGradient(
+                    colors: [Colors.orange, Colors.orange.shade700],
+                  )
+                      : LinearGradient(
                     colors: [AppTheme.primaryGreen, AppTheme.secondaryGreen],
                   ),
                   shape: BoxShape.circle,
@@ -600,20 +702,10 @@ class _ProducersScreenState extends State<ProducersScreen> {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.landscape, size: 12, color: textColor.withOpacity(0.3)),
+                        Icon(Icons.phone, size: 12, color: textColor.withOpacity(0.3)),
                         const SizedBox(width: 4),
                         Text(
-                          '${producer.farmsCount} fincas',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: textColor.withOpacity(0.6),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Icon(Icons.eco, size: 12, color: textColor.withOpacity(0.3)),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${producer.totalProduction.toStringAsFixed(0)} kg',
+                          producer.phone,
                           style: TextStyle(
                             fontSize: 11,
                             color: textColor.withOpacity(0.6),
@@ -650,55 +742,121 @@ class _ProducersScreenState extends State<ProducersScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          // ✅ Botones de acción
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+          const SizedBox(height: 12),
+
+          // ✅ Botones de acción - USANDO WRAP PARA EVITAR OVERFLOW
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              // Botón Asignar técnico
-              OutlinedButton.icon(
-                onPressed: () => _showAssignTechnicianDialog(producer),
-                icon: Icon(Icons.engineering, size: 16, color: AppTheme.primaryGreen),
-                label: const Text('Técnico'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.primaryGreen,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  side: BorderSide(color: AppTheme.primaryGreen.withOpacity(0.3)),
+              // ✅ Si está pendiente, mostrar botones de Aceptar/Rechazar
+              if (isPending) ...[
+                _buildActionButton(
+                  icon: Icons.check,
+                  label: 'Aceptar',
+                  color: Colors.green,
+                  onPressed: () => _acceptProducer(producer),
                 ),
-              ),
-              const SizedBox(width: 8),
-              // Botón Eliminar
-              OutlinedButton.icon(
+                _buildActionButton(
+                  icon: Icons.close,
+                  label: 'Rechazar',
+                  color: Colors.red,
+                  onPressed: () => _rejectProducer(producer),
+                ),
+              ] else ...[
+                // Botón Asignar técnico (solo para activos)
+                _buildActionButton(
+                  icon: Icons.engineering,
+                  label: 'Técnico',
+                  color: AppTheme.primaryGreen,
+                  onPressed: () => _showAssignTechnicianDialog(producer),
+                ),
+              ],
+              // Botón Eliminar - siempre visible
+              _buildActionButton(
+                icon: Icons.delete_outline,
+                label: 'Eliminar',
+                color: Colors.red,
                 onPressed: () => _confirmDeleteProducer(producer),
-                icon: Icon(Icons.delete_outline, size: 16, color: Colors.red),
-                label: const Text('Eliminar'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  side: BorderSide(color: Colors.red.withOpacity(0.3)),
-                ),
               ),
             ],
           ),
+
+          // ✅ Mostrar mensaje de solicitud pendiente
+          if (isPending) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.orange.withOpacity(0.1),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.access_time, size: 14, color: Colors.orange),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Esperando aprobación de la cooperativa',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
+  // ✅ Helper para construir botones de acción compactos
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 14, color: color),
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        minimumSize: const Size(0, 30),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        side: BorderSide(color: color.withOpacity(0.3)),
+        visualDensity: VisualDensity.compact,
+      ),
+    );
+  }
+
+  // ✅ KPI con tamaño reducido para evitar overflow
   Widget _buildKPI(String title, String value, IconData icon, Color color, bool isDark) {
     final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(8), // Reducido de 12 a 8
         decoration: BoxDecoration(
           color: isDark ? AppTheme.coffeeDeep : Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12), // Reducido de 16 a 12
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.02),
@@ -709,25 +867,25 @@ class _ProducersScreenState extends State<ProducersScreen> {
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(4), // Reducido de 6 a 4
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, size: 16, color: color),
+              child: Icon(icon, size: 14, color: color), // Reducido de 16 a 14
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4), // Reducido de 6 a 4
             Text(
               value,
               style: const TextStyle(
-                fontSize: 18,
+                fontSize: 16, // Reducido de 18 a 16
                 fontWeight: FontWeight.bold,
               ),
             ),
             Text(
               title,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 9, // Reducido de 10 a 9
                 color: textColor.withOpacity(0.5),
               ),
               textAlign: TextAlign.center,

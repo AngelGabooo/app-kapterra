@@ -8,6 +8,12 @@ class CertificationPreview extends StatelessWidget {
   final String lotName;
   final String producerName;
   final String certificationType;
+  final String certificationDate;
+  final String certificationExpiry;
+  final String certificationId;
+  final String healthScore;
+  final String technicianName;
+  final String diagnosisSummary;
 
   const CertificationPreview({
     super.key,
@@ -15,6 +21,12 @@ class CertificationPreview extends StatelessWidget {
     required this.lotName,
     required this.producerName,
     required this.certificationType,
+    this.certificationDate = '15 junio 2026',
+    this.certificationExpiry = '15 junio 2027',
+    this.certificationId = 'KAAB-2026-001',
+    this.healthScore = '85%',
+    this.technicianName = 'Técnico',
+    this.diagnosisSummary = 'Lote en óptimas condiciones',
   });
 
   @override
@@ -97,9 +109,15 @@ class CertificationPreview extends StatelessWidget {
                 const SizedBox(height: 6),
                 _buildPreviewRow('Tipo de certificación', certificationType, textColor),
                 const SizedBox(height: 6),
-                _buildPreviewRow('Fecha de emisión', '15 junio 2026', textColor),
+                _buildPreviewRow('Fecha de emisión', certificationDate, textColor),
                 const SizedBox(height: 6),
-                _buildPreviewRow('Vigencia', '15 junio 2027', textColor),
+                _buildPreviewRow('Vigencia', certificationExpiry, textColor),
+                const SizedBox(height: 6),
+                _buildPreviewRow('Salud del cultivo', healthScore, textColor),
+                const SizedBox(height: 6),
+                _buildPreviewRow('Técnico responsable', technicianName, textColor),
+                const SizedBox(height: 6),
+                _buildPreviewRow('Diagnóstico', diagnosisSummary, textColor),
                 const SizedBox(height: 8),
                 Divider(color: textColor.withOpacity(0.1)),
                 const SizedBox(height: 8),
@@ -113,7 +131,7 @@ class CertificationPreview extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'KAAB-2026-001',
+                      certificationId,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,

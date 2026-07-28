@@ -72,6 +72,7 @@ import 'package:kaabcafe/features/marketplace/presentation/screens/purchases_scr
 import 'package:kaabcafe/features/buyer/presentation/screens/technicians_screen.dart';
 import 'package:kaabcafe/features/technician/presentation/screens/technician_producers_screen.dart';
 
+import '../../features/dashboard/presentation/screens/dashboard_notifications_screen.dart';
 import '../../features/dashboard/presentation/screens/indicators_screen.dart';
 
 
@@ -441,6 +442,11 @@ class AppRouter {
         name: RouteNames.technicianProducers,
         path: RouteNames.technicianProducers,
         builder: (context, state) => const TechnicianProducersScreen(),
+      ),
+      GoRoute(
+        name: RouteNames.dashboardNotifications,
+        path: RouteNames.dashboardNotifications,
+        builder: (context, state) => const DashboardNotificationsScreen(),
       ),
     ],
     errorBuilder: (context, state) => const Scaffold(

@@ -1,5 +1,4 @@
 // lib/features/buyer/data/models/producer_summary_model.dart
-
 import 'package:flutter/material.dart';
 
 class ProducerSummaryModel {
@@ -16,6 +15,8 @@ class ProducerSummaryModel {
   final double? latitude;
   final double? longitude;
   final String? photoUrl;
+  final String? requestId; // ✅ ID de la solicitud de contacto
+  final String? cooperativeName; // ✅ Nombre de la cooperativa a la que solicita
 
   // ✅ NUEVOS CAMPOS PARA DETALLE DEL PRODUCTOR
   final List<ProducerLotSummary>? lots;
@@ -35,6 +36,8 @@ class ProducerSummaryModel {
     this.latitude,
     this.longitude,
     this.photoUrl,
+    this.requestId,
+    this.cooperativeName,
     this.lots,
     this.farms,
   });
@@ -53,6 +56,8 @@ class ProducerSummaryModel {
     double? latitude,
     double? longitude,
     String? photoUrl,
+    String? requestId,
+    String? cooperativeName,
     List<ProducerLotSummary>? lots,
     List<ProducerFarmSummary>? farms,
   }) {
@@ -70,6 +75,8 @@ class ProducerSummaryModel {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       photoUrl: photoUrl ?? this.photoUrl,
+      requestId: requestId ?? this.requestId,
+      cooperativeName: cooperativeName ?? this.cooperativeName,
       lots: lots ?? this.lots,
       farms: farms ?? this.farms,
     );
@@ -90,6 +97,8 @@ class ProducerSummaryModel {
       'latitude': latitude,
       'longitude': longitude,
       'photoUrl': photoUrl,
+      'requestId': requestId,
+      'cooperativeName': cooperativeName,
       'lots': lots?.map((l) => l.toJson()).toList(),
       'farms': farms?.map((f) => f.toJson()).toList(),
     };
@@ -110,6 +119,8 @@ class ProducerSummaryModel {
       latitude: json['latitude']?.toDouble(),
       longitude: json['longitude']?.toDouble(),
       photoUrl: json['photoUrl'],
+      requestId: json['requestId'],
+      cooperativeName: json['cooperativeName'],
       lots: json['lots'] != null
           ? List<ProducerLotSummary>.from(
           json['lots'].map((l) => ProducerLotSummary.fromJson(l)))

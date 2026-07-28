@@ -1,16 +1,62 @@
 // lib/features/buyer/providers/technicians_provider.dart
-
 import 'package:flutter/material.dart';
 import 'package:kaabcafe/features/buyer/data/models/technician_model.dart';
+import 'package:kaabcafe/core/providers/technician_contact_provider.dart';
+import 'package:kaabcafe/features/dashboard/data/models/technician_contact_request_model.dart';
 
 class TechniciansProvider extends ChangeNotifier {
   final List<TechnicianModel> _technicians = [];
+  TechnicianContactProvider? _contactProvider;
 
   List<TechnicianModel> get technicians => List.unmodifiable(_technicians);
   int get count => _technicians.length;
   int get activeCount => _technicians.where((t) => t.status == 'Activo').length;
+  int get pendingCount => _technicians.where((t) => t.status == 'Pendiente').length;
 
-  // ✅ Agregar técnico
+  // ✅ Inicializar con el provider de contactos
+  void init(TechnicianContactProvider contactProvider) {
+    _contactProvider = contactProvider;
+    _loadTechniciansFromRequests();
+  }
+
+  // ✅ Cargar técnicos desde las solicitudes
+  void _loadTechniciansFromRequests() {
+    if (_contactProvider == null) return;
+    final pendingRequests = _contactProvider!.pendingRequests;
+    for (final request in pendingRequests) {
+      _addTechnicianFromRequest(request);
+    }
+  }
+
+  // ✅ Convertir una solicitud en un técnico
+  void _addTechnicianFromRequest(TechnicianContactRequestModel request) {
+    final exists = _technicians.any((t) => t.email == request.technicianEmail);
+    if (!exists) {
+      final technician = TechnicianModel(
+        id: request.id,
+        fullName: request.technicianName,
+        email: request.technicianEmail,
+        phone: request.technicianPhone,
+        specialty: request.specialty,
+        status: 'Pendiente',
+        registeredAt: request.requestDate,
+        assignedProducers: [],
+        farmsCount: 0,
+        activeClients: 0,
+        averageRating: 0,
+        location: 'Sin ubicación',
+        totalVisits: 0,
+        pendingVisits: 0,
+        recommendations: 0,
+        certifications: 0,
+        performance: 0,
+      );
+      _technicians.add(technician);
+      notifyListeners();
+    }
+  }
+
+  // ✅ Agregar técnico manualmente
   void addTechnician(TechnicianModel technician) {
     _technicians.add(technician);
     notifyListeners();
@@ -29,6 +75,26 @@ class TechniciansProvider extends ChangeNotifier {
       _technicians[index] = technician;
       notifyListeners();
     }
+  }
+
+  // ✅ Aceptar un técnico pendiente
+  void acceptTechnician(String technicianId) {
+    final index = _technicians.indexWhere((t) => t.id == technicianId);
+    if (index != -1) {
+      final technician = _technicians[index];
+      if (technician.status == 'Pendiente') {
+        _technicians[index] = technician.copyWith(
+          status: 'Activo',
+        );
+        notifyListeners();
+      }
+    }
+  }
+
+  // ✅ Rechazar un técnico pendiente
+  void rejectTechnician(String technicianId) {
+    _technicians.removeWhere((t) => t.id == technicianId);
+    notifyListeners();
   }
 
   // ✅ Obtener técnico por ID
@@ -80,71 +146,6 @@ class TechniciansProvider extends ChangeNotifier {
     }).toList();
   }
 
-  // ✅ Cargar técnicos de ejemplo CON TODOS LOS CAMPOS
-  void loadSampleTechnicians() {
-    _technicians.clear();
-    _technicians.addAll([
-      TechnicianModel(
-        id: 't1',
-        fullName: 'Ing. María González',
-        email: 'maria.gonzalez@email.com',
-        phone: '+52 123 456 7890',
-        specialty: 'Agronomía',
-        status: 'Activo',
-        registeredAt: DateTime.now().subtract(const Duration(days: 45)),
-        assignedProducers: ['1', '2'],
-        farmsCount: 5,
-        activeClients: 2,
-        averageRating: 4.8,
-        location: 'Motozintla, Chiapas',
-        // ✅ NUEVOS CAMPOS
-        totalVisits: 24,
-        pendingVisits: 3,
-        recommendations: 12,
-        certifications: 5,
-        performance: 85,
-      ),
-      TechnicianModel(
-        id: 't2',
-        fullName: 'Ing. Carlos Ramírez',
-        email: 'carlos.ramirez@email.com',
-        phone: '+52 987 654 3210',
-        specialty: 'Fitopatología',
-        status: 'Activo',
-        registeredAt: DateTime.now().subtract(const Duration(days: 30)),
-        assignedProducers: ['3'],
-        farmsCount: 3,
-        activeClients: 1,
-        averageRating: 4.5,
-        location: 'Tapachula, Chiapas',
-        // ✅ NUEVOS CAMPOS
-        totalVisits: 18,
-        pendingVisits: 5,
-        recommendations: 8,
-        certifications: 3,
-        performance: 72,
-      ),
-      TechnicianModel(
-        id: 't3',
-        fullName: 'Ing. Ana Martínez',
-        email: 'ana.martinez@email.com',
-        phone: '+52 555 123 4567',
-        specialty: 'Suelos',
-        status: 'Pendiente',
-        registeredAt: DateTime.now().subtract(const Duration(days: 5)),
-        assignedProducers: [],
-        farmsCount: 0,
-        activeClients: 0,
-        averageRating: 0,
-        location: 'Comitán, Chiapas',
-        // ✅ NUEVOS CAMPOS
-        totalVisits: 0,
-        pendingVisits: 0,
-        recommendations: 0,
-        certifications: 0,
-        performance: 0,
-      ),
-    ]);
-    notifyListeners();
-  }
+// ✅ Cargar técnicos de ejemplo - ELIMINADO, ahora viene de las solicitudes
+// Ya no se cargan datos de ejemplo
 }

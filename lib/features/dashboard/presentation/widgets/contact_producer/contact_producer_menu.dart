@@ -1,10 +1,7 @@
 // lib/features/dashboard/presentation/widgets/contact_producer/contact_producer_menu.dart
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:provider/provider.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
-import 'package:kaabcafe/core/providers/user_provider.dart';
-import 'schedule_appointment_dialog.dart'; // ✅ Importar el diálogo
 
 class ContactProducerMenu extends StatelessWidget {
   const ContactProducerMenu({super.key});
@@ -28,11 +25,8 @@ class ContactProducerMenu extends StatelessWidget {
     final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
     final cardColor = isDark ? AppTheme.coffeeDeep : Colors.white;
 
-    // Número del productor
+    // Número del productor (ejemplo)
     final String producerPhone = '+528144384806';
-
-    // ✅ Obtener el nombre del productor (por ahora fijo, luego del backend)
-    final String producerName = 'Productor';
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -87,20 +81,7 @@ class ContactProducerMenu extends StatelessWidget {
             },
           ),
 
-          // ✅ Opción 2: Agendar cita (con diálogo completo)
-          _buildMenuItem(
-            context,
-            icon: Icons.calendar_today,
-            title: 'Agendar Cita',
-            subtitle: 'Programar una visita',
-            color: AppTheme.goldCoffee,
-            onTap: () {
-              Navigator.pop(context);
-              _showScheduleAppointmentDialog(context, producerName);
-            },
-          ),
-
-          // Opción 3: Revisar citas
+          // Opción 2: Revisar citas
           _buildMenuItem(
             context,
             icon: Icons.list_alt,
@@ -110,19 +91,6 @@ class ContactProducerMenu extends StatelessWidget {
             onTap: () {
               Navigator.pop(context);
               _showAppointmentsDialog(context);
-            },
-          ),
-
-          // Opción 4: Cambiar cita
-          _buildMenuItem(
-            context,
-            icon: Icons.edit_calendar,
-            title: 'Cambiar Cita',
-            subtitle: 'Modificar fecha u hora',
-            color: Colors.orange,
-            onTap: () {
-              Navigator.pop(context);
-              _showRescheduleDialog(context);
             },
           ),
         ],
@@ -185,18 +153,6 @@ class ContactProducerMenu extends StatelessWidget {
     );
   }
 
-  // ✅ Nuevo método para mostrar el diálogo de agendar cita
-  void _showScheduleAppointmentDialog(BuildContext context, String producerName) {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (context) => ScheduleAppointmentDialog(
-        producerId: 'producer_default', // En el futuro, esto vendrá del backend
-        producerName: producerName,
-      ),
-    );
-  }
-
   void _showAppointmentsDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -235,27 +191,6 @@ class ContactProducerMenu extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showRescheduleDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        title: const Text('Cambiar Cita'),
-        content: const Text(
-          'Función en desarrollo. Próximamente podrás modificar la fecha y hora de tus citas.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Entendido'),
           ),
         ],
       ),

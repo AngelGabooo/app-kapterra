@@ -11,7 +11,9 @@ import 'package:kaabcafe/features/farms/data/models/lot_cost_model.dart';
 import 'package:kaabcafe/features/farms/data/models/farm_activity_model.dart';
 import 'package:kaabcafe/features/activities/presentation/providers/activities_provider.dart';
 import 'package:kaabcafe/features/activities/domain/entities/activity_entity.dart';
-import '../qr/qr_card.dart'; // ✅ Importar QR Card
+import 'package:kaabcafe/features/technician/providers/technician_reports_provider.dart';
+import 'package:kaabcafe/features/technician/data/models/technician_diagnosis_model.dart';
+import '../qr/qr_card.dart';
 
 class LotDetailScreen extends StatefulWidget {
   final LotModel lot;
@@ -33,6 +35,17 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
   // ✅ LISTAS VACÍAS - Sin datos de ejemplo
   final List<LotCostModel> _costs = []; // Vacío inicialmente
 
+  // ✅ DATOS DE DIAGNÓSTICO (se cargarán desde el provider)
+  String _healthScore = 'No evaluado';
+  String _diagnosisDate = '';
+  String _technicianName = 'No asignado';
+  String _diagnosisSummary = 'Sin diagnóstico';
+  String _riskLevel = 'Bajo';
+  String _certificationType = 'No certificado';
+  String _certificationDate = '';
+  String _certificationExpiry = '';
+  String _recommendations = '';
+
   final List<Map<String, dynamic>> _quickActions = [
     {'title': 'Registrar actividad', 'icon': Icons.add_task},
     {'title': 'Ver Actividades', 'icon': Icons.assignment},
@@ -43,7 +56,7 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
     {'title': 'Ver trazabilidad', 'icon': Icons.qr_code},
   ];
 
-  int get _healthScore {
+  int get _healthScoreInt {
     switch (widget.lot.status) {
       case LotStatus.healthy:
         return 94;
@@ -74,20 +87,89 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final activitiesProvider = Provider.of<ActivitiesProvider>(context, listen: false);
       activitiesProvider.loadActivities();
+
+      // ✅ Cargar diagnóstico del lote
+      _loadDiagnosisData();
     });
+  }
+
+  // ✅ MÉTODO PARA CARGAR DATOS DE DIAGNÓSTICO
+  void _loadDiagnosisData() {
+    try {
+      final reportsProvider = Provider.of<TechnicianReportsProvider>(context, listen: false);
+
+      // Buscar diagnósticos para este lote
+      final diagnoses = reportsProvider.diagnoses
+          .where((d) => d.lotId == widget.lot.id)
+          .toList();
+
+      if (diagnoses.isNotEmpty) {
+        // Tomar el diagnóstico más reciente
+        final latestDiagnosis = diagnoses.last;
+
+        setState(() {
+          _healthScore = latestDiagnosis.healthScore.toString();
+          _diagnosisDate = latestDiagnosis.diagnosisDate.toIso8601String();
+          _technicianName = latestDiagnosis.technicianName;
+          _diagnosisSummary = _getDiagnosisSummary(latestDiagnosis);
+          _riskLevel = _getRiskLevel(latestDiagnosis);
+
+          // Si tiene certificación
+          if (latestDiagnosis.certification != null) {
+            _certificationType = latestDiagnosis.certification!.type;
+            _certificationDate = latestDiagnosis.certification!.issuedDate.toIso8601String();
+            _certificationExpiry = latestDiagnosis.certification!.expiryDate.toIso8601String();
+          }
+
+          // Recomendaciones
+          if (latestDiagnosis.recommendations.isNotEmpty) {
+            _recommendations = latestDiagnosis.recommendations.take(2).join('; ');
+          }
+        });
+
+        debugPrint('✅ Diagnóstico cargado para lote ${widget.lot.name}: $_healthScore%');
+      } else {
+        debugPrint('⚠️ No hay diagnóstico para lote ${widget.lot.name}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error cargando diagnóstico: $e');
+    }
+  }
+
+  // ✅ MÉTODOS AUXILIARES PARA DIAGNÓSTICO
+  String _getDiagnosisSummary(TechnicianDiagnosisModel diagnosis) {
+    final score = diagnosis.healthScore;
+    if (score >= 80) return 'Lote en excelentes condiciones';
+    if (score >= 60) return 'Lote requiere atención - seguimiento recomendado';
+    return 'Lote en riesgo - intervención necesaria';
+  }
+
+  String _getRiskLevel(TechnicianDiagnosisModel diagnosis) {
+    final score = diagnosis.healthScore;
+    if (score >= 80) return 'Bajo';
+    if (score >= 60) return 'Medio';
+    return 'Alto';
+  }
+
+  String _getDiagnosisRecommendations() {
+    // Aquí puedes obtener las recomendaciones del diagnóstico
+    final reportsProvider = Provider.of<TechnicianReportsProvider>(context, listen: false);
+    final diagnoses = reportsProvider.diagnoses
+        .where((d) => d.lotId == widget.lot.id)
+        .toList();
+
+    if (diagnoses.isNotEmpty && diagnoses.last.recommendations.isNotEmpty) {
+      return diagnoses.last.recommendations.take(2).join('; ');
+    }
+    return 'Sin recomendaciones';
   }
 
   // ✅ Método para convertir ActivityEntity a FarmActivityModel
   FarmActivityModel _entityToFarmActivity(ActivityEntity entity) {
-    // Obtener el título del tipo de actividad
     String title = _getActivityTypeTitle(entity.type);
-
-    // Construir descripción
     String description = entity.description.isNotEmpty
         ? entity.description
         : 'Actividad registrada - Responsable: ${entity.responsible}';
-
-    // Obtener el icono correspondiente
     IconData icon = _getIconForActivityType(entity.type);
 
     return FarmActivityModel(
@@ -290,6 +372,13 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
             _buildIndicatorRow('Costos totales', '\$${_totalCost.toStringAsFixed(0)} MXN', Icons.attach_money),
             _buildIndicatorRow('Árboles', '${widget.lot.treesCount}', Icons.nature),
             _buildIndicatorRow('Superficie', '${widget.lot.area} ha', Icons.landscape),
+            // ✅ Mostrar diagnóstico si existe
+            if (_healthScore != 'No evaluado') ...[
+              const Divider(),
+              _buildIndicatorRow('Salud del cultivo', '$_healthScore%', Icons.health_and_safety),
+              _buildIndicatorRow('Técnico', _technicianName, Icons.person),
+              _buildIndicatorRow('Nivel de riesgo', _riskLevel, Icons.warning),
+            ],
           ],
         ),
         actions: [
@@ -363,6 +452,16 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
             Text('• Variedad: ${widget.lot.variety}'),
             Text('• Área: ${widget.lot.area} ha'),
             Text('• Estado: ${widget.lot.statusText}'),
+            if (_healthScore != 'No evaluado') ...[
+              const SizedBox(height: 8),
+              Text('• Salud: $_healthScore%'),
+              Text('• Técnico: $_technicianName'),
+              Text('• Riesgo: $_riskLevel'),
+            ],
+            if (_certificationType != 'No certificado') ...[
+              const SizedBox(height: 8),
+              Text('• Certificación: $_certificationType'),
+            ],
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
@@ -516,6 +615,9 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
                           _buildChip(Icons.emoji_nature, widget.lot.variety),
                           _buildChip(Icons.landscape, '${widget.lot.area} ha'),
                           _buildChip(Icons.nature, '${widget.lot.treesCount} árboles'),
+                          // ✅ Mostrar salud si hay diagnóstico
+                          if (_healthScore != 'No evaluado')
+                            _buildChip(Icons.health_and_safety, 'Salud: $_healthScore%'),
                         ],
                       ),
                     ],
@@ -551,7 +653,7 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
                   _buildAlertsSection(colorScheme),
                   const SizedBox(height: 16),
 
-                  // ✅ QR - Usando QRCard
+                  // ✅ QR - Usando QRCard con todos los datos
                   _buildQRCard(),
                   const SizedBox(height: 16),
 
@@ -647,15 +749,18 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
                 ),
               ),
               const Spacer(),
+              // ✅ Mostrar health score del diagnóstico si existe
               Text(
-                '$_healthScore/100',
+                _healthScore != 'No evaluado' ? '$_healthScore/100' : '${_healthScoreInt}/100',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            widget.lot.status == LotStatus.healthy
+            _healthScore != 'No evaluado'
+                ? _diagnosisSummary
+                : widget.lot.status == LotStatus.healthy
                 ? 'El lote presenta condiciones óptimas de producción.'
                 : widget.lot.status == LotStatus.attention
                 ? 'Se recomienda atención en este lote.'
@@ -664,11 +769,41 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
           ),
           const SizedBox(height: 12),
           LinearProgressIndicator(
-            value: _healthScore / 100,
+            value: _healthScore != 'No evaluado'
+                ? int.parse(_healthScore) / 100
+                : _healthScoreInt / 100,
             backgroundColor: Colors.grey.withOpacity(0.2),
-            valueColor: AlwaysStoppedAnimation<Color>(widget.lot.statusColor),
+            valueColor: AlwaysStoppedAnimation<Color>(
+              _healthScore != 'No evaluado'
+                  ? int.parse(_healthScore) >= 80
+                  ? AppTheme.primaryGreen
+                  : int.parse(_healthScore) >= 60
+                  ? AppTheme.goldCoffee
+                  : AppTheme.berryRed
+                  : widget.lot.statusColor,
+            ),
             minHeight: 6,
           ),
+          if (_healthScore != 'No evaluado') ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.person, size: 12, color: colorScheme.onSurface.withOpacity(0.5)),
+                const SizedBox(width: 4),
+                Text(
+                  'Técnico: $_technicianName',
+                  style: TextStyle(fontSize: 11, color: colorScheme.onSurface.withOpacity(0.5)),
+                ),
+                const SizedBox(width: 16),
+                Icon(Icons.warning, size: 12, color: colorScheme.onSurface.withOpacity(0.5)),
+                const SizedBox(width: 4),
+                Text(
+                  'Riesgo: $_riskLevel',
+                  style: TextStyle(fontSize: 11, color: colorScheme.onSurface.withOpacity(0.5)),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -734,7 +869,6 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
           ),
           child: Consumer<ActivitiesProvider>(
             builder: (context, provider, child) {
-              // Filtrar actividades del lote actual
               final lotActivities = provider.activities
                   .where((activity) => activity.lotId == widget.lot.id)
                   .toList();
@@ -779,7 +913,6 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
                 );
               }
 
-              // Convertir a FarmActivityModel para mostrar
               final farmActivities = lotActivities
                   .map((entity) => _entityToFarmActivity(entity))
                   .toList();
@@ -941,9 +1074,12 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          const Text('⚠ Riesgo leve de roya detectado', style: TextStyle(fontSize: 12)),
-          const SizedBox(height: 4),
-          const Text('💡 Se recomienda fertilización en 15 días', style: TextStyle(fontSize: 12)),
+          if (_healthScore != 'No evaluado' && int.parse(_healthScore) < 60)
+            const Text('⚠ Riesgo detectado en el cultivo - Se requiere intervención', style: TextStyle(fontSize: 12)),
+          if (_healthScore != 'No evaluado' && int.parse(_healthScore) >= 60 && int.parse(_healthScore) < 80)
+            const Text('⚠ Atención recomendada en el cultivo', style: TextStyle(fontSize: 12)),
+          if (_healthScore == 'No evaluado')
+            const Text('⚠ Sin evaluación de diagnóstico reciente', style: TextStyle(fontSize: 12)),
           const SizedBox(height: 8),
           SizedBox(
             width: double.infinity,
@@ -962,7 +1098,7 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
     );
   }
 
-  // ✅ QR CARD - Usando el widget modularizado
+  // ✅ QR CARD - Con todos los datos de diagnóstico y certificación
   Widget _buildQRCard() {
     return QRCard(
       lotId: widget.lot.id,
@@ -974,6 +1110,17 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
       treesCount: widget.lot.treesCount,
       estimatedProduction: widget.lot.estimatedProduction,
       location: widget.farm.location,
+      // ✅ DATOS DE DIAGNÓSTICO
+      healthScore: _healthScore,
+      diagnosisDate: _diagnosisDate,
+      technicianName: _technicianName,
+      diagnosisSummary: _diagnosisSummary,
+      recommendations: _recommendations,
+      riskLevel: _riskLevel,
+      // ✅ DATOS DE CERTIFICACIÓN
+      certificationType: _certificationType,
+      certificationDate: _certificationDate,
+      certificationExpiry: _certificationExpiry,
     );
   }
 

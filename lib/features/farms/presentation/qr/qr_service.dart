@@ -22,6 +22,16 @@ class QRService {
     required int treesCount,
     required double estimatedProduction,
     String? location,
+    // ✅ NUEVOS CAMPOS PARA DIAGNÓSTICO Y CERTIFICACIÓN
+    String? healthScore,
+    String? diagnosisDate,
+    String? technicianName,
+    String? certificationType,
+    String? certificationDate,
+    String? certificationExpiry,
+    String? diagnosisSummary,
+    String? recommendations,
+    String? riskLevel,
   }) {
     final data = {
       'lotId': lotId,
@@ -33,9 +43,21 @@ class QRService {
       'treesCount': treesCount,
       'estimatedProduction': estimatedProduction,
       'location': location ?? '',
+      // ✅ DIAGNÓSTICO
+      'healthScore': healthScore ?? 'No evaluado',
+      'diagnosisDate': diagnosisDate ?? DateTime.now().toIso8601String(),
+      'technicianName': technicianName ?? 'No asignado',
+      'diagnosisSummary': diagnosisSummary ?? 'Sin diagnóstico',
+      'recommendations': recommendations ?? '',
+      'riskLevel': riskLevel ?? 'Bajo',
+      // ✅ CERTIFICACIÓN
+      'certificationType': certificationType ?? 'No certificado',
+      'certificationDate': certificationDate ?? '',
+      'certificationExpiry': certificationExpiry ?? '',
+      // ✅ METADATOS
       'timestamp': DateTime.now().toIso8601String(),
       'type': 'lot_qr',
-      'version': '1.0',
+      'version': '2.0',
     };
     return jsonEncode(data);
   }
@@ -50,12 +72,19 @@ class QRService {
     required String status,
     required int treesCount,
     String? location,
+    // ✅ NUEVOS CAMPOS
+    String? healthScore,
+    String? diagnosisDate,
+    String? technicianName,
+    String? certificationType,
+    String? certificationDate,
+    String? certificationExpiry,
+    String? diagnosisSummary,
+    String? recommendations,
+    String? riskLevel,
   }) {
     // ⚠️ Para pruebas locales
     final baseUrl = 'https://qrr-psi.vercel.app/lot_public.html';
-
-    // 🔄 Cuando subas a producción, cambia por tu URL pública:
-    // final baseUrl = 'https://tu-dominio.com/lot_public.html';
 
     final params = {
       'id': lotId,
@@ -66,6 +95,16 @@ class QRService {
       'trees': treesCount.toString(),
       'location': location ?? 'No especificada',
       'status': status,
+      // ✅ NUEVOS PARÁMETROS
+      'health': healthScore ?? 'No evaluado',
+      'diagnosis_date': diagnosisDate ?? '',
+      'technician': technicianName ?? 'No asignado',
+      'cert_type': certificationType ?? 'No certificado',
+      'cert_date': certificationDate ?? '',
+      'cert_expiry': certificationExpiry ?? '',
+      'summary': diagnosisSummary ?? '',
+      'recommendations': recommendations ?? '',
+      'risk': riskLevel ?? 'Bajo',
     };
 
     final queryString = params.entries
@@ -99,6 +138,9 @@ class QRService {
           '🌿 Variedad: ${data['variety'] ?? 'No especificada'}\n'
           '📏 Área: ${data['area'] ?? 0} ha\n'
           '📊 Estado: ${data['status'] ?? 'Sin estado'}\n'
+          '🏥 Salud: ${data['healthScore'] ?? 'No evaluado'}\n'
+          '📋 Diagnóstico: ${data['diagnosisSummary'] ?? 'Sin diagnóstico'}\n'
+          '🏅 Certificación: ${data['certificationType'] ?? 'No certificado'}\n'
           '🔗 Escanea este código QR para ver más información'
           : '🌱 Lote: $lotName\n'
           '📋 Escanea este código QR para ver la información del lote';

@@ -1,5 +1,4 @@
 // lib/features/buyer/presentation/screens/reports/reports_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -22,171 +21,29 @@ class ReportsScreen extends StatefulWidget {
 class _ReportsScreenState extends State<ReportsScreen> {
   int _currentIndex = 3;
   String _selectedPeriod = 'Este mes';
-  String _selectedReportType = 'Producción';
+  String _selectedReportType = 'Visitas Técnicas';
   String _selectedTechnician = 'Todos';
 
   final List<String> _periods = ['Hoy', 'Esta semana', 'Este mes', 'Este año'];
   final List<String> _reportTypes = [
+    'Visitas Técnicas',
+    'Diagnósticos',
     'Producción',
     'Acopio',
     'Ventas',
     'Trazabilidad',
-    'Visitas Técnicas',
-    'Diagnósticos',
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = Provider.of<TechnicianReportsProvider>(context, listen: false);
-      // Cargar datos de ejemplo (en producción vendrían del backend)
-      _loadSampleData(provider);
-    });
-  }
-
-  void _loadSampleData(TechnicianReportsProvider provider) {
-    // ✅ VISITAS DE EJEMPLO
-    provider.addVisit(TechnicianVisitModel(
-      id: 'v1',
-      technicianId: 't1',
-      technicianName: 'Ing. María González',
-      producerId: 'p1',
-      producerName: 'Juan Pérez Gómez',
-      farmId: 'f1',
-      farmName: 'Finca El Mirador',
-      lotId: 'l1',
-      lotName: 'Lote Central',
-      location: 'Motozintla, Chiapas',
-      visitDate: DateTime.now().subtract(const Duration(days: 2)),
-      objective: 'Evaluación fitosanitaria',
-      observations: 'Se detectaron signos tempranos de roya en el 15% del lote. Se recomienda aplicación de fungicida.',
-      recommendations: ['Aplicar fungicida sistémico', 'Monitorear cada 15 días'],
-      evidenceUrls: [],
-      status: 'completed',
-      isUrgent: false,
-      createdAt: DateTime.now().subtract(const Duration(days: 2)),
-    ));
-
-    provider.addVisit(TechnicianVisitModel(
-      id: 'v2',
-      technicianId: 't2',
-      technicianName: 'Ing. Carlos Ramírez',
-      producerId: 'p2',
-      producerName: 'María López Hernández',
-      farmId: 'f2',
-      farmName: 'Finca Santa Lucía',
-      lotId: 'l2',
-      lotName: 'Lote La Esperanza',
-      location: 'Tapachula, Chiapas',
-      visitDate: DateTime.now().subtract(const Duration(days: 5)),
-      objective: 'Revisión de cosecha',
-      observations: 'La cosecha avanza bien. Se recomienda empezar la selección de café de especialidad.',
-      recommendations: ['Iniciar selección de granos', 'Mantener registros de calidad'],
-      evidenceUrls: [],
-      status: 'completed',
-      isUrgent: false,
-      createdAt: DateTime.now().subtract(const Duration(days: 5)),
-    ));
-
-    // ✅ DIAGNÓSTICOS DE EJEMPLO
-    provider.addDiagnosis(TechnicianDiagnosisModel(
-      id: 'd1',
-      technicianId: 't1',
-      technicianName: 'Ing. María González',
-      producerId: 'p1',
-      producerName: 'Juan Pérez Gómez',
-      farmId: 'f1',
-      farmName: 'Finca El Mirador',
-      lotId: 'l1',
-      lotName: 'Lote Central',
-      location: 'Motozintla, Chiapas',
-      diagnosisDate: DateTime.now().subtract(const Duration(days: 3)),
-      healthScore: 82.5,
-      status: 'Atención',
-      categories: [
-        DiagnosisCategory(label: 'Fertilidad del suelo', value: 75, color: Colors.orange),
-        DiagnosisCategory(label: 'Sanidad vegetal', value: 65, color: Colors.orange),
-        DiagnosisCategory(label: 'Riego', value: 90, color: Colors.green),
-        DiagnosisCategory(label: 'Nutrición', value: 80, color: Colors.green),
-      ],
-      issues: [
-        DiagnosisIssue(
-          title: 'Roya detectada',
-          level: 'Medio',
-          priority: 'Alta',
-          priorityColor: Colors.orange,
-        ),
-        DiagnosisIssue(
-          title: 'Fertilización deficiente',
-          level: 'Bajo',
-          priority: 'Media',
-          priorityColor: Colors.blue,
-        ),
-      ],
-      risks: [
-        DiagnosisRisk(label: 'Humedad excesiva', level: 'Medio', color: Colors.orange),
-        DiagnosisRisk(label: 'Temperatura elevada', level: 'Bajo', color: Colors.blue),
-      ],
-      recommendations: ['Aplicar fungicida', 'Ajustar riego', 'Monitorear temperatura'],
-      certification: null,
-      evidenceUrls: [],
-      createdAt: DateTime.now().subtract(const Duration(days: 3)),
-    ));
-
-    provider.addDiagnosis(TechnicianDiagnosisModel(
-      id: 'd2',
-      technicianId: 't2',
-      technicianName: 'Ing. Carlos Ramírez',
-      producerId: 'p2',
-      producerName: 'María López Hernández',
-      farmId: 'f2',
-      farmName: 'Finca Santa Lucía',
-      lotId: 'l2',
-      lotName: 'Lote La Esperanza',
-      location: 'Tapachula, Chiapas',
-      diagnosisDate: DateTime.now().subtract(const Duration(days: 6)),
-      healthScore: 92.0,
-      status: 'Excelente',
-      categories: [
-        DiagnosisCategory(label: 'Fertilidad del suelo', value: 95, color: Colors.green),
-        DiagnosisCategory(label: 'Sanidad vegetal', value: 90, color: Colors.green),
-        DiagnosisCategory(label: 'Riego', value: 88, color: Colors.green),
-        DiagnosisCategory(label: 'Nutrición', value: 95, color: Colors.green),
-      ],
-      issues: [],
-      risks: [],
-      recommendations: ['Mantener prácticas actuales', 'Considerar certificación de especialidad'],
-      certification: 'Orgánico',
-      evidenceUrls: [],
-      createdAt: DateTime.now().subtract(const Duration(days: 6)),
-    ));
-  }
+  // ✅ ELIMINADO: _loadSampleData - Ya no se cargan datos de ejemplo
+  // Los datos vienen del TechnicianReportsProvider
 
   // ✅ OBTENER TÉCNICOS ÚNICOS
   List<String> get _technicians {
     final provider = Provider.of<TechnicianReportsProvider>(context);
-    final allTechs = provider.visits.map((v) => v.technicianName).toList();
+    final allTechs = <String>[];
+    allTechs.addAll(provider.visits.map((v) => v.technicianName));
     allTechs.addAll(provider.diagnoses.map((d) => d.technicianName));
     return ['Todos', ...allTechs.toSet().toList()];
-  }
-
-  // ✅ CONTAR VISITAS POR TÉCNICO
-  int _countVisitsByTechnician(String technicianName) {
-    final provider = Provider.of<TechnicianReportsProvider>(context);
-    if (technicianName == 'Todos') {
-      return provider.totalVisits;
-    }
-    return provider.visits.where((v) => v.technicianName == technicianName).length;
-  }
-
-  // ✅ CONTAR DIAGNÓSTICOS POR TÉCNICO
-  int _countDiagnosesByTechnician(String technicianName) {
-    final provider = Provider.of<TechnicianReportsProvider>(context);
-    if (technicianName == 'Todos') {
-      return provider.totalDiagnoses;
-    }
-    return provider.diagnoses.where((d) => d.technicianName == technicianName).length;
   }
 
   // ✅ OBTENER VISITAS FILTRADAS
@@ -351,7 +208,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Los reportes se generarán automáticamente cuando haya datos de producción, acopio, visitas y diagnósticos.',
+              'Los reportes se generarán automáticamente cuando los técnicos registren visitas y diagnósticos.',
               style: TextStyle(
                 fontSize: 14,
                 color: textColor.withOpacity(0.6),
@@ -656,15 +513,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
+                  color: visit.status == 'completed'
+                      ? Colors.green.withOpacity(0.1)
+                      : Colors.orange.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  visit.status,
+                  visit.status == 'completed' ? 'Completada' : 'Pendiente',
                   style: TextStyle(
                     fontSize: 9,
                     fontWeight: FontWeight.w600,
-                    color: Colors.green,
+                    color: visit.status == 'completed' ? Colors.green : Colors.orange,
                   ),
                 ),
               ),
@@ -719,7 +578,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               Icon(Icons.calendar_today, size: 12, color: textColor.withOpacity(0.3)),
               const SizedBox(width: 4),
               Text(
-                '${visit.visitDate.day}/${visit.visitDate.month}/${visit.visitDate.year}',
+                _formatDate(visit.visitDate),
                 style: TextStyle(
                   fontSize: 10,
                   color: textColor.withOpacity(0.5),
@@ -776,7 +635,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     Row(
                       children: [
                         Text(
-                          '${diagnosis.producerName}',
+                          diagnosis.producerName,
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
@@ -919,7 +778,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               Icon(Icons.calendar_today, size: 12, color: textColor.withOpacity(0.3)),
               const SizedBox(width: 4),
               Text(
-                '${diagnosis.diagnosisDate.day}/${diagnosis.diagnosisDate.month}/${diagnosis.diagnosisDate.year}',
+                _formatDate(diagnosis.diagnosisDate),
                 style: TextStyle(
                   fontSize: 10,
                   color: textColor.withOpacity(0.5),
@@ -936,6 +795,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
     if (diagnoses.isEmpty) return '--';
     final avg = diagnoses.fold(0.0, (sum, d) => sum + d.healthScore) / diagnoses.length;
     return '${avg.toStringAsFixed(0)}%';
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 
   Widget _buildExportButton(String label, IconData icon, bool isDark) {

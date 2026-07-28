@@ -1,6 +1,8 @@
 // lib/features/buyer/presentation/screens/cooperative_profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:kaabcafe/core/providers/user_provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/buyer/presentation/widgets/profile/cooperative_profile_stat_card.dart';
@@ -17,7 +19,7 @@ class CooperativeProfileScreen extends StatefulWidget {
 class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
   int _currentIndex = 4;
 
-  // ✅ TODOS LOS DATOS VACÍOS
+  // ✅ Datos del usuario (se cargarán desde UserProvider)
   String _cooperativeName = '---';
   String _representative = '---';
   String _rfc = '---';
@@ -32,6 +34,26 @@ class _CooperativeProfileScreenState extends State<CooperativeProfileScreen> {
   // ✅ Listas vacías
   final List<Map<String, dynamic>> _documents = [];
   final List<Map<String, dynamic>> _bankAccounts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  void _loadUserData() {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final userName = userProvider.userName ?? '';
+    final userEmail = userProvider.userEmail ?? '';
+    final userPhone = userProvider.userPhone ?? '';
+
+    setState(() {
+      _cooperativeName = userName.isNotEmpty ? userName : '---';
+      _representative = userName.isNotEmpty ? userName : '---';
+      _email = userEmail.isNotEmpty ? userEmail : '---';
+      _phone = userPhone.isNotEmpty ? userPhone : '---';
+    });
+  }
 
   void _showEditDialog(String title, String initialValue, Function(String) onSave) {
     showDialog(

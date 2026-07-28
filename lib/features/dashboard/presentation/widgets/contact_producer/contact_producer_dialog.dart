@@ -13,47 +13,57 @@ class ContactProducerDialog extends StatefulWidget {
 }
 
 class _ContactProducerDialogState extends State<ContactProducerDialog> {
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _nameController = TextEditingController();
-  bool _isLoading = false;
-
-  // Número del productor (ejemplo - puedes obtenerlo del provider)
-  final String _producerPhone = '+528144384806';
+  String? _technicianName;
+  String? _technicianPhone;
+  bool _isLoading = true;
 
   @override
-  void dispose() {
-    _phoneController.dispose();
-    _nameController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _loadTechnicianData();
   }
 
-  Future<void> _makeCallWithBot(String phoneNumber) async {
+  void _loadTechnicianData() {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+
+    setState(() {
+      _technicianName = userProvider.userName ?? 'Técnico no disponible';
+      _technicianPhone = userProvider.userPhone ?? '';
+      _isLoading = false;
+    });
+
+    debugPrint('👤 Técnico: $_technicianName');
+    debugPrint('📞 Teléfono técnico: $_technicianPhone');
+  }
+
+  Future<void> _makeCall() async {
+    if (_technicianPhone == null || _technicianPhone!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ No hay número de teléfono disponible'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
-      // Obtener el número del cliente desde UserProvider
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      final clientPhone = userProvider.userPhone ?? '+528144384806';
-
-      // Llamar al bot de Twilio
-      final success = await CallService.makeCall(
-        clientPhoneNumber: clientPhone,
-        producerPhone: phoneNumber,
-        producerName: _nameController.text.isNotEmpty
-            ? _nameController.text
-            : 'Productor',
-      );
+      final success = await CallService.makeDirectCall(_technicianPhone!);
 
       if (success) {
-        _showSnackBar('📞 Te llamaremos para conectar con el productor', Colors.green);
+        // La llamada se inició correctamente
         Navigator.pop(context);
       } else {
-        _showSnackBar('❌ No se pudo iniciar la llamada. Intenta de nuevo.', Colors.red);
+        _showSnackBar('❌ No se pudo realizar la llamada', Colors.red);
       }
     } catch (e) {
       _showSnackBar('❌ Error al realizar la llamada: $e', Colors.red);
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -67,20 +77,13 @@ class _ContactProducerDialogState extends State<ContactProducerDialog> {
     );
   }
 
-  void _handleCall() {
-    final phone = _phoneController.text.trim();
-    if (phone.isNotEmpty) {
-      _makeCallWithBot(phone);
-    } else {
-      _makeCallWithBot(_producerPhone);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
     final cardColor = isDark ? AppTheme.coffeeDeep : Colors.white;
+
+    final bool hasPhone = _technicianPhone != null && _technicianPhone!.isNotEmpty;
 
     return Dialog(
       backgroundColor: Colors.transparent,
@@ -116,7 +119,7 @@ class _ContactProducerDialogState extends State<ContactProducerDialog> {
 
             // Título
             Text(
-              'Contactar al Productor',
+              'Contactar al Técnico',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -127,71 +130,124 @@ class _ContactProducerDialogState extends State<ContactProducerDialog> {
 
             // Subtítulo
             Text(
-              'El bot te llamará para conectar con el productor',
+              _isLoading ? 'Cargando datos del técnico...' : 'Llama directamente a tu técnico asignado',
               style: TextStyle(
                 fontSize: 13,
                 color: textColor.withOpacity(0.6),
               ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
 
-            // Campo de nombre
-            TextField(
-              controller: _nameController,
-              style: TextStyle(color: textColor),
-              decoration: InputDecoration(
-                hintText: 'Nombre del productor (opcional)',
-                hintStyle: TextStyle(color: textColor.withOpacity(0.4)),
-                prefixIcon: Icon(Icons.person, color: AppTheme.primaryGreen),
-                border: OutlineInputBorder(
+            // Información del técnico
+            if (!_isLoading) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppTheme.coffeeDark.withOpacity(0.5)
+                      : AppTheme.lightBeige.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: textColor.withOpacity(0.1)),
+                  border: Border.all(
+                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                  ),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: textColor.withOpacity(0.1)),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryGreen.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.engineering,
+                            color: AppTheme.primaryGreen,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Técnico asignado',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: textColor.withOpacity(0.5),
+                                ),
+                              ),
+                              Text(
+                                _technicianName ?? 'No disponible',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (hasPhone) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.phone,
+                            size: 14,
+                            color: AppTheme.primaryGreen,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            _technicianPhone!,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: textColor.withOpacity(0.7),
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryGreen.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'Disponible',
+                              style: TextStyle(
+                                fontSize: 9,
+                                color: AppTheme.primaryGreen,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: AppTheme.primaryGreen),
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
-            ),
-            const SizedBox(height: 12),
+            ],
 
-            // Campo de teléfono
-            TextField(
-              controller: _phoneController,
-              style: TextStyle(color: textColor),
-              keyboardType: TextInputType.phone,
-              decoration: InputDecoration(
-                hintText: 'Número de teléfono del productor',
-                hintStyle: TextStyle(color: textColor.withOpacity(0.4)),
-                prefixIcon: Icon(Icons.phone, color: AppTheme.primaryGreen),
-                suffixIcon: IconButton(
-                  icon: Icon(Icons.contacts, color: AppTheme.primaryGreen),
-                  onPressed: () {
-                    _phoneController.text = _producerPhone;
-                  },
-                  tooltip: 'Usar número de ejemplo',
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: SizedBox(
+                  height: 40,
+                  width: 40,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: AppTheme.primaryGreen,
+                  ),
                 ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: textColor.withOpacity(0.1)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(color: textColor.withOpacity(0.1)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: AppTheme.primaryGreen),
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
               ),
-            ),
-            const SizedBox(height: 12),
+
+            const SizedBox(height: 20),
 
             // Info del bot
             Container(
@@ -211,7 +267,9 @@ class _ContactProducerDialogState extends State<ContactProducerDialog> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'El bot te llamará primero y luego te conectará con el productor.',
+                      hasPhone
+                          ? 'Presiona "Llamar" para contactar directamente a tu técnico.'
+                          : 'No hay número de teléfono registrado para tu técnico.',
                       style: TextStyle(
                         fontSize: 11,
                         color: textColor.withOpacity(0.6),
@@ -243,7 +301,7 @@ class _ContactProducerDialogState extends State<ContactProducerDialog> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _isLoading ? null : _handleCall,
+                    onPressed: (_isLoading || !hasPhone) ? null : _makeCall,
                     icon: _isLoading
                         ? const SizedBox(
                       width: 20,
@@ -254,9 +312,9 @@ class _ContactProducerDialogState extends State<ContactProducerDialog> {
                       ),
                     )
                         : const Icon(Icons.call),
-                    label: Text(_isLoading ? 'Llamando...' : 'Llamar con Bot'),
+                    label: Text(_isLoading ? 'Cargando...' : 'Llamar'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryGreen,
+                      backgroundColor: hasPhone ? AppTheme.primaryGreen : Colors.grey,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(

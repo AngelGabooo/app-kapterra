@@ -1,8 +1,8 @@
 // lib/features/buyer/presentation/screens/technicians_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:kaabcafe/core/providers/technician_contact_provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/buyer/providers/technicians_provider.dart';
@@ -28,9 +28,13 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = Provider.of<TechniciansProvider>(context, listen: false);
-      if (provider.technicians.isEmpty) {
-        provider.loadSampleTechnicians();
-      }
+      final contactProvider = Provider.of<TechnicianContactProvider>(context, listen: false);
+
+      // ✅ Inicializar el provider con el contactProvider para cargar solicitudes
+      provider.init(contactProvider);
+
+      // ❌ ELIMINADO: provider.loadSampleTechnicians();
+      // Ahora los técnicos vienen de las solicitudes de contacto
     });
   }
 
@@ -107,6 +111,50 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
     );
   }
 
+  // ✅ ACEPTAR TÉCNICO PENDIENTE
+  void _acceptTechnician(TechnicianModel technician) {
+    final provider = Provider.of<TechniciansProvider>(context, listen: false);
+    final contactProvider = Provider.of<TechnicianContactProvider>(context, listen: false);
+
+    provider.acceptTechnician(technician.id);
+
+    // Actualizar el estado de la solicitud
+    final request = contactProvider.pendingRequests.firstWhere(
+          (r) => r.technicianEmail == technician.email,
+      orElse: () => throw Exception('Solicitud no encontrada'),
+    );
+    contactProvider.updateRequestStatus(request.id, 'accepted');
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('✅ Técnico "${technician.fullName}" aceptado'),
+        backgroundColor: AppTheme.primaryGreen,
+      ),
+    );
+  }
+
+  // ✅ RECHAZAR TÉCNICO PENDIENTE
+  void _rejectTechnician(TechnicianModel technician) {
+    final provider = Provider.of<TechniciansProvider>(context, listen: false);
+    final contactProvider = Provider.of<TechnicianContactProvider>(context, listen: false);
+
+    // Buscar la solicitud correspondiente
+    final request = contactProvider.pendingRequests.firstWhere(
+          (r) => r.technicianEmail == technician.email,
+      orElse: () => throw Exception('Solicitud no encontrada'),
+    );
+    contactProvider.updateRequestStatus(request.id, 'rejected');
+
+    provider.rejectTechnician(technician.id);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('❌ Técnico "${technician.fullName}" rechazado'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
   // ✅ DIÁLOGO PARA VER DETALLE DEL TÉCNICO
   void _showTechnicianDetail(TechnicianModel technician) {
     showModalBottomSheet(
@@ -143,6 +191,7 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
     final provider = Provider.of<TechniciansProvider>(context);
     final filtered = _filteredTechnicians;
     final activeCount = provider.activeCount;
+    final pendingCount = provider.pendingCount;
     final totalAssignments = provider.technicians.fold(0, (sum, t) => sum + t.assignedProducers.length);
 
     final totalVisits = provider.technicians.fold(0, (sum, t) => sum + t.totalVisits);
@@ -188,6 +237,7 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
             isDark: isDark,
             textColor: textColor,
             activeCount: activeCount,
+            pendingCount: pendingCount,
             totalAssignments: totalAssignments,
             totalVisits: totalVisits,
             totalPendingVisits: totalPendingVisits,
@@ -215,6 +265,7 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
     required bool isDark,
     required Color textColor,
     required int activeCount,
+    required int pendingCount,
     required int totalAssignments,
     required int totalVisits,
     required int totalPendingVisits,
@@ -237,6 +288,14 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
               const SizedBox(width: 12),
               _buildKPIItem(
                 isDark: isDark,
+                label: 'Pendientes',
+                value: '$pendingCount',
+                icon: Icons.pending,
+                color: Colors.orange,
+              ),
+              const SizedBox(width: 12),
+              _buildKPIItem(
+                isDark: isDark,
                 label: 'Asignaciones',
                 value: '$totalAssignments',
                 icon: Icons.people,
@@ -250,7 +309,11 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
                 icon: Icons.assignment,
                 color: Colors.blue,
               ),
-              const SizedBox(width: 12),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
               _buildKPIItem(
                 isDark: isDark,
                 label: 'Pendientes',
@@ -258,11 +321,7 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
                 icon: Icons.pending,
                 color: Colors.orange,
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
+              const SizedBox(width: 12),
               _buildKPIItem(
                 isDark: isDark,
                 label: 'Recomendaciones',
@@ -384,8 +443,10 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
     );
   }
 
-  // ✅ TARJETA DE TÉCNICO
+  // ✅ TARJETA DE TÉCNICO (con soporte para pendientes)
   Widget _buildTechnicianCard(TechnicianModel technician, bool isDark, Color textColor) {
+    final isPending = technician.status == 'Pendiente';
+
     return GestureDetector(
       onTap: () => _showTechnicianDetail(technician),
       child: Container(
@@ -394,6 +455,11 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
         decoration: BoxDecoration(
           color: isDark ? AppTheme.coffeeDeep : Colors.white,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isPending
+                ? Colors.orange.withOpacity(0.3)
+                : Colors.grey.withOpacity(0.1),
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.02),
@@ -409,7 +475,11 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
+                    gradient: isPending
+                        ? LinearGradient(
+                      colors: [Colors.orange, Colors.orange.shade700],
+                    )
+                        : LinearGradient(
                       colors: [AppTheme.primaryGreen, AppTheme.secondaryGreen],
                     ),
                     shape: BoxShape.circle,
@@ -485,82 +555,146 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
               ],
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                _buildMetricChip(
-                  icon: Icons.assignment,
-                  label: '${technician.totalVisits} visitas',
-                  color: Colors.blue,
-                ),
-                const SizedBox(width: 8),
-                _buildMetricChip(
-                  icon: Icons.pending,
-                  label: '${technician.pendingVisits} pendientes',
-                  color: Colors.orange,
-                ),
-                const SizedBox(width: 8),
-                _buildMetricChip(
-                  icon: Icons.lightbulb,
-                  label: '${technician.recommendations} rec.',
-                  color: Colors.purple,
-                ),
-                const SizedBox(width: 8),
-                _buildMetricChip(
-                  icon: Icons.verified,
-                  label: '${technician.certifications} cert.',
-                  color: AppTheme.goldCoffee,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Rendimiento',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: textColor.withOpacity(0.5),
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            '${technician.performance.toStringAsFixed(0)}%',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: technician.performance > 80 ? Colors.green : Colors.orange,
-                            ),
-                          ),
-                        ],
+
+            // ✅ Si está pendiente, mostrar botones de Aceptar/Rechazar
+            if (isPending) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => _acceptTechnician(technician),
+                    icon: Icon(Icons.check, size: 16, color: Colors.green),
+                    label: const Text('Aceptar'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.green,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                      const SizedBox(height: 2),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: (technician.performance / 100).clamp(0.0, 1.0),
-                          backgroundColor: Colors.grey.withOpacity(0.1),
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            technician.performance > 80 ? Colors.green : Colors.orange,
-                          ),
-                          minHeight: 6,
-                        ),
+                      side: BorderSide(color: Colors.green.withOpacity(0.3)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => _rejectTechnician(technician),
+                    icon: Icon(Icons.close, size: 16, color: Colors.red),
+                    label: const Text('Rechazar'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
-                    ],
+                      side: BorderSide(color: Colors.red.withOpacity(0.3)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: Colors.orange.withOpacity(0.1),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Icon(
-                  Icons.chevron_right,
-                  color: textColor.withOpacity(0.3),
+                child: Row(
+                  children: [
+                    Icon(Icons.access_time, size: 14, color: Colors.orange),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Esperando aprobación de la cooperativa',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ] else ...[
+              // Métricas para técnicos activos
+              Row(
+                children: [
+                  _buildMetricChip(
+                    icon: Icons.assignment,
+                    label: '${technician.totalVisits} visitas',
+                    color: Colors.blue,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildMetricChip(
+                    icon: Icons.pending,
+                    label: '${technician.pendingVisits} pendientes',
+                    color: Colors.orange,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildMetricChip(
+                    icon: Icons.lightbulb,
+                    label: '${technician.recommendations} rec.',
+                    color: Colors.purple,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildMetricChip(
+                    icon: Icons.verified,
+                    label: '${technician.certifications} cert.',
+                    color: AppTheme.goldCoffee,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Rendimiento',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: textColor.withOpacity(0.5),
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              '${technician.performance.toStringAsFixed(0)}%',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: technician.performance > 80 ? Colors.green : Colors.orange,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: (technician.performance / 100).clamp(0.0, 1.0),
+                            backgroundColor: Colors.grey.withOpacity(0.1),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              technician.performance > 80 ? Colors.green : Colors.orange,
+                            ),
+                            minHeight: 6,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Icon(
+                    Icons.chevron_right,
+                    color: textColor.withOpacity(0.3),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -632,7 +766,8 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Registra técnicos para asignarlos a los productores.',
+              'Los técnicos que soliciten unirse aparecerán aquí.\n'
+                  'También puedes registrarlos manualmente.',
               style: TextStyle(
                 fontSize: 14,
                 color: textColor.withOpacity(0.6),

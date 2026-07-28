@@ -1,11 +1,12 @@
 // lib/features/dashboard/presentation/screens/dashboard_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:kaabcafe/core/providers/farm_provider.dart';
 import 'package:kaabcafe/core/providers/user_provider.dart';
 import 'package:kaabcafe/core/providers/appointment_provider.dart';
+import 'package:kaabcafe/core/providers/cooperative_contact_provider.dart';
+import 'package:kaabcafe/core/providers/notification_provider.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/core/widgets/aurora_background.dart';
 import 'package:kaabcafe/core/widgets/glass_widgets.dart';
@@ -131,6 +132,9 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
     final appointmentProvider = Provider.of<AppointmentProvider>(context);
     final pendingCount = appointmentProvider.pendingAppointments.length;
 
+    final notificationProvider = Provider.of<NotificationProvider>(context);
+    final unreadCount = notificationProvider.unreadCount;
+
     final farmProvider = Provider.of<FarmProvider>(context);
     final farms = farmProvider.farms;
 
@@ -241,7 +245,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
                           ],
                         ),
                       ),
-                      _buildNotificationButton(isDark, accentColor, pendingCount),
+                      _buildNotificationButton(isDark, accentColor, pendingCount, unreadCount),
                       const SizedBox(width: 8),
                       NeumorphicIconButton(
                         icon: Icons.person_outline,
@@ -532,6 +536,9 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
                         // ── Contactar a un productor ────────────────
                         ContactProducerCard(isDark: isDark),
 
+                        // ── Notificación de solicitudes pendientes ──
+                        _buildPendingRequestsNotification(isDark, textColor),
+
                         const SizedBox(height: 110),
                       ],
                     ),
@@ -557,8 +564,10 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
     );
   }
 
-  Widget _buildNotificationButton(bool isDark, Color accentColor, int pendingCount) {
-    if (pendingCount > 0) {
+  Widget _buildNotificationButton(bool isDark, Color accentColor, int pendingCount, int unreadCount) {
+    final totalNotifications = pendingCount + unreadCount;
+
+    if (totalNotifications > 0) {
       return Stack(
         children: [
           NeumorphicIconButton(
@@ -566,7 +575,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
             isDark: isDark,
             onPressed: () {
               resetTimeout();
-              context.push(RouteNames.notifications);
+              context.push(RouteNames.dashboardNotifications);
             },
             size: 44,
             iconSize: 20,
@@ -583,7 +592,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
                 shape: BoxShape.circle,
               ),
               child: Text(
-                pendingCount > 9 ? '9+' : '$pendingCount',
+                totalNotifications > 9 ? '9+' : '$totalNotifications',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 9,
@@ -602,11 +611,91 @@ class _DashboardScreenState extends State<DashboardScreen> with SessionTimeoutMi
       isDark: isDark,
       onPressed: () {
         resetTimeout();
-        context.push(RouteNames.notifications);
+        context.push(RouteNames.dashboardNotifications);
       },
       size: 44,
       iconSize: 20,
       color: accentColor,
+    );
+  }
+
+  Widget _buildPendingRequestsNotification(bool isDark, Color textColor) {
+    final contactProvider = Provider.of<CooperativeContactProvider>(context);
+    final pendingCount = contactProvider.pendingCount;
+
+    if (pendingCount == 0) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: GestureDetector(
+        onTap: () {
+          // Navegar a la sección de solicitudes
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Tienes $pendingCount solicitud${pendingCount > 1 ? 'es' : ''} pendiente${pendingCount > 1 ? 's' : ''}'),
+              backgroundColor: AppTheme.primaryGreen,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryGreen.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: AppTheme.primaryGreen.withOpacity(0.2),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryGreen.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.handshake,
+                  color: AppTheme.primaryGreen,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Solicitudes pendientes',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    Text(
+                      '$pendingCount solicitud${pendingCount > 1 ? 'es' : ''} en espera de respuesta',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: textColor.withOpacity(0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: AppTheme.primaryGreen,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

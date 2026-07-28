@@ -1,5 +1,4 @@
 // lib/features/technician/providers/technician_producers_provider.dart
-
 import 'package:flutter/material.dart';
 import 'package:kaabcafe/features/technician/data/models/technician_model.dart';
 
@@ -14,13 +13,22 @@ class TechnicianProducersProvider extends ChangeNotifier {
 
   // ✅ Agregar productor asignado
   void addProducer(TechnicianProducerModel producer) {
-    _producers.add(producer);
-    notifyListeners();
+    // Verificar si ya existe para evitar duplicados
+    final exists = _producers.any((p) => p.id == producer.id);
+    if (!exists) {
+      _producers.add(producer);
+      notifyListeners();
+    }
   }
 
   // ✅ Agregar múltiples productores
   void addProducers(List<TechnicianProducerModel> producers) {
-    _producers.addAll(producers);
+    for (final producer in producers) {
+      final exists = _producers.any((p) => p.id == producer.id);
+      if (!exists) {
+        _producers.add(producer);
+      }
+    }
     notifyListeners();
   }
 
@@ -54,38 +62,21 @@ class TechnicianProducersProvider extends ChangeNotifier {
     return _producers.where((p) => p.status == status).toList();
   }
 
-  // ✅ Cargar productores de ejemplo (para demo)
-  void loadSampleProducers() {
+  // ✅ Obtener productor por ID
+  TechnicianProducerModel? getProducerById(String id) {
+    try {
+      return _producers.firstWhere((p) => p.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // ✅ Cargar productores desde la cooperativa (recibidos por asignación)
+  void loadProducersFromCooperative(List<TechnicianProducerModel> producers) {
     _producers.clear();
-    _producers.addAll([
-      TechnicianProducerModel(
-        id: 'p1',
-        name: 'Juan Pérez Gómez',
-        location: 'Motozintla, Chiapas',
-        production: 2450,
-        traceability: 92,
-        status: ProducerStatus.excellent,
-        lastVisit: '2026-07-20',
-      ),
-      TechnicianProducerModel(
-        id: 'p2',
-        name: 'María López Hernández',
-        location: 'Tapachula, Chiapas',
-        production: 1800,
-        traceability: 78,
-        status: ProducerStatus.requiresAttention,
-        lastVisit: '2026-07-15',
-      ),
-      TechnicianProducerModel(
-        id: 'p3',
-        name: 'Carlos Sánchez Ruiz',
-        location: 'Comitán, Chiapas',
-        production: 950,
-        traceability: 45,
-        status: ProducerStatus.risk,
-        lastVisit: '2026-07-10',
-      ),
-    ]);
+    _producers.addAll(producers);
     notifyListeners();
   }
+
+// ❌ ELIMINADO: loadSampleProducers() - Ya no se usan datos de ejemplo
 }

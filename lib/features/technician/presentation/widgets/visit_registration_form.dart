@@ -3,9 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:kaabcafe/core/providers/user_provider.dart';
+import 'package:kaabcafe/core/providers/notification_provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/core/widgets/neumorphic_widgets.dart';
+import 'package:kaabcafe/features/technician/providers/technician_visits_provider.dart';
+import 'package:kaabcafe/features/technician/providers/technician_reports_provider.dart';
+import 'package:kaabcafe/features/technician/providers/technician_producers_provider.dart';
+// ✅ Importar SOLO el modelo correcto
+import 'package:kaabcafe/features/technician/data/models/technician_visit_model.dart';
+import 'package:kaabcafe/features/technician/data/models/technician_model.dart' show TechnicianProducerModel, ProducerStatus;
+import 'package:kaabcafe/features/dashboard/data/models/notification_model.dart';
 
 class VisitRegistrationForm extends StatefulWidget {
   final bool isDark;
@@ -13,6 +21,10 @@ class VisitRegistrationForm extends StatefulWidget {
   final String? farmName;
   final String? lotName;
   final String? location;
+  final String? producerId;
+  final String? producerEmail;
+  final String? producerPhone;
+  final String? visitId;
   final Function(Map<String, dynamic>) onSave;
   final VoidCallback onSaveDraft;
 
@@ -23,6 +35,10 @@ class VisitRegistrationForm extends StatefulWidget {
     this.farmName,
     this.lotName,
     this.location,
+    this.producerId,
+    this.producerEmail,
+    this.producerPhone,
+    this.visitId,
     required this.onSave,
     required this.onSaveDraft,
   });
@@ -41,6 +57,10 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
 
+  // ✅ SELECTOR DE PRODUCTOR
+  String? _selectedProducerId;
+  TechnicianProducerModel? _selectedProducer;
+
   String? _selectedObjective;
   int _cropHealth = 2;
   DateTime _selectedDate = DateTime.now();
@@ -53,6 +73,7 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
   // Datos del técnico (se llenarán desde el provider)
   String _technicianName = '';
   String _technicianEmail = '';
+  String _technicianId = '';
 
   final List<Map<String, dynamic>> _checklistItems = [
     {'label': 'Productor presente', 'checked': false},
@@ -87,13 +108,13 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
   @override
   void initState() {
     super.initState();
-    // Cargar datos del técnico desde el provider
     _loadTechnicianData();
 
-    // Inicializar campos con los datos recibidos (pueden estar vacíos)
-    _producerNameController.text = widget.producerName ?? '';
-    _phoneController.text = '';
-    _emailController.text = '';
+    if (widget.producerName != null && widget.producerName!.isNotEmpty) {
+      _producerNameController.text = widget.producerName!;
+      _phoneController.text = widget.producerPhone ?? '';
+      _emailController.text = widget.producerEmail ?? '';
+    }
   }
 
   void _loadTechnicianData() {
@@ -104,6 +125,7 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
     if (userProvider.userEmail != null) {
       _technicianEmail = userProvider.userEmail!;
     }
+    _technicianId = userProvider.userEmail ?? 'technician_001';
   }
 
   @override
@@ -180,14 +202,124 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
       return false;
     }
 
+    if (_selectedProducerId == null) return false;
     if (_selectedObjective == null) return false;
     if (_observationsController.text.trim().isEmpty) return false;
 
     return true;
   }
 
+  // ✅ GUARDAR VISITA EN REPORTS
+  void _saveVisitToReports(Map<String, dynamic> visitData) {
+    try {
+      final reportsProvider = Provider.of<TechnicianReportsProvider>(context, listen: false);
+
+      final visit = TechnicianVisitModel(
+        id: visitData['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        technicianId: visitData['technicianId'] ?? _technicianId,
+        technicianName: visitData['technicianName'] ?? _technicianName,
+        producerId: visitData['producerId'] ?? _selectedProducerId ?? 'unknown',
+        producerName: visitData['producerName'] ?? _selectedProducer?.name ?? 'Productor',
+        farmId: visitData['farmId'] ?? 'farm_001',
+        farmName: visitData['farmName'] ?? _selectedProducer?.farmName ?? 'Finca',
+        lotId: visitData['lotId'] ?? 'lot_001',
+        lotName: visitData['lotName'] ?? _selectedProducer?.lotName ?? 'Lote',
+        location: visitData['location'] ?? _selectedProducer?.location ?? 'Ubicación',
+        visitDate: visitData['visitDate'] ?? DateTime.now(),
+        objective: visitData['objective'] ?? _selectedObjective ?? 'Inspección general',
+        observations: visitData['observations'] ?? _observationsController.text.trim(),
+        recommendations: [],
+        evidenceUrls: [],
+        status: 'completed',
+        isUrgent: visitData['isUrgent'] ?? false,
+        createdAt: DateTime.now(),
+      );
+
+      reportsProvider.addVisit(visit);
+      debugPrint('✅ Visita guardada en reportes para ${visit.producerName}');
+    } catch (e) {
+      debugPrint('❌ Error al guardar en reportes: $e');
+    }
+  }
+
+  // ✅ NOTIFICAR AL PRODUCTOR
+  void _notifyProducerOfVisit(Map<String, dynamic> visitData) {
+    try {
+      final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+
+      final visitDate = visitData['visitDate'] ?? DateTime.now();
+      final formattedDate = _formatDate(visitDate);
+      final formattedTime = _formatTime(visitDate);
+
+      final notification = NotificationModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: '📋 Visita programada',
+        message: 'El técnico ${visitData['technicianName'] ?? _technicianName} ha programado una visita a tu finca para el $formattedDate a las $formattedTime.',
+        type: 'visit_scheduled',
+        date: DateTime.now(),
+        isRead: false,
+        data: {
+          'visitId': visitData['id'],
+          'producerId': visitData['producerId'] ?? _selectedProducerId,
+          'technicianId': visitData['technicianId'] ?? _technicianId,
+          'visitDate': visitDate.toIso8601String(),
+          'farmName': visitData['farmName'] ?? _selectedProducer?.farmName,
+          'location': visitData['location'] ?? _selectedProducer?.location,
+        },
+        senderName: visitData['technicianName'] ?? _technicianName,
+        senderId: visitData['technicianId'] ?? _technicianId,
+      );
+
+      notificationProvider.addNotification(notification);
+      debugPrint('✅ Notificación enviada al productor: ${visitData['producerName']}');
+    } catch (e) {
+      debugPrint('❌ Error al enviar notificación: $e');
+    }
+  }
+
+  // ✅ GUARDAR VISITA EN EL PROVIDER DE VISITAS
+  void _saveVisitToProvider(Map<String, dynamic> visitData) {
+    try {
+      final visitsProvider = Provider.of<TechnicianVisitsProvider>(context, listen: false);
+
+      final visit = TechnicianVisitModel(
+        id: visitData['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        technicianId: visitData['technicianId'] ?? _technicianId,
+        technicianName: visitData['technicianName'] ?? _technicianName,
+        producerId: visitData['producerId'] ?? _selectedProducerId ?? 'unknown',
+        producerName: visitData['producerName'] ?? _selectedProducer?.name ?? 'Productor',
+        farmId: visitData['farmId'] ?? 'farm_001',
+        farmName: visitData['farmName'] ?? _selectedProducer?.farmName ?? 'Finca',
+        lotId: visitData['lotId'] ?? 'lot_001',
+        lotName: visitData['lotName'] ?? _selectedProducer?.lotName ?? 'Lote',
+        location: visitData['location'] ?? _selectedProducer?.location ?? 'Ubicación',
+        visitDate: visitData['visitDate'] ?? DateTime.now(),
+        objective: visitData['objective'] ?? _selectedObjective ?? 'Inspección general',
+        observations: visitData['observations'] ?? _observationsController.text.trim(),
+        recommendations: [],
+        evidenceUrls: [],
+        status: 'pending',
+        isUrgent: visitData['isUrgent'] ?? false,
+        createdAt: DateTime.now(),
+      );
+
+      visitsProvider.addVisit(visit);
+      debugPrint('✅ Visita guardada en el provider: ${visit.producerName}');
+    } catch (e) {
+      debugPrint('❌ Error al guardar visita: $e');
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
+  String _formatTime(DateTime date) {
+    return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
   void _submitForm() {
-    // Validar todos los campos antes de enviar
     final nameError = _validateName(_producerNameController.text);
     final phoneError = _validatePhone(_phoneController.text);
     final emailError = _validateEmail(_emailController.text);
@@ -197,13 +329,28 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
       return;
     }
 
+    if (_selectedProducerId == null) {
+      _showProducerRequiredDialog();
+      return;
+    }
+
+    final visitDate = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      _selectedTime.hour,
+      _selectedTime.minute,
+    );
+
     final data = {
+      'id': widget.visitId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      'producerId': _selectedProducerId,
       'producerName': _producerNameController.text.trim(),
       'phone': _phoneController.text.trim(),
       'email': _emailController.text.trim(),
-      'farmName': widget.farmName ?? '',
-      'lotName': widget.lotName ?? '',
-      'location': widget.location ?? '',
+      'farmName': _selectedProducer?.farmName ?? widget.farmName ?? '',
+      'lotName': _selectedProducer?.lotName ?? widget.lotName ?? '',
+      'location': _selectedProducer?.location ?? widget.location ?? '',
       'objective': _selectedObjective,
       'cropHealth': _cropHealthOptions[_cropHealth]['label'],
       'observations': _observationsController.text.trim(),
@@ -216,7 +363,14 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
       'nextVisitReason': _nextVisitReason,
       'technicianName': _technicianName,
       'technicianEmail': _technicianEmail,
+      'technicianId': _technicianId,
+      'visitDate': visitDate,
+      'isUrgent': _cropHealth <= 1,
     };
+
+    _saveVisitToProvider(data);
+    _notifyProducerOfVisit(data);
+    _saveVisitToReports(data);
     widget.onSave(data);
   }
 
@@ -224,12 +378,13 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
     context.push(
       RouteNames.technicianLotInspection,
       extra: {
-        'lotName': widget.lotName ?? '',
-        'farmName': widget.farmName ?? '',
+        'lotName': _selectedProducer?.lotName ?? widget.lotName ?? '',
+        'farmName': _selectedProducer?.farmName ?? widget.farmName ?? '',
         'producerName': _producerNameController.text.trim(),
-        'location': widget.location ?? '',
+        'location': _selectedProducer?.location ?? widget.location ?? '',
         'phone': _phoneController.text.trim(),
         'email': _emailController.text.trim(),
+        'producerId': _selectedProducerId,
       },
     );
   }
@@ -243,6 +398,7 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
     if (nameError != null) errors.add('• $nameError');
     if (phoneError != null) errors.add('• $phoneError');
     if (emailError != null) errors.add('• $emailError');
+    if (_selectedProducerId == null) errors.add('• Selecciona un productor para la visita');
     if (_selectedObjective == null) errors.add('• Selecciona un objetivo para la visita');
     if (_observationsController.text.trim().isEmpty) errors.add('• Agrega observaciones de la visita');
 
@@ -278,8 +434,33 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
     );
   }
 
+  void _showProducerRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          '⚠️ Productor requerido',
+          style: TextStyle(
+            color: widget.isDark ? Colors.white : AppTheme.darkCoffee,
+          ),
+        ),
+        content: Text(
+          'Debes seleccionar un productor para programar la visita.\n\nSi no tienes productores asignados, contacta a la cooperativa.',
+          style: TextStyle(
+            color: widget.isDark ? Colors.white.withOpacity(0.8) : AppTheme.darkCoffee.withOpacity(0.8),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showConfirmDialog() {
-    // Validar antes de mostrar el diálogo
     if (!_isFormComplete()) {
       _showValidationDialog();
       return;
@@ -381,7 +562,7 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
   Future<void> _selectDate(BuildContext context) async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _nextVisitDate ?? DateTime.now().add(const Duration(days: 7)),
+      initialDate: _selectedDate,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) {
@@ -399,14 +580,14 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
       },
     );
     if (picked != null) {
-      setState(() => _nextVisitDate = picked);
+      setState(() => _selectedDate = picked);
     }
   }
 
   Future<void> _selectTime(BuildContext context) async {
     final picked = await showTimePicker(
       context: context,
-      initialTime: _nextVisitTime ?? const TimeOfDay(hour: 9, minute: 0),
+      initialTime: _selectedTime,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -422,8 +603,155 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
       },
     );
     if (picked != null) {
-      setState(() => _nextVisitTime = picked);
+      setState(() => _selectedTime = picked);
     }
+  }
+
+  // ✅ SELECTOR DE PRODUCTOR
+  Widget _buildProducerSelector(Color cardColor, Color textColor) {
+    final producersProvider = Provider.of<TechnicianProducersProvider>(context);
+    final producers = producersProvider.producers;
+
+    if (producers.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: widget.isDark ? AppTheme.coffeeDeep.withOpacity(0.7) : Colors.white.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.alertOrange.withOpacity(0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.warning, color: AppTheme.alertOrange, size: 32),
+            const SizedBox(height: 8),
+            Text(
+              'No tienes productores asignados',
+              style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              'La cooperativa debe asignarte un productor para programar visitas.',
+              style: TextStyle(color: textColor.withOpacity(0.6), fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ✅ Si el productor viene desde la navegación, seleccionarlo automáticamente
+    if (_selectedProducerId == null && widget.producerName != null && widget.producerName!.isNotEmpty) {
+      try {
+        final producer = producers.firstWhere((p) => p.name == widget.producerName);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          setState(() {
+            _selectedProducerId = producer.id;
+            _selectedProducer = producer;
+            _producerNameController.text = producer.name;
+            _phoneController.text = producer.phone;
+            _emailController.text = producer.email;
+          });
+        });
+      } catch (e) {
+        // Productor no encontrado
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: widget.isDark ? AppTheme.coffeeDeep.withOpacity(0.7) : Colors.white.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: textColor.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Seleccionar productor *',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: _selectedProducerId,
+            isExpanded: true,
+            hint: Text(
+              'Selecciona un productor',
+              style: TextStyle(color: textColor.withOpacity(0.4)),
+            ),
+            dropdownColor: widget.isDark ? AppTheme.coffeeDeep : Colors.white,
+            style: TextStyle(color: textColor, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'Selecciona un productor',
+              hintStyle: TextStyle(color: textColor.withOpacity(0.4)),
+              prefixIcon: Icon(Icons.person, color: AppTheme.primaryGreen),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: textColor.withOpacity(0.1)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: textColor.withOpacity(0.1)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppTheme.primaryGreen),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            ),
+            items: producers.map((producer) {
+              return DropdownMenuItem(
+                value: producer.id,
+                child: Row(
+                  children: [
+                    Icon(Icons.person, size: 16, color: AppTheme.primaryGreen),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            producer.name,
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                          ),
+                          Text(
+                            producer.location,
+                            style: TextStyle(fontSize: 10, color: textColor.withOpacity(0.5)),
+                          ),
+                          if (producer.farmName != null)
+                            Text(
+                              '🌱 ${producer.farmName}',
+                              style: TextStyle(fontSize: 9, color: textColor.withOpacity(0.3)),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedProducerId = value;
+                _selectedProducer = producers.firstWhere((p) => p.id == value);
+                _producerNameController.text = _selectedProducer!.name;
+                _phoneController.text = _selectedProducer!.phone;
+                _emailController.text = _selectedProducer!.email;
+              });
+            },
+            validator: (value) {
+              if (value == null) {
+                return 'Selecciona un productor';
+              }
+              return null;
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -437,6 +765,12 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Seleccionar productor ─────────────────────────────
+          _buildSectionTitle('Seleccionar productor', textColor),
+          const SizedBox(height: 8),
+          _buildProducerSelector(cardColor, textColor),
+          const SizedBox(height: 20),
+
           // ── Información del productor ──────────────────────────
           _buildSectionTitle('Información del productor', textColor),
           const SizedBox(height: 8),
@@ -531,7 +865,6 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
     );
   }
 
-  // Formulario de productor con validaciones
   Widget _buildProducerForm(Color cardColor, Color textColor) {
     return NeumorphicBox(
       isDark: widget.isDark,
@@ -539,7 +872,6 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Nombre del productor
           TextFormField(
             controller: _producerNameController,
             style: TextStyle(color: textColor, fontSize: 14),
@@ -576,7 +908,6 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
           ),
           const SizedBox(height: 12),
 
-          // Número de celular
           TextFormField(
             controller: _phoneController,
             style: TextStyle(color: textColor, fontSize: 14),
@@ -624,7 +955,6 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
           ),
           const SizedBox(height: 12),
 
-          // Correo electrónico
           TextFormField(
             controller: _emailController,
             style: TextStyle(color: textColor, fontSize: 14),
@@ -667,8 +997,6 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
 
   Widget _buildAutoInfoCard(Color cardColor, Color textColor) {
     final now = DateTime.now();
-
-    // Usar el nombre del técnico desde el provider o un placeholder
     final technicianName = _technicianName.isNotEmpty ? _technicianName : 'Cargando...';
 
     return NeumorphicBox(
@@ -689,7 +1017,7 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
           _buildAutoInfoRow(
             Icons.location_on,
             'Ubicación',
-            widget.location?.isNotEmpty == true ? widget.location! : 'No especificada',
+            _selectedProducer?.location ?? widget.location ?? 'No especificada',
             textColor,
           ),
           const SizedBox(height: 8),
@@ -1206,17 +1534,17 @@ class _VisitRegistrationFormState extends State<VisitRegistrationForm> {
       padding: const EdgeInsets.all(14),
       child: Column(
         children: [
-          _buildSummaryRow('👨‍🌾 Productor', _producerNameController.text.isNotEmpty ? _producerNameController.text : 'No registrado', textColor),
+          _buildSummaryRow('👨‍🌾 Productor', _selectedProducer?.name ?? 'No seleccionado', textColor),
           const SizedBox(height: 6),
           _buildSummaryRow('📱 Celular', _phoneController.text.isNotEmpty ? _phoneController.text : 'No registrado', textColor),
           const SizedBox(height: 6),
           _buildSummaryRow('✉️ Email', _emailController.text.isNotEmpty ? _emailController.text : 'No registrado', textColor),
           const SizedBox(height: 6),
-          _buildSummaryRow('🌱 Finca', widget.farmName?.isNotEmpty == true ? widget.farmName! : 'No registrada', textColor),
+          _buildSummaryRow('🌱 Finca', _selectedProducer?.farmName ?? widget.farmName ?? 'No registrada', textColor),
           const SizedBox(height: 6),
-          _buildSummaryRow('☕ Lote', widget.lotName?.isNotEmpty == true ? widget.lotName! : 'No registrado', textColor),
+          _buildSummaryRow('☕ Lote', _selectedProducer?.lotName ?? widget.lotName ?? 'No registrado', textColor),
           const SizedBox(height: 6),
-          _buildSummaryRow('📍 Ubicación', widget.location?.isNotEmpty == true ? widget.location! : 'No especificada', textColor),
+          _buildSummaryRow('📍 Ubicación', _selectedProducer?.location ?? widget.location ?? 'No especificada', textColor),
           const SizedBox(height: 6),
           _buildSummaryRow('📷 Fotografías', '$_photos tomadas', textColor),
           const SizedBox(height: 6),

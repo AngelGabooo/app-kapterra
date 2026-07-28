@@ -14,6 +14,16 @@ class QRCard extends StatefulWidget {
   final int treesCount;
   final double estimatedProduction;
   final String? location;
+  // ✅ NUEVOS CAMPOS
+  final String? healthScore;
+  final String? diagnosisDate;
+  final String? technicianName;
+  final String? certificationType;
+  final String? certificationDate;
+  final String? certificationExpiry;
+  final String? diagnosisSummary;
+  final String? recommendations;
+  final String? riskLevel;
 
   const QRCard({
     super.key,
@@ -26,6 +36,15 @@ class QRCard extends StatefulWidget {
     required this.treesCount,
     required this.estimatedProduction,
     this.location,
+    this.healthScore,
+    this.diagnosisDate,
+    this.technicianName,
+    this.certificationType,
+    this.certificationDate,
+    this.certificationExpiry,
+    this.diagnosisSummary,
+    this.recommendations,
+    this.riskLevel,
   });
 
   @override
@@ -43,7 +62,6 @@ class _QRCardState extends State<QRCard> {
   }
 
   void _generateQR() {
-    // ✅ CAMBIADO: Usar generateLotURL en lugar de generateQRData
     _qrData = QRService.generateLotURL(
       lotId: widget.lotId,
       lotName: widget.lotName,
@@ -53,6 +71,16 @@ class _QRCardState extends State<QRCard> {
       status: widget.status,
       treesCount: widget.treesCount,
       location: widget.location,
+      // ✅ PASAR NUEVOS CAMPOS
+      healthScore: widget.healthScore,
+      diagnosisDate: widget.diagnosisDate,
+      technicianName: widget.technicianName,
+      certificationType: widget.certificationType,
+      certificationDate: widget.certificationDate,
+      certificationExpiry: widget.certificationExpiry,
+      diagnosisSummary: widget.diagnosisSummary,
+      recommendations: widget.recommendations,
+      riskLevel: widget.riskLevel,
     );
   }
 
@@ -82,37 +110,58 @@ class _QRCardState extends State<QRCard> {
             borderRadius: BorderRadius.circular(24),
           ),
           title: const Text('Información del Lote'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDetailRow('🌱 Lote', data['lotName'] ?? widget.lotName),
-              _buildDetailRow('🏠 Finca', data['farmName'] ?? widget.farmName),
-              _buildDetailRow('🌿 Variedad', data['variety'] ?? widget.variety),
-              _buildDetailRow('📏 Área', '${data['area'] ?? widget.area} ha'),
-              _buildDetailRow('🌳 Árboles', '${data['treesCount'] ?? widget.treesCount}'),
-              _buildDetailRow('📊 Estado', data['status'] ?? widget.status),
-              if (data['location'] != null && data['location'].toString().isNotEmpty)
-                _buildDetailRow('📍 Ubicación', data['location']),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(12),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildDetailRow('🌱 Lote', data['lotName'] ?? widget.lotName),
+                _buildDetailRow('🏠 Finca', data['farmName'] ?? widget.farmName),
+                _buildDetailRow('🌿 Variedad', data['variety'] ?? widget.variety),
+                _buildDetailRow('📏 Área', '${data['area'] ?? widget.area} ha'),
+                _buildDetailRow('🌳 Árboles', '${data['treesCount'] ?? widget.treesCount}'),
+                _buildDetailRow('📊 Estado', data['status'] ?? widget.status),
+                if (data['location'] != null && data['location'].toString().isNotEmpty)
+                  _buildDetailRow('📍 Ubicación', data['location']),
+
+                // ✅ SECCIÓN DIAGNÓSTICO
+                if (data['healthScore'] != null && data['healthScore'] != 'No evaluado')
+                  _buildDetailRow('🏥 Salud', data['healthScore']),
+                if (data['technicianName'] != null && data['technicianName'] != 'No asignado')
+                  _buildDetailRow('👨‍🔬 Técnico', data['technicianName']),
+                if (data['diagnosisSummary'] != null && data['diagnosisSummary'] != 'Sin diagnóstico')
+                  _buildDetailRow('📋 Diagnóstico', data['diagnosisSummary']),
+                if (data['riskLevel'] != null && data['riskLevel'] != 'Bajo')
+                  _buildDetailRow('⚠️ Riesgo', data['riskLevel']),
+
+                // ✅ SECCIÓN CERTIFICACIÓN
+                if (data['certificationType'] != null && data['certificationType'] != 'No certificado')
+                  _buildDetailRow('🏅 Certificación', data['certificationType']),
+                if (data['certificationDate'] != null && data['certificationDate']!.isNotEmpty)
+                  _buildDetailRow('📅 Fecha', data['certificationDate']),
+                if (data['certificationExpiry'] != null && data['certificationExpiry']!.isNotEmpty)
+                  _buildDetailRow('⏳ Vigencia', data['certificationExpiry']),
+
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryGreen.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.verified, color: AppTheme.primaryGreen, size: 16),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Certificado digital',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(Icons.verified, color: AppTheme.primaryGreen, size: 16),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Certificado digital',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
           actions: [
             TextButton(

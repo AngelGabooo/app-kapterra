@@ -1,5 +1,4 @@
 // lib/features/technician/presentation/screens/technician_producers_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -25,12 +24,8 @@ class _TechnicianProducersScreenState extends State<TechnicianProducersScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = Provider.of<TechnicianProducersProvider>(context, listen: false);
-      if (provider.producers.isEmpty) {
-        provider.loadSampleProducers();
-      }
-    });
+    // ❌ ELIMINADO: provider.loadSampleProducers();
+    // Ahora los productores vienen de la cooperativa
   }
 
   List<TechnicianProducerModel> get _filteredProducers {
@@ -40,7 +35,8 @@ class _TechnicianProducersScreenState extends State<TechnicianProducersScreen> {
     if (_searchQuery.isNotEmpty) {
       list = list.where((p) =>
       p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          p.location.toLowerCase().contains(_searchQuery.toLowerCase())
+          p.location.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          (p.farmName?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false)
       ).toList();
     }
 
@@ -64,6 +60,36 @@ class _TechnicianProducersScreenState extends State<TechnicianProducersScreen> {
     );
   }
 
+  // ✅ Navegar a registro de visita con datos del productor
+  void _navigateToVisitRegistration(TechnicianProducerModel producer) {
+    context.push(
+      RouteNames.technicianVisitRegistration,
+      extra: {
+        'producerName': producer.name,
+        'farmName': producer.farmName ?? 'Finca',
+        'lotName': producer.lotName ?? 'Lote',
+        'location': producer.location,
+        'producerId': producer.id,
+        'producerEmail': producer.email,
+        'producerPhone': producer.phone,
+      },
+    );
+  }
+
+  // ✅ Navegar a diagnóstico con datos del productor
+  void _navigateToCropDiagnosis(TechnicianProducerModel producer) {
+    context.push(
+      RouteNames.technicianCropDiagnosis,
+      extra: {
+        'lotName': producer.lotName ?? 'Lote',
+        'farmName': producer.farmName ?? 'Finca',
+        'producerName': producer.name,
+        'location': producer.location,
+        'producerId': producer.id,
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -73,6 +99,7 @@ class _TechnicianProducersScreenState extends State<TechnicianProducersScreen> {
 
     final provider = Provider.of<TechnicianProducersProvider>(context);
     final filtered = _filteredProducers;
+    final bool hasData = filtered.isNotEmpty;
 
     return Scaffold(
       backgroundColor: isDark ? AppTheme.coffeeDark : AppTheme.lightBeige,
@@ -306,7 +333,7 @@ class _TechnicianProducersScreenState extends State<TechnicianProducersScreen> {
     );
   }
 
-  // ✅ Tarjeta de productor
+  // ✅ Tarjeta de productor con datos completos
   Widget _buildProducerCard(TechnicianProducerModel producer, bool isDark, Color textColor) {
     return GestureDetector(
       onTap: () => _showProducerDetail(producer),
@@ -323,85 +350,130 @@ class _TechnicianProducersScreenState extends State<TechnicianProducersScreen> {
             ),
           ],
         ),
-        child: Row(
+        child: Column(
           children: [
-            // Avatar
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [AppTheme.primaryGreen, AppTheme.secondaryGreen],
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  producer.name.split(' ').map((e) => e[0]).take(2).join(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Información
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    producer.name,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
+            Row(
+              children: [
+                // Avatar
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppTheme.primaryGreen, AppTheme.secondaryGreen],
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(height: 2),
-                  Row(
+                  child: Center(
+                    child: Text(
+                      producer.name.split(' ').map((e) => e[0]).take(2).join(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Información
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.location_on, size: 12, color: textColor.withOpacity(0.3)),
-                      const SizedBox(width: 4),
                       Text(
-                        producer.location,
+                        producer.name,
                         style: TextStyle(
-                          fontSize: 12,
-                          color: textColor.withOpacity(0.5),
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on, size: 12, color: textColor.withOpacity(0.3)),
+                          const SizedBox(width: 4),
+                          Text(
+                            producer.location,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: textColor.withOpacity(0.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          _buildChip(Icons.eco, '${producer.production} kg', Colors.green),
+                          const SizedBox(width: 6),
+                          _buildChip(Icons.qr_code, '${producer.traceability}%', AppTheme.goldCoffee),
+                          if (producer.farmName != null) ...[
+                            const SizedBox(width: 6),
+                            _buildChip(Icons.agriculture, producer.farmName!, AppTheme.primaryGreen),
+                          ],
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      _buildChip(Icons.eco, '${producer.production} kg', Colors.green),
-                      const SizedBox(width: 6),
-                      _buildChip(Icons.qr_code, '${producer.traceability}%', AppTheme.goldCoffee),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            // Estado
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: producer.status.color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                producer.status.label,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: producer.status.color,
                 ),
-              ),
+                // Estado
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: producer.status.color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    producer.status.label,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: producer.status.color,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // ✅ Botones de acción rápida
+            Row(
+              children: [
+                // Botón Registrar Visita
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _navigateToVisitRegistration(producer),
+                    icon: const Icon(Icons.add, size: 14),
+                    label: const Text('Visita', style: TextStyle(fontSize: 11)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      side: BorderSide(color: AppTheme.primaryGreen.withOpacity(0.3)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Botón Diagnóstico
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _navigateToCropDiagnosis(producer),
+                    icon: const Icon(Icons.science, size: 14),
+                    label: const Text('Diagnóstico', style: TextStyle(fontSize: 11)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      side: BorderSide(color: AppTheme.goldCoffee.withOpacity(0.3)),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -470,7 +542,7 @@ class _TechnicianProducersScreenState extends State<TechnicianProducersScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Cuando te asignen productores, aparecerán aquí.',
+              'Cuando la cooperativa te asigne productores,\naparecerán aquí para que puedas gestionarlos.',
               style: TextStyle(
                 fontSize: 14,
                 color: textColor.withOpacity(0.6),
@@ -509,7 +581,7 @@ class _TechnicianProducerDetailSheet extends StatelessWidget {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: DraggableScrollableSheet(
-        initialChildSize: 0.7,
+        initialChildSize: 0.8,
         minChildSize: 0.5,
         maxChildSize: 0.9,
         expand: false,
@@ -576,6 +648,16 @@ class _TechnicianProducerDetailSheet extends StatelessWidget {
                               color: textColor.withOpacity(0.6),
                             ),
                           ),
+                          if (producer.farmName != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              '🌱 ${producer.farmName}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: textColor.withOpacity(0.6),
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -599,6 +681,40 @@ class _TechnicianProducerDetailSheet extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 24),
+
+                // Información de contacto
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 4,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Información de contacto',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildInfoRow('📧 Email', producer.email, textColor),
+                      _buildInfoRow('📱 Teléfono', producer.phone, textColor),
+                      _buildInfoRow('📍 Ubicación', producer.location, textColor),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
 
                 // KPIs del productor
                 Container(
@@ -705,11 +821,17 @@ class _TechnicianProducerDetailSheet extends StatelessWidget {
                       child: OutlinedButton.icon(
                         onPressed: () {
                           Navigator.pop(context);
+                          // Navegar a registro de visita con datos del productor
                           context.push(
                             RouteNames.technicianVisitRegistration,
                             extra: {
                               'producerName': producer.name,
+                              'farmName': producer.farmName ?? 'Finca',
+                              'lotName': producer.lotName ?? 'Lote',
                               'location': producer.location,
+                              'producerId': producer.id,
+                              'producerEmail': producer.email,
+                              'producerPhone': producer.phone,
                             },
                           );
                         },
@@ -734,9 +856,10 @@ class _TechnicianProducerDetailSheet extends StatelessWidget {
                             RouteNames.technicianCropDiagnosis,
                             extra: {
                               'producerName': producer.name,
-                              'farmName': 'Finca',
-                              'lotName': 'Lote',
+                              'farmName': producer.farmName ?? 'Finca',
+                              'lotName': producer.lotName ?? 'Lote',
                               'location': producer.location,
+                              'producerId': producer.id,
                             },
                           );
                         },
@@ -782,9 +905,12 @@ class _TechnicianProducerDetailSheet extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
+                      if (producer.farmName != null)
+                        _buildInfoRow('🌱 Finca', producer.farmName!, textColor),
+                      if (producer.lotName != null)
+                        _buildInfoRow('☕ Lote', producer.lotName!, textColor),
                       _buildInfoRow('📅 Última visita', producer.lastVisit, textColor),
-                      _buildInfoRow('📍 Ubicación', producer.location, textColor),
-                      _buildInfoRow('📊 Producción total', '${producer.production} kg', textColor),
+                      _buildInfoRow('📊 Producción', '${producer.production} kg', textColor),
                       _buildInfoRow('🔗 Trazabilidad', '${producer.traceability}%', textColor),
                     ],
                   ),
@@ -801,7 +927,7 @@ class _TechnicianProducerDetailSheet extends StatelessWidget {
 
   Widget _buildInfoRow(String label, String value, Color textColor) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Expanded(
@@ -820,7 +946,7 @@ class _TechnicianProducerDetailSheet extends StatelessWidget {
               value,
               style: TextStyle(
                 fontSize: 13,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
                 color: textColor,
               ),
               textAlign: TextAlign.right,

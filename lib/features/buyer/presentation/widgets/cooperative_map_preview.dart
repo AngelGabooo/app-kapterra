@@ -1,5 +1,9 @@
+// lib/features/buyer/presentation/widgets/cooperative_map_preview.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
+import 'package:kaabcafe/features/buyer/providers/cooperative_producers_provider.dart';
+import 'package:kaabcafe/features/buyer/data/models/producer_summary_model.dart';
 
 class CooperativeMapPreview extends StatelessWidget {
   final bool isDark;
@@ -14,6 +18,10 @@ class CooperativeMapPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
+
+    // ✅ OBTENER PRODUCTORES DEL PROVIDER
+    final producersProvider = Provider.of<CooperativeProducersProvider>(context);
+    final producers = producersProvider.producers;
 
     return Container(
       height: 180,
@@ -43,7 +51,9 @@ class CooperativeMapPreview extends StatelessWidget {
                   ],
                 ),
               ),
-              child: hasData ? _buildMapWithData() : _buildEmptyMap(isDark, textColor),
+              child: producers.isNotEmpty
+                  ? _buildMapWithData(producers)
+                  : _buildEmptyMap(isDark, textColor),
             ),
             // Leyenda
             Positioned(
@@ -72,29 +82,140 @@ class CooperativeMapPreview extends StatelessWidget {
     );
   }
 
-  Widget _buildMapWithData() {
+  // ✅ MAPA CON DATOS REALES DE PRODUCTORES
+  Widget _buildMapWithData(List<ProducerSummaryModel> producers) {
+    // ✅ Agrupar productores por ubicación y calcular estadísticas
+    final Map<String, Map<String, dynamic>> locations = {};
+
+    for (final producer in producers) {
+      final location = producer.location ?? 'Sin ubicación';
+
+      if (!locations.containsKey(location)) {
+        locations[location] = {
+          'count': 0,
+          'status': _getProducerStatus(producer),
+          'emoji': _getStatusEmoji(producer),
+        };
+      }
+
+      locations[location]!['count'] = (locations[location]!['count'] as int) + 1;
+
+      // ✅ Actualizar el estado si hay algún productor con estado más crítico
+      final currentStatus = locations[location]!['status'] as String;
+      final producerStatus = _getProducerStatus(producer);
+
+      if (producerStatus == 'Riesgo' || (producerStatus == 'Atención' && currentStatus != 'Riesgo')) {
+        locations[location]!['status'] = producerStatus;
+        locations[location]!['emoji'] = _getStatusEmojiByStatus(producerStatus);
+      }
+    }
+
+    // ✅ Tomar las ubicaciones más relevantes (hasta 5)
+    final topLocations = locations.entries
+        .sorted((a, b) => (b.value['count'] as int).compareTo(a.value['count'] as int))
+        .take(5)
+        .toList();
+
+    // ✅ Calcular total de productores
+    final totalProducers = producers.length;
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildMarker('🟢', 'Motozintla', 32),
-            _buildMarker('🟠', 'Tapachula', 18),
-            _buildMarker('🔴', 'Ocosingo', 5),
-          ],
+        // ✅ Mostrar ubicaciones con productores
+        Wrap(
+          spacing: 16,
+          runSpacing: 8,
+          alignment: WrapAlignment.center,
+          children: topLocations.map((entry) {
+            final location = entry.key;
+            final data = entry.value;
+            final count = data['count'] as int;
+            final emoji = data['emoji'] as String;
+            final status = data['status'] as String;
+
+            return _buildMarker(
+              emoji,
+              location.length > 12 ? '${location.substring(0, 12)}...' : location,
+              count,
+              status,
+            );
+          }).toList(),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
+        // ✅ Mostrar total de productores
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildMarker('🏢', 'Centro de acopio', 3),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '👨‍🌾 $totalProducers productores',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '📍 ${topLocations.length} ubicaciones',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
           ],
         ),
       ],
     );
   }
 
+  // ✅ OBTENER ESTADO DEL PRODUCTOR
+  String _getProducerStatus(ProducerSummaryModel producer) {
+    // Si el productor tiene campos de estado de salud, usarlos
+    if (producer.averageQuality > 80) {
+      return 'Normal';
+    } else if (producer.averageQuality > 60) {
+      return 'Atención';
+    } else {
+      return 'Riesgo';
+    }
+  }
+
+  // ✅ OBTENER EMOJI SEGÚN ESTADO DEL PRODUCTOR
+  String _getStatusEmoji(ProducerSummaryModel producer) {
+    final status = _getProducerStatus(producer);
+    return _getStatusEmojiByStatus(status);
+  }
+
+  String _getStatusEmojiByStatus(String status) {
+    switch (status) {
+      case 'Normal':
+        return '🟢';
+      case 'Atención':
+        return '🟠';
+      case 'Riesgo':
+        return '🔴';
+      default:
+        return '🟢';
+    }
+  }
+
+  // ✅ MAPA VACÍO
   Widget _buildEmptyMap(bool isDark, Color textColor) {
     return Center(
       child: Column(
@@ -115,7 +236,7 @@ class CooperativeMapPreview extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'El mapa se actualizará automáticamente',
+            'Los productores aparecerán en el mapa cuando se registren',
             style: TextStyle(
               fontSize: 11,
               color: textColor.withOpacity(0.25),
@@ -126,30 +247,65 @@ class CooperativeMapPreview extends StatelessWidget {
     );
   }
 
-  Widget _buildMarker(String emoji, String label, int count) {
+  // ✅ MARCADOR DE UBICACIÓN
+  Widget _buildMarker(String emoji, String label, int count, String status) {
+    final color = status == 'Normal'
+        ? Colors.green
+        : status == 'Atención'
+        ? Colors.orange
+        : Colors.red;
+
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(emoji, style: const TextStyle(fontSize: 24)),
-        const SizedBox(height: 2),
-        Text(
-          '$count',
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.darkCoffee,
-          ),
+        Stack(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 28)),
+            if (count > 1)
+              Positioned(
+                top: -4,
+                right: -8,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '$count',
+                    style: const TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
         ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 8,
-            color: AppTheme.darkCoffee.withOpacity(0.5),
+        const SizedBox(height: 2),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
           ),
         ),
       ],
     );
   }
 
+  // ✅ LEYENDA
   Widget _buildLegendDot(Color color, String label) {
     return Row(
       children: [
@@ -171,5 +327,12 @@ class CooperativeMapPreview extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+// ✅ EXTENSIÓN PARA SORTEAR MAPAS
+extension MapEntrySort<K, V> on Iterable<MapEntry<K, V>> {
+  List<MapEntry<K, V>> sorted(int Function(MapEntry<K, V>, MapEntry<K, V>) compare) {
+    return toList()..sort(compare);
   }
 }

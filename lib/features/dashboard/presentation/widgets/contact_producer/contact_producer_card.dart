@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/core/widgets/neumorphic_widgets.dart';
+import 'contact_cooperativa_dialog.dart';
 import 'contact_producer_dialog.dart';
-import 'contact_producer_menu.dart';
 
 class ContactProducerCard extends StatelessWidget {
   final bool isDark;
@@ -24,7 +24,6 @@ class ContactProducerCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Título
           Row(
             children: [
               Container(
@@ -66,34 +65,23 @@ class ContactProducerCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Botones de acción
-          Row(
-            children: [
-              Expanded(
-                child: _buildActionButton(
-                  context,
-                  icon: Icons.add_call,
-                  label: 'Llamar ahora',
-                  color: AppTheme.primaryGreen,
-                  onTap: () {
-                    _showContactDialog(context);
-                  },
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildActionButton(
-                  context,
-                  icon: Icons.calendar_today,
-                  label: 'Agendar cita',
-                  color: AppTheme.goldCoffee,
-                  onTap: () {
-                    _showMenuDialog(context);
-                  },
-                ),
-              ),
-            ],
+          // ✅ Solo el botón de llamar ahora
+          _buildActionButton(
+            context,
+            icon: Icons.add_call,
+            label: 'Llamar ahora',
+            color: AppTheme.primaryGreen,
+            onTap: () {
+              _showContactDialog(context);
+            },
           ),
+
+          const SizedBox(height: 16),
+          Divider(color: textColor.withOpacity(0.1)),
+          const SizedBox(height: 12),
+
+          // Botón para contactar cooperativa
+          _buildCooperativaButton(context, textColor),
         ],
       ),
     );
@@ -106,8 +94,6 @@ class ContactProducerCard extends StatelessWidget {
         required Color color,
         required VoidCallback onTap,
       }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -117,17 +103,87 @@ class ContactProducerCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: color.withOpacity(0.2)),
         ),
-        child: Column(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, size: 20, color: color),
-            const SizedBox(height: 4),
+            const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: color,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCooperativaButton(BuildContext context, Color textColor) {
+    return GestureDetector(
+      onTap: () {
+        _showCooperativaDialog(context);
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppTheme.primaryGreen.withOpacity(0.1),
+              AppTheme.goldCoffee.withOpacity(0.05),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppTheme.primaryGreen.withOpacity(0.2),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryGreen.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.handshake_outlined,
+                color: AppTheme.primaryGreen,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Contactar Cooperativa',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                  Text(
+                    'Encuentra una cooperativa para tu café',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: textColor.withOpacity(0.5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 16,
+              color: AppTheme.primaryGreen,
             ),
           ],
         ),
@@ -143,12 +199,11 @@ class ContactProducerCard extends StatelessWidget {
     );
   }
 
-  void _showMenuDialog(BuildContext context) {
-    showModalBottomSheet(
+  void _showCooperativaDialog(BuildContext context) {
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => const ContactProducerMenu(),
+      barrierDismissible: true,
+      builder: (context) => const ContactCooperativaDialog(),
     );
   }
 }

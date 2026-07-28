@@ -1,4 +1,3 @@
-// lib/features/notifications/presentation/screens/notifications_screen.dart
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';

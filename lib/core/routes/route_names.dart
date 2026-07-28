@@ -48,6 +48,9 @@ class RouteNames {
   static const String indicators = '/indicators';
   static const String technicians = '/technicians';
   static const String technicianProducers = '/technician-producers';
+  static const String cooperativeContacts = '/cooperative/contacts';
+  static const String producerContacts = '/producer/contacts';
+  static const String dashboardNotifications = '/dashboard-notifications';
 
   // ✅ NUEVA RUTA PARA PIN DE SEGURIDAD
   static const String pinSecurity = '/pin-security';
