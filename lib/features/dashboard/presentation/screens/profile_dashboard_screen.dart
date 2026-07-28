@@ -80,7 +80,6 @@ class _ProfileDashboardScreenState extends State<ProfileDashboardScreen> {
                       icon: Icons.arrow_back,
                       isDark: isDark,
                       onPressed: () {
-                        // ✅ Volver al Dashboard correctamente
                         if (Navigator.canPop(context)) {
                           Navigator.pop(context);
                         } else {
@@ -102,20 +101,14 @@ class _ProfileDashboardScreenState extends State<ProfileDashboardScreen> {
                         ),
                       ),
                     ),
+                    // ✅ Botón de cerrar sesión en el header (icono pequeño)
                     NeumorphicIconButton(
-                      icon: Icons.edit_outlined,
+                      icon: Icons.logout,
                       isDark: isDark,
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Próximamente: Editar perfil'),
-                            backgroundColor: AppTheme.primaryGreen,
-                          ),
-                        );
-                      },
+                      onPressed: () => _showLogoutDialog(context),
                       size: 44,
                       iconSize: 20,
-                      color: AppTheme.primaryGreen,
+                      color: Colors.red,
                     ),
                   ],
                 ),
@@ -187,12 +180,23 @@ class _ProfileDashboardScreenState extends State<ProfileDashboardScreen> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        '📱 $userPhone',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: textColor.withOpacity(0.6),
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.phone,
+                            size: 14,
+                            color: textColor.withOpacity(0.4),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            userPhone,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: textColor.withOpacity(0.6),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       Container(
@@ -216,73 +220,69 @@ class _ProfileDashboardScreenState extends State<ProfileDashboardScreen> {
 
                 const SizedBox(height: 24),
 
-                // ── Opciones del perfil ──────────────────────────
-                _buildMenuItem(
-                  icon: Icons.person_outline,
-                  title: 'Información personal',
-                  subtitle: 'Datos de tu cuenta',
-                  isDark: isDark,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Próximamente: Editar información personal'),
-                        backgroundColor: AppTheme.primaryGreen,
+                // ── Información del perfil (solo lectura) ──────────
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppTheme.coffeeDeep.withOpacity(0.7)
+                        : Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: textColor.withOpacity(0.06),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.person_outline,
+                            color: AppTheme.primaryGreen,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Información de la cuenta',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: textColor,
+                            ),
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                ),
-
-                _buildMenuItem(
-                  icon: Icons.security_outlined,
-                  title: 'Seguridad',
-                  subtitle: 'Cambiar contraseña, PIN de seguridad',
-                  isDark: isDark,
-                  onTap: () {
-                    context.push(RouteNames.pinSecurity);
-                  },
-                ),
-
-                _buildMenuItem(
-                  icon: Icons.notifications_outlined,
-                  title: 'Notificaciones',
-                  subtitle: 'Preferencias de notificaciones',
-                  isDark: isDark,
-                  onTap: () {
-                    context.push(RouteNames.notifications);
-                  },
-                ),
-
-                _buildMenuItem(
-                  icon: Icons.language_outlined,
-                  title: 'Idioma',
-                  subtitle: 'Español (México)',
-                  isDark: isDark,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Próximamente: Cambiar idioma'),
-                        backgroundColor: AppTheme.primaryGreen,
+                      const SizedBox(height: 16),
+                      _buildInfoRow(
+                        label: 'Nombre',
+                        value: userName,
+                        textColor: textColor,
                       ),
-                    );
-                  },
-                ),
-
-                _buildMenuItem(
-                  icon: Icons.help_outline,
-                  title: 'Ayuda y soporte',
-                  subtitle: 'Centro de ayuda, preguntas frecuentes',
-                  isDark: isDark,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Próximamente: Centro de ayuda'),
-                        backgroundColor: AppTheme.primaryGreen,
+                      Divider(height: 24, color: Colors.grey.withOpacity(0.1)),
+                      _buildInfoRow(
+                        label: 'Correo electrónico',
+                        value: userEmail,
+                        textColor: textColor,
                       ),
-                    );
-                  },
+                      Divider(height: 24, color: Colors.grey.withOpacity(0.1)),
+                      _buildInfoRow(
+                        label: 'Teléfono',
+                        value: userPhone,
+                        textColor: textColor,
+                      ),
+                      Divider(height: 24, color: Colors.grey.withOpacity(0.1)),
+                      _buildInfoRow(
+                        label: 'Rol',
+                        value: roleName,
+                        textColor: textColor,
+                      ),
+                    ],
+                  ),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
                 // ── Botón de cerrar sesión ──────────────────────
                 Container(
@@ -297,28 +297,40 @@ class _ProfileDashboardScreenState extends State<ProfileDashboardScreen> {
                       ),
                     ],
                   ),
-                  child: OutlinedButton.icon(
+                  child: ElevatedButton.icon(
                     onPressed: () => _showLogoutDialog(context),
-                    icon: const Icon(Icons.logout, color: Colors.red),
+                    icon: const Icon(Icons.logout, color: Colors.white),
                     label: const Text(
                       'Cerrar sesión',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.red,
+                        color: Colors.white,
                       ),
                     ),
-                    style: OutlinedButton.styleFrom(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24),
                       ),
-                      side: const BorderSide(color: Colors.red),
                     ),
                   ),
                 ),
 
                 const SizedBox(height: 40),
+
+                // ── Versión de la app ─────────────────────────────
+                Center(
+                  child: Text(
+                    'Kaab Terra v1.0.0',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: textColor.withOpacity(0.3),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -327,58 +339,35 @@ class _ProfileDashboardScreenState extends State<ProfileDashboardScreen> {
     );
   }
 
-  Widget _buildMenuItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool isDark,
-    required VoidCallback onTap,
+  Widget _buildInfoRow({
+    required String label,
+    required String value,
+    required Color textColor,
   }) {
-    final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
-    final cardColor = isDark
-        ? AppTheme.coffeeDeep.withOpacity(0.7)
-        : Colors.white.withOpacity(0.9);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: textColor.withOpacity(0.06),
-        ),
-      ),
-      child: ListTile(
-        onTap: onTap,
-        leading: Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: AppTheme.primaryGreen.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: AppTheme.primaryGreen, size: 22),
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: textColor,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 120,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: textColor.withOpacity(0.5),
+            ),
           ),
         ),
-        subtitle: Text(
-          subtitle,
-          style: TextStyle(
-            fontSize: 12,
-            color: textColor.withOpacity(0.5),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: textColor,
+            ),
           ),
         ),
-        trailing: Icon(
-          Icons.chevron_right,
-          color: textColor.withOpacity(0.3),
-        ),
-      ),
+      ],
     );
   }
 
@@ -389,12 +378,36 @@ class _ProfileDashboardScreenState extends State<ProfileDashboardScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(24),
         ),
-        title: const Text('Cerrar sesión'),
-        content: const Text('¿Estás seguro de que deseas cerrar sesión?'),
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? AppTheme.coffeeDeep
+            : Colors.white,
+        title: Text(
+          'Cerrar sesión',
+          style: TextStyle(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : AppTheme.darkCoffee,
+          ),
+        ),
+        content: Text(
+          '¿Estás seguro de que deseas cerrar sesión?',
+          style: TextStyle(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white.withOpacity(0.8)
+                : AppTheme.darkCoffee.withOpacity(0.8),
+          ),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white.withOpacity(0.6)
+                    : AppTheme.darkCoffee.withOpacity(0.6),
+              ),
+            ),
           ),
           TextButton(
             onPressed: () {

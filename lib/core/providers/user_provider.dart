@@ -435,7 +435,6 @@ class UserProvider extends ChangeNotifier {
     );
   }
 
-  /// ✅ Método para forzar la recarga de la cooperativa actual
   void refreshCooperativeRegistration() {
     if (_selectedUserType == UserType.cooperative && _userEmail != null) {
       _registerCooperativeIfNeeded(

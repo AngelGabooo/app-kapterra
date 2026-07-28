@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/core/providers/user_provider.dart';
+import 'package:kaabcafe/core/providers/producer_technician_provider.dart';
 import 'package:kaabcafe/core/services/call_service.dart';
 
 class ContactProducerDialog extends StatefulWidget {
@@ -16,24 +17,66 @@ class _ContactProducerDialogState extends State<ContactProducerDialog> {
   String? _technicianName;
   String? _technicianPhone;
   bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _loadTechnicianData();
+    // Esperar a que se construya el widget para obtener el provider
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadTechnicianData();
+    });
   }
 
   void _loadTechnicianData() {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    try {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final producerTechnicianProvider = Provider.of<ProducerTechnicianProvider>(context, listen: false);
 
-    setState(() {
-      _technicianName = userProvider.userName ?? 'Técnico no disponible';
-      _technicianPhone = userProvider.userPhone ?? '';
-      _isLoading = false;
-    });
+      // Obtener el ID del productor (usando el email como ID temporal)
+      final producerId = userProvider.userEmail ?? '';
 
-    debugPrint('👤 Técnico: $_technicianName');
-    debugPrint('📞 Teléfono técnico: $_technicianPhone');
+      if (producerId.isEmpty) {
+        setState(() {
+          _errorMessage = 'No se pudo identificar al productor';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Buscar el técnico asignado al productor
+      final assignment = producerTechnicianProvider.getTechnicianForProducer(producerId);
+
+      if (assignment != null) {
+        setState(() {
+          _technicianName = assignment.technicianName;
+          _technicianPhone = assignment.technicianPhone;
+          _isLoading = false;
+          _errorMessage = null;
+        });
+
+        debugPrint('👤 Técnico asignado: $_technicianName');
+        debugPrint('📞 Teléfono técnico: $_technicianPhone');
+      } else {
+        // Si no hay asignación, usar datos del UserProvider como fallback
+        final userProvider = Provider.of<UserProvider>(context, listen: false);
+        setState(() {
+          _technicianName = userProvider.userName ?? 'Técnico no disponible';
+          _technicianPhone = userProvider.userPhone ?? '';
+          _isLoading = false;
+          _errorMessage = 'No hay técnico asignado específicamente';
+        });
+
+        debugPrint('⚠️ No se encontró técnico asignado para $producerId');
+        debugPrint('⚠️ Usando datos de UserProvider como fallback');
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error al cargar datos del técnico: $e';
+        _isLoading = false;
+      });
+      debugPrint('❌ Error al cargar datos del técnico: $e');
+    }
   }
 
   Future<void> _makeCall() async {
@@ -53,7 +96,6 @@ class _ContactProducerDialogState extends State<ContactProducerDialog> {
       final success = await CallService.makeDirectCall(_technicianPhone!);
 
       if (success) {
-        // La llamada se inició correctamente
         Navigator.pop(context);
       } else {
         _showSnackBar('❌ No se pudo realizar la llamada', Colors.red);
@@ -130,7 +172,11 @@ class _ContactProducerDialogState extends State<ContactProducerDialog> {
 
             // Subtítulo
             Text(
-              _isLoading ? 'Cargando datos del técnico...' : 'Llama directamente a tu técnico asignado',
+              _isLoading
+                  ? 'Cargando datos del técnico...'
+                  : _errorMessage != null && hasPhone
+                  ? 'Llama directamente a tu técnico asignado'
+                  : 'No hay técnico asignado actualmente',
               style: TextStyle(
                 fontSize: 13,
                 color: textColor.withOpacity(0.6),
@@ -149,7 +195,9 @@ class _ContactProducerDialogState extends State<ContactProducerDialog> {
                       : AppTheme.lightBeige.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: AppTheme.primaryGreen.withOpacity(0.1),
+                    color: hasPhone
+                        ? AppTheme.primaryGreen.withOpacity(0.1)
+                        : AppTheme.alertOrange.withOpacity(0.1),
                   ),
                 ),
                 child: Column(
@@ -159,12 +207,14 @@ class _ContactProducerDialogState extends State<ContactProducerDialog> {
                         Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryGreen.withOpacity(0.1),
+                            color: hasPhone
+                                ? AppTheme.primaryGreen.withOpacity(0.1)
+                                : AppTheme.alertOrange.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(
-                            Icons.engineering,
-                            color: AppTheme.primaryGreen,
+                          child: Icon(
+                            hasPhone ? Icons.engineering : Icons.person_off,
+                            color: hasPhone ? AppTheme.primaryGreen : AppTheme.alertOrange,
                             size: 20,
                           ),
                         ),
@@ -174,7 +224,7 @@ class _ContactProducerDialogState extends State<ContactProducerDialog> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Técnico asignado',
+                                hasPhone ? 'Técnico asignado' : 'Sin técnico asignado',
                                 style: TextStyle(
                                   fontSize: 11,
                                   color: textColor.withOpacity(0.5),
@@ -229,6 +279,29 @@ class _ContactProducerDialogState extends State<ContactProducerDialog> {
                         ],
                       ),
                     ],
+                    // Mostrar mensaje de error si existe
+                    if (_errorMessage != null && !hasPhone) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 14,
+                            color: AppTheme.alertOrange,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.alertOrange,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -253,23 +326,29 @@ class _ContactProducerDialogState extends State<ContactProducerDialog> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTheme.goldCoffee.withOpacity(0.05),
+                color: hasPhone
+                    ? AppTheme.goldCoffee.withOpacity(0.05)
+                    : AppTheme.alertOrange.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.goldCoffee.withOpacity(0.1)),
+                border: Border.all(
+                  color: hasPhone
+                      ? AppTheme.goldCoffee.withOpacity(0.1)
+                      : AppTheme.alertOrange.withOpacity(0.1),
+                ),
               ),
               child: Row(
                 children: [
                   Icon(
-                    Icons.info_outline,
+                    hasPhone ? Icons.info_outline : Icons.warning,
                     size: 16,
-                    color: AppTheme.goldCoffee,
+                    color: hasPhone ? AppTheme.goldCoffee : AppTheme.alertOrange,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       hasPhone
                           ? 'Presiona "Llamar" para contactar directamente a tu técnico.'
-                          : 'No hay número de teléfono registrado para tu técnico.',
+                          : 'No hay técnico asignado a tu cuenta. Contacta a tu cooperativa.',
                       style: TextStyle(
                         fontSize: 11,
                         color: textColor.withOpacity(0.6),

@@ -10,6 +10,10 @@ import 'package:kaabcafe/features/buyer/presentation/widgets/register_technician
 import 'package:kaabcafe/features/buyer/data/models/technician_model.dart';
 import 'package:kaabcafe/features/buyer/data/models/producer_summary_model.dart';
 import 'package:kaabcafe/features/buyer/providers/cooperative_producers_provider.dart';
+import 'package:kaabcafe/core/providers/farm_provider.dart';
+import 'package:kaabcafe/features/farms/data/models/lot_model.dart';
+
+import '../../../farms/data/models/farm_details_model.dart';
 
 class TechniciansScreen extends StatefulWidget {
   const TechniciansScreen({super.key});
@@ -30,11 +34,7 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
       final provider = Provider.of<TechniciansProvider>(context, listen: false);
       final contactProvider = Provider.of<TechnicianContactProvider>(context, listen: false);
 
-      // ✅ Inicializar el provider con el contactProvider para cargar solicitudes
       provider.init(contactProvider);
-
-      // ❌ ELIMINADO: provider.loadSampleTechnicians();
-      // Ahora los técnicos vienen de las solicitudes de contacto
     });
   }
 
@@ -111,14 +111,12 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
     );
   }
 
-  // ✅ ACEPTAR TÉCNICO PENDIENTE
   void _acceptTechnician(TechnicianModel technician) {
     final provider = Provider.of<TechniciansProvider>(context, listen: false);
     final contactProvider = Provider.of<TechnicianContactProvider>(context, listen: false);
 
     provider.acceptTechnician(technician.id);
 
-    // Actualizar el estado de la solicitud
     final request = contactProvider.pendingRequests.firstWhere(
           (r) => r.technicianEmail == technician.email,
       orElse: () => throw Exception('Solicitud no encontrada'),
@@ -133,12 +131,10 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
     );
   }
 
-  // ✅ RECHAZAR TÉCNICO PENDIENTE
   void _rejectTechnician(TechnicianModel technician) {
     final provider = Provider.of<TechniciansProvider>(context, listen: false);
     final contactProvider = Provider.of<TechnicianContactProvider>(context, listen: false);
 
-    // Buscar la solicitud correspondiente
     final request = contactProvider.pendingRequests.firstWhere(
           (r) => r.technicianEmail == technician.email,
       orElse: () => throw Exception('Solicitud no encontrada'),
@@ -155,7 +151,6 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
     );
   }
 
-  // ✅ DIÁLOGO PARA VER DETALLE DEL TÉCNICO
   void _showTechnicianDetail(TechnicianModel technician) {
     showModalBottomSheet(
       context: context,
@@ -168,7 +163,6 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
     );
   }
 
-  // ✅ MOSTRAR DETALLE DEL PRODUCTOR ASIGNADO
   void _showProducerDetail(ProducerSummaryModel producer) {
     showModalBottomSheet(
       context: context,
@@ -260,7 +254,6 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
     );
   }
 
-  // ✅ KPIS
   Widget _buildKPIs({
     required bool isDark,
     required Color textColor,
@@ -406,7 +399,6 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
     );
   }
 
-  // ✅ FILTROS
   Widget _buildFilters(bool isDark, Color textColor, Color cardColor) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -443,7 +435,6 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
     );
   }
 
-  // ✅ TARJETA DE TÉCNICO (con soporte para pendientes)
   Widget _buildTechnicianCard(TechnicianModel technician, bool isDark, Color textColor) {
     final isPending = technician.status == 'Pendiente';
 
@@ -556,7 +547,6 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
             ),
             const SizedBox(height: 12),
 
-            // ✅ Si está pendiente, mostrar botones de Aceptar/Rechazar
             if (isPending) ...[
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -617,7 +607,6 @@ class _TechniciansScreenState extends State<TechniciansScreen> {
                 ),
               ),
             ] else ...[
-              // Métricas para técnicos activos
               Row(
                 children: [
                   _buildMetricChip(
@@ -850,7 +839,6 @@ class _TechnicianDetailSheet extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
-                // Encabezado
                 Row(
                   children: [
                     Container(
@@ -991,7 +979,6 @@ class _TechnicianDetailSheet extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // Rendimiento
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -1066,7 +1053,6 @@ class _TechnicianDetailSheet extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // ✅ PRODUCTORES ASIGNADOS CON DETALLE
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -1323,7 +1309,10 @@ class _TechnicianDetailSheet extends StatelessWidget {
 }
 
 // ============================================================
-// ✅ BOTTOM SHEET PARA DETALLE DEL PRODUCTOR
+// ✅ BOTTOM SHEET PARA DETALLE DEL PRODUCTOR CON DATOS DINÁMICOS
+// ============================================================
+// ============================================================
+// ✅ BOTTOM SHEET PARA DETALLE DEL PRODUCTOR CON DATOS REALES
 // ============================================================
 class _ProducerDetailSheet extends StatelessWidget {
   final ProducerSummaryModel producer;
@@ -1340,33 +1329,31 @@ class _ProducerDetailSheet extends StatelessWidget {
     final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
     final cardColor = isDark ? AppTheme.coffeeDeep : Colors.white;
 
-    // Datos de ejemplo para mostrar (en producción vendrían del backend)
-    final List<Map<String, dynamic>> lots = [
-      {
-        'name': 'Lote Central',
-        'variety': 'Bourbon',
-        'area': 4.5,
-        'production': 1850,
-        'status': 'Saludable',
-        'farmName': 'Finca El Mirador',
-      },
-      {
-        'name': 'Lote La Esperanza',
-        'variety': 'Geisha',
-        'area': 2.0,
-        'production': 1200,
-        'status': 'Atención',
-        'farmName': 'Finca El Mirador',
-      },
-      {
-        'name': 'Lote El Bosque',
-        'variety': 'Catuaí',
-        'area': 3.2,
-        'production': 980,
-        'status': 'Riesgo',
-        'farmName': 'Finca Santa Lucía',
-      },
-    ];
+    // ✅ OBTENER FINCAS Y LOTES DEL PRODUCTOR DESDE EL PROVIDER
+    final farmProvider = Provider.of<FarmProvider>(context);
+
+    // ✅ Obtener las fincas del productor usando el ID del productor
+    final producerFarms = farmProvider.getFarmsByProducer(producer.id);
+
+    // ✅ Obtener todos los lotes de las fincas del productor
+    final List<Map<String, dynamic>> lots = [];
+    for (final farm in producerFarms) {
+      final farmLots = farmProvider.getLotsForFarm(farm.id);
+      for (final lot in farmLots) {
+        lots.add({
+          'id': lot.id,
+          'name': lot.name,
+          'variety': lot.variety,
+          'area': lot.area,
+          'production': lot.estimatedProduction,
+          'status': lot.statusText,
+          'farmName': farm.name,
+        });
+      }
+    }
+
+    final hasLots = lots.isNotEmpty;
+    final hasFarms = producerFarms.isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
@@ -1465,7 +1452,7 @@ class _ProducerDetailSheet extends StatelessWidget {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '${producer.farmsCount} fincas',
+                                '${hasFarms ? producerFarms.length : 0} fincas',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: textColor.withOpacity(0.5),
@@ -1473,7 +1460,7 @@ class _ProducerDetailSheet extends StatelessWidget {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '• ${producer.lotsCount} lotes',
+                                '• ${hasLots ? lots.length : 0} lotes',
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: textColor.withOpacity(0.5),
@@ -1564,7 +1551,7 @@ class _ProducerDetailSheet extends StatelessWidget {
                         child: Column(
                           children: [
                             Text(
-                              '${producer.farmsCount}',
+                              '${hasFarms ? producerFarms.length : 0}',
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -1587,24 +1574,278 @@ class _ProducerDetailSheet extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // Lista de lotes del productor
-                Text(
-                  'Lotes del productor',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                  ),
+                // ✅ LISTA DE FINCAS DEL PRODUCTOR
+                Row(
+                  children: [
+                    Text(
+                      'Fincas del productor',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryGreen.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${hasFarms ? producerFarms.length : 0} fincas',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.primaryGreen,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
 
-                ...lots.map((lot) => _buildLotCard(lot, isDark, textColor)),
+                if (!hasFarms)
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.grey.withOpacity(0.1),
+                      ),
+                    ),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.landscape_outlined,
+                            size: 40,
+                            color: textColor.withOpacity(0.3),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Este productor no tiene fincas registradas',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: textColor.withOpacity(0.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ...producerFarms.map((farm) => _buildFarmCard(
+                    farm: farm,
+                    isDark: isDark,
+                    textColor: textColor,
+                    context: context, // ✅ PASAR EL CONTEXT
+                  )),
+
+                const SizedBox(height: 20),
+
+                // ✅ LISTA DE LOTES DEL PRODUCTOR
+                Row(
+                  children: [
+                    Text(
+                      'Lotes del productor',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryGreen.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${lots.length} lotes',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.primaryGreen,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                if (!hasLots)
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.grey.withOpacity(0.1),
+                      ),
+                    ),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.inbox_outlined,
+                            size: 40,
+                            color: textColor.withOpacity(0.3),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Este productor no tiene lotes registrados',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: textColor.withOpacity(0.5),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Los lotes aparecerán aquí cuando el productor los registre.',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: textColor.withOpacity(0.3),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ...lots.map((lot) => _buildLotCard(lot, isDark, textColor)),
 
                 const SizedBox(height: 40),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+
+  // ✅ TARJETA DE FINCA - CON CONTEXT COMO PARÁMETRO
+  Widget _buildFarmCard({
+    required FarmDetailsModel farm,
+    required bool isDark,
+    required Color textColor,
+    required BuildContext context, // ✅ CONTEXT PASADO COMO PARÁMETRO
+  }) {
+    final farmLots = Provider.of<FarmProvider>(context, listen: false).getLotsForFarm(farm.id);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.coffeeDeep : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 4,
+          ),
+        ],
+        border: Border.all(
+          color: Colors.grey.withOpacity(0.1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: farm.statusColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  farm.name,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: farm.statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  farm.statusText,
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                    color: farm.statusColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.landscape, size: 14, color: textColor.withOpacity(0.4)),
+              const SizedBox(width: 4),
+              Text(
+                '${farm.hectares} ha',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: textColor.withOpacity(0.6),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Icon(Icons.view_module, size: 14, color: textColor.withOpacity(0.4)),
+              const SizedBox(width: 4),
+              Text(
+                '${farmLots.length} lotes',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: textColor.withOpacity(0.6),
+                ),
+              ),
+              if (farm.mainVariety != null) ...[
+                const SizedBox(width: 16),
+                Icon(Icons.emoji_nature, size: 14, color: textColor.withOpacity(0.4)),
+                const SizedBox(width: 4),
+                Text(
+                  farm.mainVariety!,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: textColor.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(Icons.location_on, size: 12, color: textColor.withOpacity(0.3)),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  farm.location,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: textColor.withOpacity(0.5),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -1712,11 +1953,14 @@ class _ProducerDetailSheet extends StatelessWidget {
             children: [
               Icon(Icons.agriculture, size: 12, color: textColor.withOpacity(0.3)),
               const SizedBox(width: 4),
-              Text(
-                lot['farmName'],
-                style: TextStyle(
-                  fontSize: 11,
-                  color: textColor.withOpacity(0.5),
+              Expanded(
+                child: Text(
+                  lot['farmName'],
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: textColor.withOpacity(0.5),
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

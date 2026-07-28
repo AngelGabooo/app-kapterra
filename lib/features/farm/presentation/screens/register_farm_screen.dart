@@ -2,10 +2,13 @@
 
 import 'dart:ui';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:kaabcafe/core/providers/farm_provider.dart';
+import 'package:kaabcafe/core/providers/user_provider.dart';
+import 'package:kaabcafe/features/buyer/providers/cooperative_producers_provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/features/farm/data/models/farm_model.dart';
@@ -42,22 +45,55 @@ class _RegisterFarmScreenState extends State<RegisterFarmScreen> {
     setState(() => _isLoading = true);
     await Future.delayed(const Duration(seconds: 1));
     setState(() => _isLoading = false);
+
     if (mounted) {
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
       final farmProvider = Provider.of<FarmProvider>(context, listen: false);
+      final coopProducersProvider = Provider.of<CooperativeProducersProvider>(context, listen: false);
+
+      // ✅ OBTENER EL EMAIL DEL USUARIO COMO ID
+      String producerId = userProvider.userEmail ?? '';
+
+      // ✅ Si no hay email en UserProvider, verificar en FirebaseAuth
+      if (producerId.isEmpty) {
+        final auth = FirebaseAuth.instance;
+        final user = auth.currentUser;
+        if (user != null && user.email != null) {
+          producerId = user.email!;
+          debugPrint('✅ Producer ID obtenido de FirebaseAuth: $producerId');
+        } else {
+          debugPrint('⚠️ No se pudo obtener el ID del productor');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('⚠️ Inicia sesión para registrar la finca'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
+      }
+
       final newFarm = FarmDetailsModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: farm.name,
         location: farm.location.isNotEmpty ? farm.location : 'Ubicación registrada',
         hectares: farm.surface,
-        lots: 0,
+        lots: farm.numberOfLots,
         productivity: 0,
         status: FarmHealthStatus.healthy,
         imageUrl: 'assets/img/default_farm.png',
         latitude: farm.latitude ?? 16.7525,
         longitude: farm.longitude ?? -93.1167,
         altitude: farm.altitude,
+        mainVariety: farm.mainVariety,
+        establishmentYear: farm.establishmentYear,
       );
-      farmProvider.addFarm(newFarm);
+
+      // ✅ AGREGAR FINCA CON EL ID DEL PRODUCTOR
+      farmProvider.addFarmForProducer(newFarm, producerId);
+
+      // ✅ SINCRONIZAR CON CooperativeProducersProvider
+      coopProducersProvider.syncProducerWithFarms(producerId);
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -65,6 +101,9 @@ class _RegisterFarmScreenState extends State<RegisterFarmScreen> {
           backgroundColor: AppTheme.primaryGreen,
         ),
       );
+
+      // ✅ DEBUG: Verificar estado
+      farmProvider.debugPrintState();
 
       context.go(RouteNames.farmSuccess, extra: farm.name);
     }

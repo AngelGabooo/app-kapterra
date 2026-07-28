@@ -49,13 +49,11 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
       return;
     }
 
-    // Obtener la finca seleccionada
     final selectedFarm = farmProvider.farms.firstWhere(
           (f) => f.id == _selectedFarmId,
       orElse: () => farmProvider.farms.first,
     );
 
-    // Obtener la cooperativa seleccionada
     final selectedCoop = cooperativesProvider.cooperatives.firstWhere(
           (c) => c.id == _selectedCooperativeId,
       orElse: () => throw Exception('Cooperativa no encontrada'),
@@ -184,13 +182,8 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final coopProvider = Provider.of<CooperativesProvider>(context, listen: false);
 
-    // ✅ Forzar recarga desde UserProvider
     userProvider.refreshCooperativeRegistration();
-
-    // ✅ Forzar notificación
     coopProvider.refresh();
-
-    // ✅ Actualizar el estado local
     setState(() {});
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -208,18 +201,14 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
     final textColor = isDark ? Colors.white : AppTheme.darkCoffee;
     final cardColor = isDark ? AppTheme.coffeeDeep : Colors.white;
 
-    // ✅ Obtener fincas del provider
     final farmProvider = Provider.of<FarmProvider>(context);
     final userFarms = farmProvider.farms;
 
-    // ✅ Obtener cooperativas del provider
     final cooperativesProvider = Provider.of<CooperativesProvider>(context);
     final cooperatives = cooperativesProvider.cooperatives;
 
-    // ✅ Debug: Imprimir cantidad de cooperativas
     debugPrint('🔍 Cooperativas disponibles en diálogo (Productor): ${cooperatives.length}');
 
-    // ✅ Si no hay cooperativas registradas, mostrar mensaje
     final bool hasCooperatives = cooperatives.isNotEmpty;
 
     return Dialog(
@@ -228,7 +217,7 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
         width: double.infinity,
         constraints: const BoxConstraints(
           maxWidth: 400,
-          maxHeight: 600,
+          maxHeight: 620,
         ),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -241,7 +230,7 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ✅ Encabezado con botón de refresco
+            // ✅ Encabezado
             Row(
               children: [
                 Container(
@@ -283,7 +272,6 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
                     ],
                   ),
                 ),
-                // ✅ Botón de refresco
                 IconButton(
                   onPressed: _refreshCooperatives,
                   icon: Icon(
@@ -307,14 +295,14 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
 
             // ✅ Contenido del formulario
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 child: Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.only(bottom: 12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -332,23 +320,31 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
                         items: userFarms.map<DropdownMenuItem<String>>((farm) {
                           return DropdownMenuItem<String>(
                             value: farm.id,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
+                            child: Row(
                               children: [
-                                Text(
-                                  farm.name,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    color: textColor,
-                                  ),
-                                ),
-                                Text(
-                                  '📍 ${farm.location} • ${farm.hectares} ha',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: textColor.withOpacity(0.5),
+                                Icon(Icons.landscape, size: 14, color: AppTheme.primaryGreen),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        farm.name,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                          color: textColor,
+                                        ),
+                                      ),
+                                      Text(
+                                        '📍 ${farm.location} • ${farm.hectares} ha',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          color: textColor.withOpacity(0.5),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
@@ -359,9 +355,9 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
                         textColor: textColor,
                         isEmpty: userFarms.isEmpty,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
 
-                      // ✅ Seleccionar cooperativa (dinámica)
+                      // ✅ Seleccionar cooperativa
                       if (hasCooperatives)
                         _buildDropdownField(
                           label: 'Selecciona una cooperativa *',
@@ -376,23 +372,31 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
                           items: cooperatives.map<DropdownMenuItem<String>>((coop) {
                             return DropdownMenuItem<String>(
                               value: coop.id,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
+                              child: Row(
                                 children: [
-                                  Text(
-                                    coop.name,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color: textColor,
-                                    ),
-                                  ),
-                                  Text(
-                                    '📍 ${coop.location} • ${coop.email}',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: textColor.withOpacity(0.5),
+                                  Icon(Icons.apartment, size: 14, color: AppTheme.primaryGreen),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          coop.name,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: textColor,
+                                          ),
+                                        ),
+                                        Text(
+                                          '📍 ${coop.location} • ${coop.email}',
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            color: textColor.withOpacity(0.5),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
@@ -404,9 +408,8 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
                           isEmpty: false,
                         )
                       else
-                      // ✅ Mensaje cuando no hay cooperativas
                         Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
                             color: AppTheme.alertOrange.withOpacity(0.05),
                             borderRadius: BorderRadius.circular(10),
@@ -424,9 +427,9 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  'No hay cooperativas registradas en el sistema.\n\nSi eres una cooperativa, regístrate con ese rol para aparecer aquí.',
+                                  'No hay cooperativas registradas.\nSi eres cooperativa, regístrate con ese rol.',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 11,
                                     color: textColor.withOpacity(0.7),
                                   ),
                                 ),
@@ -434,7 +437,7 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
                             ],
                           ),
                         ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
 
                       // ✅ Mensaje
                       Text(
@@ -455,26 +458,26 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
                         ),
                         child: TextField(
                           controller: _messageController,
-                          maxLines: 3,
-                          minLines: 2,
-                          style: TextStyle(color: textColor, fontSize: 13),
+                          maxLines: 2,
+                          minLines: 1,
+                          style: TextStyle(color: textColor, fontSize: 12),
                           decoration: const InputDecoration(
                             hintText: 'Describe tu producción y lo que buscas...',
                             hintStyle: TextStyle(
                               color: Colors.grey,
-                              fontSize: 12,
+                              fontSize: 11,
                             ),
                             prefixIcon: Icon(
                               Icons.message_outlined,
                               color: AppTheme.primaryGreen,
-                              size: 18,
+                              size: 16,
                             ),
                             border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
 
                       // ✅ Botón enviar
                       SizedBox(
@@ -484,16 +487,16 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: hasCooperatives ? AppTheme.primaryGreen : Colors.grey,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             elevation: 0,
                           ),
                           child: _isLoading
                               ? const SizedBox(
-                            height: 20,
-                            width: 20,
+                            height: 18,
+                            width: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               color: Colors.white,
@@ -502,12 +505,12 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
                               : const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.send, size: 16),
-                              SizedBox(width: 6),
+                              Icon(Icons.send, size: 14),
+                              SizedBox(width: 4),
                               Text(
                                 'Enviar solicitud',
                                 style: TextStyle(
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -515,7 +518,7 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
                     ],
                   ),
                 ),
@@ -527,7 +530,7 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
     );
   }
 
-  // ✅ Widget helper para dropdown
+  // ✅ Widget helper para dropdown - CORREGIDO
   Widget _buildDropdownField({
     required String label,
     required String hint,
@@ -541,52 +544,49 @@ class _ContactCooperativaDialogState extends State<ContactCooperativaDialog> {
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: FontWeight.w600,
             color: textColor.withOpacity(0.8),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 3),
         Container(
+          height: 42,
           decoration: BoxDecoration(
             border: Border.all(
               color: textColor.withOpacity(0.1),
             ),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: DropdownButtonFormField<String>(
-            value: value,
-            isExpanded: true,
-            hint: Text(
-              isEmpty ? 'No hay opciones disponibles' : hint,
-              style: TextStyle(
-                color: isEmpty ? Colors.grey : textColor.withOpacity(0.4),
-                fontSize: 12,
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: value,
+              isExpanded: true,
+              hint: Row(
+                children: [
+                  Icon(icon, color: textColor.withOpacity(0.4), size: 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    isEmpty ? 'No hay opciones disponibles' : hint,
+                    style: TextStyle(
+                      color: isEmpty ? Colors.grey : textColor.withOpacity(0.4),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
+              dropdownColor: isDark ? AppTheme.coffeeDeep : Colors.white,
+              style: TextStyle(color: textColor, fontSize: 12),
+              icon: Icon(Icons.arrow_drop_down, color: textColor.withOpacity(0.5), size: 24),
+              items: items,
+              onChanged: onChanged,
             ),
-            dropdownColor: isDark ? AppTheme.coffeeDeep : Colors.white,
-            style: TextStyle(color: textColor, fontSize: 13),
-            decoration: InputDecoration(
-              prefixIcon: Icon(
-                icon,
-                color: isEmpty ? Colors.grey : AppTheme.primaryGreen,
-                size: 18,
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            ),
-            items: items,
-            onChanged: onChanged,
-            validator: (value) {
-              if (value == null) {
-                return 'Campo requerido';
-              }
-              return null;
-            },
           ),
         ),
       ],

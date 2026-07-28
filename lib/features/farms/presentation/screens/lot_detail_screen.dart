@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:kaabcafe/core/providers/qr_update_provider.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/core/providers/farm_provider.dart';
@@ -45,12 +46,15 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
   String _certificationDate = '';
   String _certificationExpiry = '';
   String _recommendations = '';
+  String _certCode = '';
+
+  // ✅ KEY PARA EL QR CARD (para poder actualizarlo)
+  final GlobalKey<QRCardState> _qrCardKey = GlobalKey<QRCardState>();
 
   final List<Map<String, dynamic>> _quickActions = [
     {'title': 'Registrar actividad', 'icon': Icons.add_task},
     {'title': 'Ver Actividades', 'icon': Icons.assignment},
     {'title': 'Registrar costo', 'icon': Icons.attach_money},
-    {'title': 'Subir evidencia', 'icon': Icons.camera_alt},
     {'title': 'Consultar IA', 'icon': Icons.psychology},
     {'title': 'Ver indicadores', 'icon': Icons.analytics},
     {'title': 'Ver trazabilidad', 'icon': Icons.qr_code},
@@ -83,12 +87,9 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
   @override
   void initState() {
     super.initState();
-    // Cargar actividades del provider al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final activitiesProvider = Provider.of<ActivitiesProvider>(context, listen: false);
       activitiesProvider.loadActivities();
-
-      // ✅ Cargar diagnóstico del lote
       _loadDiagnosisData();
     });
   }
@@ -98,13 +99,11 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
     try {
       final reportsProvider = Provider.of<TechnicianReportsProvider>(context, listen: false);
 
-      // Buscar diagnósticos para este lote
       final diagnoses = reportsProvider.diagnoses
           .where((d) => d.lotId == widget.lot.id)
           .toList();
 
       if (diagnoses.isNotEmpty) {
-        // Tomar el diagnóstico más reciente
         final latestDiagnosis = diagnoses.last;
 
         setState(() {
@@ -114,14 +113,13 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
           _diagnosisSummary = _getDiagnosisSummary(latestDiagnosis);
           _riskLevel = _getRiskLevel(latestDiagnosis);
 
-          // Si tiene certificación
           if (latestDiagnosis.certification != null) {
             _certificationType = latestDiagnosis.certification!.type;
             _certificationDate = latestDiagnosis.certification!.issuedDate.toIso8601String();
             _certificationExpiry = latestDiagnosis.certification!.expiryDate.toIso8601String();
+            _certCode = latestDiagnosis.certification!.certificationId;
           }
 
-          // Recomendaciones
           if (latestDiagnosis.recommendations.isNotEmpty) {
             _recommendations = latestDiagnosis.recommendations.take(2).join('; ');
           }
@@ -149,19 +147,6 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
     if (score >= 80) return 'Bajo';
     if (score >= 60) return 'Medio';
     return 'Alto';
-  }
-
-  String _getDiagnosisRecommendations() {
-    // Aquí puedes obtener las recomendaciones del diagnóstico
-    final reportsProvider = Provider.of<TechnicianReportsProvider>(context, listen: false);
-    final diagnoses = reportsProvider.diagnoses
-        .where((d) => d.lotId == widget.lot.id)
-        .toList();
-
-    if (diagnoses.isNotEmpty && diagnoses.last.recommendations.isNotEmpty) {
-      return diagnoses.last.recommendations.take(2).join('; ');
-    }
-    return 'Sin recomendaciones';
   }
 
   // ✅ Método para convertir ActivityEntity a FarmActivityModel
@@ -240,9 +225,6 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
           },
         );
         break;
-      case 'Subir evidencia':
-        _showUploadEvidenceDialog();
-        break;
       case 'Consultar IA':
         _showAIAnalysisDialog();
         break;
@@ -269,40 +251,6 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
           SnackBar(content: Text('Acción: $action'), backgroundColor: AppTheme.primaryGreen),
         );
     }
-  }
-
-  void _showUploadEvidenceDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('Subir evidencia'),
-        content: const Text('Selecciona el tipo de evidencia que deseas subir:'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('📸 Cámara abierta'), backgroundColor: AppTheme.primaryGreen),
-              );
-            },
-            icon: const Icon(Icons.camera_alt),
-            label: const Text('Tomar foto'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('📁 Galería abierta'), backgroundColor: AppTheme.primaryGreen),
-              );
-            },
-            icon: const Icon(Icons.image),
-            label: const Text('Subir imagen'),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showAIAnalysisDialog() {
@@ -372,7 +320,6 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
             _buildIndicatorRow('Costos totales', '\$${_totalCost.toStringAsFixed(0)} MXN', Icons.attach_money),
             _buildIndicatorRow('Árboles', '${widget.lot.treesCount}', Icons.nature),
             _buildIndicatorRow('Superficie', '${widget.lot.area} ha', Icons.landscape),
-            // ✅ Mostrar diagnóstico si existe
             if (_healthScore != 'No evaluado') ...[
               const Divider(),
               _buildIndicatorRow('Salud del cultivo', '$_healthScore%', Icons.health_and_safety),
@@ -461,6 +408,10 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
             if (_certificationType != 'No certificado') ...[
               const SizedBox(height: 8),
               Text('• Certificación: $_certificationType'),
+            ],
+            if (_certCode.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text('• Código: $_certCode'),
             ],
             const SizedBox(height: 16),
             Container(
@@ -615,9 +566,10 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
                           _buildChip(Icons.emoji_nature, widget.lot.variety),
                           _buildChip(Icons.landscape, '${widget.lot.area} ha'),
                           _buildChip(Icons.nature, '${widget.lot.treesCount} árboles'),
-                          // ✅ Mostrar salud si hay diagnóstico
                           if (_healthScore != 'No evaluado')
                             _buildChip(Icons.health_and_safety, 'Salud: $_healthScore%'),
+                          if (_certificationType != 'No certificado')
+                            _buildChip(Icons.verified, 'Certificado: $_certificationType'),
                         ],
                       ),
                     ],
@@ -641,7 +593,7 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
                   _buildKPIs(),
                   const SizedBox(height: 16),
 
-                  // ✅ Actividades - Ahora con Consumer para escuchar cambios
+                  // ✅ Actividades
                   _buildActivitiesSection(colorScheme),
                   const SizedBox(height: 16),
 
@@ -653,8 +605,51 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
                   _buildAlertsSection(colorScheme),
                   const SizedBox(height: 16),
 
-                  // ✅ QR - Usando QRCard con todos los datos
-                  _buildQRCard(),
+                  // ✅ QR - Usando Consumer para escuchar cambios en QRUpdateProvider
+                  Consumer<QRUpdateProvider>(
+                    builder: (context, qrProvider, child) {
+                      if (qrProvider.hasBeenUpdated) {
+                        final data = qrProvider.certificationData;
+
+                        if (data['lotId'] == widget.lot.id) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            setState(() {
+                              if (data['healthScore'] != null) {
+                                _healthScore = data['healthScore'];
+                              }
+                              if (data['certificationType'] != null) {
+                                _certificationType = data['certificationType'];
+                              }
+                              if (data['certificationDate'] != null) {
+                                _certificationDate = data['certificationDate'];
+                              }
+                              if (data['certificationExpiry'] != null) {
+                                _certificationExpiry = data['certificationExpiry'];
+                              }
+                              if (data['technicianName'] != null) {
+                                _technicianName = data['technicianName'];
+                              }
+                              if (data['diagnosisSummary'] != null) {
+                                _diagnosisSummary = data['diagnosisSummary'];
+                              }
+                              if (data['riskLevel'] != null) {
+                                _riskLevel = data['riskLevel'];
+                              }
+                              if (data['certCode'] != null) {
+                                _certCode = data['certCode'];
+                              }
+                            });
+
+                            _qrCardKey.currentState?.refreshQR();
+                          });
+
+                          qrProvider.clear();
+                        }
+                      }
+
+                      return _buildQRCard();
+                    },
+                  ),
                   const SizedBox(height: 16),
 
                   // Acciones rápidas
@@ -749,7 +744,6 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
                 ),
               ),
               const Spacer(),
-              // ✅ Mostrar health score del diagnóstico si existe
               Text(
                 _healthScore != 'No evaluado' ? '$_healthScore/100' : '${_healthScoreInt}/100',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
@@ -800,6 +794,19 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
                 Text(
                   'Riesgo: $_riskLevel',
                   style: TextStyle(fontSize: 11, color: colorScheme.onSurface.withOpacity(0.5)),
+                ),
+              ],
+            ),
+          ],
+          if (_certificationType != 'No certificado') ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.verified, size: 12, color: AppTheme.goldCoffee),
+                const SizedBox(width: 4),
+                Text(
+                  'Certificación: $_certificationType',
+                  style: TextStyle(fontSize: 11, color: AppTheme.goldCoffee),
                 ),
               ],
             ),
@@ -1098,9 +1105,10 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
     );
   }
 
-  // ✅ QR CARD - Con todos los datos de diagnóstico y certificación
+  // ✅ QR CARD
   Widget _buildQRCard() {
     return QRCard(
+      key: _qrCardKey,
       lotId: widget.lot.id,
       lotName: widget.lot.name,
       farmName: widget.farm.name,
@@ -1110,17 +1118,16 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
       treesCount: widget.lot.treesCount,
       estimatedProduction: widget.lot.estimatedProduction,
       location: widget.farm.location,
-      // ✅ DATOS DE DIAGNÓSTICO
       healthScore: _healthScore,
       diagnosisDate: _diagnosisDate,
       technicianName: _technicianName,
       diagnosisSummary: _diagnosisSummary,
       recommendations: _recommendations,
       riskLevel: _riskLevel,
-      // ✅ DATOS DE CERTIFICACIÓN
       certificationType: _certificationType,
       certificationDate: _certificationDate,
       certificationExpiry: _certificationExpiry,
+      certCode: _certCode,
     );
   }
 
@@ -1172,4 +1179,4 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
       ],
     );
   }
-}
+}|

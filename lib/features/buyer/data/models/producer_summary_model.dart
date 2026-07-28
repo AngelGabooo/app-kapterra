@@ -6,7 +6,7 @@ class ProducerSummaryModel {
   final String name;
   final String email;
   final String phone;
-  final String status; // 'Activo', 'Inactivo', 'Pendiente'
+  final String status;
   final int farmsCount;
   final int lotsCount;
   final double totalProduction;
@@ -15,12 +15,12 @@ class ProducerSummaryModel {
   final double? latitude;
   final double? longitude;
   final String? photoUrl;
-  final String? requestId; // ✅ ID de la solicitud de contacto
-  final String? cooperativeName; // ✅ Nombre de la cooperativa a la que solicita
+  final String? requestId;
+  final String? cooperativeName;
 
-  // ✅ NUEVOS CAMPOS PARA DETALLE DEL PRODUCTOR
-  final List<ProducerLotSummary>? lots;
+  // ✅ NUEVOS CAMPOS CON DATOS REALES
   final List<ProducerFarmSummary>? farms;
+  final List<ProducerLotSummary>? lots;
 
   ProducerSummaryModel({
     required this.id,
@@ -38,8 +38,8 @@ class ProducerSummaryModel {
     this.photoUrl,
     this.requestId,
     this.cooperativeName,
-    this.lots,
     this.farms,
+    this.lots,
   });
 
   ProducerSummaryModel copyWith({
@@ -58,8 +58,8 @@ class ProducerSummaryModel {
     String? photoUrl,
     String? requestId,
     String? cooperativeName,
-    List<ProducerLotSummary>? lots,
     List<ProducerFarmSummary>? farms,
+    List<ProducerLotSummary>? lots,
   }) {
     return ProducerSummaryModel(
       id: id ?? this.id,
@@ -77,8 +77,8 @@ class ProducerSummaryModel {
       photoUrl: photoUrl ?? this.photoUrl,
       requestId: requestId ?? this.requestId,
       cooperativeName: cooperativeName ?? this.cooperativeName,
-      lots: lots ?? this.lots,
       farms: farms ?? this.farms,
+      lots: lots ?? this.lots,
     );
   }
 
@@ -99,8 +99,8 @@ class ProducerSummaryModel {
       'photoUrl': photoUrl,
       'requestId': requestId,
       'cooperativeName': cooperativeName,
-      'lots': lots?.map((l) => l.toJson()).toList(),
       'farms': farms?.map((f) => f.toJson()).toList(),
+      'lots': lots?.map((l) => l.toJson()).toList(),
     };
   }
 
@@ -121,14 +121,79 @@ class ProducerSummaryModel {
       photoUrl: json['photoUrl'],
       requestId: json['requestId'],
       cooperativeName: json['cooperativeName'],
-      lots: json['lots'] != null
-          ? List<ProducerLotSummary>.from(
-          json['lots'].map((l) => ProducerLotSummary.fromJson(l)))
-          : null,
       farms: json['farms'] != null
           ? List<ProducerFarmSummary>.from(
           json['farms'].map((f) => ProducerFarmSummary.fromJson(f)))
           : null,
+      lots: json['lots'] != null
+          ? List<ProducerLotSummary>.from(
+          json['lots'].map((l) => ProducerLotSummary.fromJson(l)))
+          : null,
+    );
+  }
+}
+
+// ✅ MODELO DE FINCA PARA PRODUCTOR
+class ProducerFarmSummary {
+  final String id;
+  final String name;
+  final double hectares;
+  final int lotsCount;
+  final String? location;
+  final String? mainVariety;
+  final String? status;
+
+  ProducerFarmSummary({
+    required this.id,
+    required this.name,
+    required this.hectares,
+    required this.lotsCount,
+    this.location,
+    this.mainVariety,
+    this.status,
+  });
+
+  ProducerFarmSummary copyWith({
+    String? id,
+    String? name,
+    double? hectares,
+    int? lotsCount,
+    String? location,
+    String? mainVariety,
+    String? status,
+  }) {
+    return ProducerFarmSummary(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      hectares: hectares ?? this.hectares,
+      lotsCount: lotsCount ?? this.lotsCount,
+      location: location ?? this.location,
+      mainVariety: mainVariety ?? this.mainVariety,
+      status: status ?? this.status,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'hectares': hectares,
+      'lotsCount': lotsCount,
+      'location': location,
+      'mainVariety': mainVariety,
+      'status': status,
+    };
+  }
+
+  factory ProducerFarmSummary.fromJson(Map<String, dynamic> json) {
+    return ProducerFarmSummary(
+      id: json['id'],
+      name: json['name'],
+      hectares: json['hectares']?.toDouble() ?? 0,
+      lotsCount: json['lotsCount'] ?? 0,
+      location: json['location'],
+      mainVariety: json['mainVariety'],
+      status: json['status'],
     );
   }
 }
@@ -140,8 +205,9 @@ class ProducerLotSummary {
   final String variety;
   final double area;
   final double estimatedProduction;
-  final String status; // 'Saludable', 'Atención', 'Riesgo'
+  final String status;
   final String? farmName;
+  final String? farmId;
 
   ProducerLotSummary({
     required this.id,
@@ -151,23 +217,32 @@ class ProducerLotSummary {
     required this.estimatedProduction,
     required this.status,
     this.farmName,
+    this.farmId,
   });
 
   Color get statusColor {
     switch (status) {
-      case 'Saludable': return const Color(0xFF2E7D32);
-      case 'Atención': return const Color(0xFFF57C00);
-      case 'Riesgo': return const Color(0xFFD32F2F);
-      default: return Colors.grey;
+      case 'Saludable':
+        return const Color(0xFF2E7D32);
+      case 'Atención':
+        return const Color(0xFFF57C00);
+      case 'Riesgo':
+        return const Color(0xFFD32F2F);
+      default:
+        return Colors.grey;
     }
   }
 
   IconData get statusIcon {
     switch (status) {
-      case 'Saludable': return Icons.health_and_safety;
-      case 'Atención': return Icons.warning_amber;
-      case 'Riesgo': return Icons.dangerous;
-      default: return Icons.help_outline;
+      case 'Saludable':
+        return Icons.health_and_safety;
+      case 'Atención':
+        return Icons.warning_amber;
+      case 'Riesgo':
+        return Icons.dangerous;
+      default:
+        return Icons.help_outline;
     }
   }
 
@@ -179,6 +254,7 @@ class ProducerLotSummary {
     double? estimatedProduction,
     String? status,
     String? farmName,
+    String? farmId,
   }) {
     return ProducerLotSummary(
       id: id ?? this.id,
@@ -188,6 +264,7 @@ class ProducerLotSummary {
       estimatedProduction: estimatedProduction ?? this.estimatedProduction,
       status: status ?? this.status,
       farmName: farmName ?? this.farmName,
+      farmId: farmId ?? this.farmId,
     );
   }
 
@@ -200,6 +277,7 @@ class ProducerLotSummary {
       'estimatedProduction': estimatedProduction,
       'status': status,
       'farmName': farmName,
+      'farmId': farmId,
     };
   }
 
@@ -212,59 +290,7 @@ class ProducerLotSummary {
       estimatedProduction: json['estimatedProduction']?.toDouble() ?? 0,
       status: json['status'] ?? 'Saludable',
       farmName: json['farmName'],
-    );
-  }
-}
-
-// ✅ MODELO DE FINCA PARA PRODUCTOR
-class ProducerFarmSummary {
-  final String id;
-  final String name;
-  final double hectares;
-  final int lotsCount;
-  final String? location;
-
-  ProducerFarmSummary({
-    required this.id,
-    required this.name,
-    required this.hectares,
-    required this.lotsCount,
-    this.location,
-  });
-
-  ProducerFarmSummary copyWith({
-    String? id,
-    String? name,
-    double? hectares,
-    int? lotsCount,
-    String? location,
-  }) {
-    return ProducerFarmSummary(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      hectares: hectares ?? this.hectares,
-      lotsCount: lotsCount ?? this.lotsCount,
-      location: location ?? this.location,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'hectares': hectares,
-      'lotsCount': lotsCount,
-      'location': location,
-    };
-  }
-
-  factory ProducerFarmSummary.fromJson(Map<String, dynamic> json) {
-    return ProducerFarmSummary(
-      id: json['id'],
-      name: json['name'],
-      hectares: json['hectares']?.toDouble() ?? 0,
-      lotsCount: json['lotsCount'] ?? 0,
-      location: json['location'],
+      farmId: json['farmId'],
     );
   }
 }

@@ -11,7 +11,6 @@ import 'dart:io';
 import '../../../../core/themes/app_theme.dart';
 
 class QRService {
-  /// Genera datos JSON para el código QR con toda la información del lote
   static String generateQRData({
     required String lotId,
     required String lotName,
@@ -22,7 +21,6 @@ class QRService {
     required int treesCount,
     required double estimatedProduction,
     String? location,
-    // ✅ NUEVOS CAMPOS PARA DIAGNÓSTICO Y CERTIFICACIÓN
     String? healthScore,
     String? diagnosisDate,
     String? technicianName,
@@ -32,6 +30,7 @@ class QRService {
     String? diagnosisSummary,
     String? recommendations,
     String? riskLevel,
+    String? certCode,
   }) {
     final data = {
       'lotId': lotId,
@@ -43,18 +42,16 @@ class QRService {
       'treesCount': treesCount,
       'estimatedProduction': estimatedProduction,
       'location': location ?? '',
-      // ✅ DIAGNÓSTICO
       'healthScore': healthScore ?? 'No evaluado',
       'diagnosisDate': diagnosisDate ?? DateTime.now().toIso8601String(),
       'technicianName': technicianName ?? 'No asignado',
       'diagnosisSummary': diagnosisSummary ?? 'Sin diagnóstico',
       'recommendations': recommendations ?? '',
       'riskLevel': riskLevel ?? 'Bajo',
-      // ✅ CERTIFICACIÓN
       'certificationType': certificationType ?? 'No certificado',
       'certificationDate': certificationDate ?? '',
       'certificationExpiry': certificationExpiry ?? '',
-      // ✅ METADATOS
+      'certCode': certCode ?? '',
       'timestamp': DateTime.now().toIso8601String(),
       'type': 'lot_qr',
       'version': '2.0',
@@ -62,7 +59,6 @@ class QRService {
     return jsonEncode(data);
   }
 
-  /// Genera la URL pública para el lote (para usar en el QR)
   static String generateLotURL({
     required String lotId,
     required String lotName,
@@ -72,7 +68,6 @@ class QRService {
     required String status,
     required int treesCount,
     String? location,
-    // ✅ NUEVOS CAMPOS
     String? healthScore,
     String? diagnosisDate,
     String? technicianName,
@@ -82,8 +77,8 @@ class QRService {
     String? diagnosisSummary,
     String? recommendations,
     String? riskLevel,
+    String? certCode,
   }) {
-    // ⚠️ Para pruebas locales
     final baseUrl = 'https://qrr-psi.vercel.app/lot_public.html';
 
     final params = {
@@ -95,7 +90,6 @@ class QRService {
       'trees': treesCount.toString(),
       'location': location ?? 'No especificada',
       'status': status,
-      // ✅ NUEVOS PARÁMETROS
       'health': healthScore ?? 'No evaluado',
       'diagnosis_date': diagnosisDate ?? '',
       'technician': technicianName ?? 'No asignado',
@@ -105,6 +99,7 @@ class QRService {
       'summary': diagnosisSummary ?? '',
       'recommendations': recommendations ?? '',
       'risk': riskLevel ?? 'Bajo',
+      'cert_code': certCode ?? '',
     };
 
     final queryString = params.entries
@@ -114,11 +109,9 @@ class QRService {
     return '$baseUrl?$queryString';
   }
 
-  /// Parsea los datos del código QR
   static Map<String, dynamic> parseQRData(String qrData) {
     try {
       final data = jsonDecode(qrData) as Map<String, dynamic>;
-      // Verificar que sea un QR de lote válido
       if (data['type'] != 'lot_qr') {
         return {};
       }
@@ -128,7 +121,6 @@ class QRService {
     }
   }
 
-  /// Comparte el código QR
   static Future<void> shareQR(String qrData, String lotName) async {
     try {
       final data = parseQRData(qrData);
@@ -141,6 +133,7 @@ class QRService {
           '🏥 Salud: ${data['healthScore'] ?? 'No evaluado'}\n'
           '📋 Diagnóstico: ${data['diagnosisSummary'] ?? 'Sin diagnóstico'}\n'
           '🏅 Certificación: ${data['certificationType'] ?? 'No certificado'}\n'
+          '🔑 Código: ${data['certCode'] ?? 'N/A'}\n'
           '🔗 Escanea este código QR para ver más información'
           : '🌱 Lote: $lotName\n'
           '📋 Escanea este código QR para ver la información del lote';
@@ -154,7 +147,6 @@ class QRService {
     }
   }
 
-  /// Guarda el código QR como imagen
   static Future<void> saveQRAsImage(
       BuildContext context,
       GlobalKey qrKey,

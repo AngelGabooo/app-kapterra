@@ -18,6 +18,10 @@ class TechnicianProducersProvider extends ChangeNotifier {
     if (!exists) {
       _producers.add(producer);
       notifyListeners();
+      debugPrint('✅ Productor agregado al técnico: ${producer.name} (Fincas: ${producer.farmsCount}, Lotes: ${producer.lotsCount})');
+    } else {
+      // Si existe, actualizar sus datos
+      updateProducer(producer);
     }
   }
 
@@ -27,9 +31,24 @@ class TechnicianProducersProvider extends ChangeNotifier {
       final exists = _producers.any((p) => p.id == producer.id);
       if (!exists) {
         _producers.add(producer);
+      } else {
+        // Actualizar existente
+        final index = _producers.indexWhere((p) => p.id == producer.id);
+        if (index != -1) {
+          _producers[index] = _producers[index].copyWith(
+            farmsCount: producer.farmsCount,
+            lotsCount: producer.lotsCount,
+            totalProduction: producer.totalProduction,
+            averageQuality: producer.averageQuality,
+            location: producer.location,
+            farmName: producer.farmName,
+            lotName: producer.lotName,
+          );
+        }
       }
     }
     notifyListeners();
+    debugPrint('✅ ${producers.length} productores agregados/actualizados al técnico');
   }
 
   // ✅ Eliminar productor
@@ -44,6 +63,7 @@ class TechnicianProducersProvider extends ChangeNotifier {
     if (index != -1) {
       _producers[index] = producer;
       notifyListeners();
+      debugPrint('✅ Productor actualizado: ${producer.name}');
     }
   }
 
@@ -78,5 +98,35 @@ class TechnicianProducersProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-// ❌ ELIMINADO: loadSampleProducers() - Ya no se usan datos de ejemplo
+  // ✅ Sincronizar productor con datos actualizados
+  void syncProducer(String producerId, {
+    int? farmsCount,
+    int? lotsCount,
+    double? totalProduction,
+    double? averageQuality,
+    String? location,
+    String? farmName,
+    String? lotName,
+  }) {
+    final index = _producers.indexWhere((p) => p.id == producerId);
+    if (index != -1) {
+      _producers[index] = _producers[index].copyWith(
+        farmsCount: farmsCount ?? _producers[index].farmsCount,
+        lotsCount: lotsCount ?? _producers[index].lotsCount,
+        totalProduction: totalProduction ?? _producers[index].totalProduction,
+        averageQuality: averageQuality ?? _producers[index].averageQuality,
+        location: location ?? _producers[index].location,
+        farmName: farmName ?? _producers[index].farmName,
+        lotName: lotName ?? _producers[index].lotName,
+      );
+      notifyListeners();
+      debugPrint('✅ Productor sincronizado: ${_producers[index].name}');
+    }
+  }
+
+  // ✅ Limpiar todos los productores
+  void clearAll() {
+    _producers.clear();
+    notifyListeners();
+  }
 }

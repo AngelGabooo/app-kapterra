@@ -43,6 +43,11 @@ class TechnicianProducerModel {
   final String lastVisit;
   final String? farmName;
   final String? lotName;
+  // ✅ NUEVOS CAMPOS PARA FINCAS Y LOTES
+  final int farmsCount;
+  final int lotsCount;
+  final double totalProduction;
+  final double averageQuality;
 
   TechnicianProducerModel({
     required this.id,
@@ -56,6 +61,10 @@ class TechnicianProducerModel {
     required this.lastVisit,
     this.farmName,
     this.lotName,
+    this.farmsCount = 0,
+    this.lotsCount = 0,
+    this.totalProduction = 0,
+    this.averageQuality = 0,
   });
 
   TechnicianProducerModel copyWith({
@@ -70,6 +79,10 @@ class TechnicianProducerModel {
     String? lastVisit,
     String? farmName,
     String? lotName,
+    int? farmsCount,
+    int? lotsCount,
+    double? totalProduction,
+    double? averageQuality,
   }) {
     return TechnicianProducerModel(
       id: id ?? this.id,
@@ -83,6 +96,10 @@ class TechnicianProducerModel {
       lastVisit: lastVisit ?? this.lastVisit,
       farmName: farmName ?? this.farmName,
       lotName: lotName ?? this.lotName,
+      farmsCount: farmsCount ?? this.farmsCount,
+      lotsCount: lotsCount ?? this.lotsCount,
+      totalProduction: totalProduction ?? this.totalProduction,
+      averageQuality: averageQuality ?? this.averageQuality,
     );
   }
 
@@ -99,6 +116,10 @@ class TechnicianProducerModel {
       'lastVisit': lastVisit,
       'farmName': farmName,
       'lotName': lotName,
+      'farmsCount': farmsCount,
+      'lotsCount': lotsCount,
+      'totalProduction': totalProduction,
+      'averageQuality': averageQuality,
     };
   }
 
@@ -115,6 +136,10 @@ class TechnicianProducerModel {
       lastVisit: json['lastVisit'] ?? DateTime.now().toIso8601String().split('T').first,
       farmName: json['farmName'],
       lotName: json['lotName'],
+      farmsCount: json['farmsCount'] ?? 0,
+      lotsCount: json['lotsCount'] ?? 0,
+      totalProduction: json['totalProduction']?.toDouble() ?? 0,
+      averageQuality: json['averageQuality']?.toDouble() ?? 0,
     );
   }
 }

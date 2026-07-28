@@ -14,7 +14,6 @@ class QRCard extends StatefulWidget {
   final int treesCount;
   final double estimatedProduction;
   final String? location;
-  // ✅ NUEVOS CAMPOS
   final String? healthScore;
   final String? diagnosisDate;
   final String? technicianName;
@@ -24,6 +23,7 @@ class QRCard extends StatefulWidget {
   final String? diagnosisSummary;
   final String? recommendations;
   final String? riskLevel;
+  final String? certCode;
 
   const QRCard({
     super.key,
@@ -45,15 +45,42 @@ class QRCard extends StatefulWidget {
     this.diagnosisSummary,
     this.recommendations,
     this.riskLevel,
+    this.certCode,
   });
 
   @override
-  State<QRCard> createState() => _QRCardState();
+  State<QRCard> createState() => QRCardState(); // ✅ Ahora es público
 }
 
-class _QRCardState extends State<QRCard> {
+// ✅ CLASE PÚBLICA (sin _)
+class QRCardState extends State<QRCard> {
   final GlobalKey _qrKey = GlobalKey();
   String? _qrData;
+
+  // ✅ Método público para actualizar el QR desde fuera
+  void updateQR({
+    String? healthScore,
+    String? diagnosisDate,
+    String? technicianName,
+    String? certificationType,
+    String? certificationDate,
+    String? certificationExpiry,
+    String? diagnosisSummary,
+    String? recommendations,
+    String? riskLevel,
+    String? certCode,
+  }) {
+    setState(() {
+      _generateQR();
+    });
+  }
+
+  // ✅ Método público para recargar el QR
+  void refreshQR() {
+    setState(() {
+      _generateQR();
+    });
+  }
 
   @override
   void initState() {
@@ -71,7 +98,6 @@ class _QRCardState extends State<QRCard> {
       status: widget.status,
       treesCount: widget.treesCount,
       location: widget.location,
-      // ✅ PASAR NUEVOS CAMPOS
       healthScore: widget.healthScore,
       diagnosisDate: widget.diagnosisDate,
       technicianName: widget.technicianName,
@@ -81,6 +107,7 @@ class _QRCardState extends State<QRCard> {
       diagnosisSummary: widget.diagnosisSummary,
       recommendations: widget.recommendations,
       riskLevel: widget.riskLevel,
+      certCode: widget.certCode,
     );
   }
 
@@ -123,8 +150,9 @@ class _QRCardState extends State<QRCard> {
                 _buildDetailRow('📊 Estado', data['status'] ?? widget.status),
                 if (data['location'] != null && data['location'].toString().isNotEmpty)
                   _buildDetailRow('📍 Ubicación', data['location']),
+                if (data['certCode'] != null && data['certCode'].toString().isNotEmpty)
+                  _buildDetailRow('🔑 Código', data['certCode']),
 
-                // ✅ SECCIÓN DIAGNÓSTICO
                 if (data['healthScore'] != null && data['healthScore'] != 'No evaluado')
                   _buildDetailRow('🏥 Salud', data['healthScore']),
                 if (data['technicianName'] != null && data['technicianName'] != 'No asignado')
@@ -134,7 +162,6 @@ class _QRCardState extends State<QRCard> {
                 if (data['riskLevel'] != null && data['riskLevel'] != 'Bajo')
                   _buildDetailRow('⚠️ Riesgo', data['riskLevel']),
 
-                // ✅ SECCIÓN CERTIFICACIÓN
                 if (data['certificationType'] != null && data['certificationType'] != 'No certificado')
                   _buildDetailRow('🏅 Certificación', data['certificationType']),
                 if (data['certificationDate'] != null && data['certificationDate']!.isNotEmpty)
@@ -225,7 +252,6 @@ class _QRCardState extends State<QRCard> {
       ),
       child: Column(
         children: [
-          // Título
           Row(
             children: [
               Icon(Icons.qr_code, color: AppTheme.primaryGreen),
@@ -250,7 +276,6 @@ class _QRCardState extends State<QRCard> {
           ),
           const SizedBox(height: 12),
 
-          // QR
           RepaintBoundary(
             key: _qrKey,
             child: _qrData != null
@@ -273,7 +298,6 @@ class _QRCardState extends State<QRCard> {
 
           const SizedBox(height: 16),
 
-          // Botones de acción
           Row(
             children: [
               Expanded(

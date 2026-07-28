@@ -1,12 +1,13 @@
+// lib/core/routes/app_router.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart'; // 🆕 Agregado para usar BlocProvider
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 // ==================== FEATURES SPLASH ====================
 import 'package:kaabcafe/features/splash/presentation/screens/splash_screen.dart';
-import 'package:kaabcafe/features/splash/presentation/cubit/splash_cubit.dart'; // 🆕 Agregado
-import 'package:kaabcafe/features/splash/data/datasources/splash_local_datasource.dart'; // 🆕 Agregado
-import 'package:kaabcafe/features/splash/data/repositories/splash_repository_impl.dart'; // 🆕 Agregado
+import 'package:kaabcafe/features/splash/presentation/cubit/splash_cubit.dart';
+import 'package:kaabcafe/features/splash/data/datasources/splash_local_datasource.dart';
+import 'package:kaabcafe/features/splash/data/repositories/splash_repository_impl.dart';
 
 // ==================== SCREENS ====================
 import 'package:kaabcafe/features/onboarding/presentation/screens/onboarding_screen.dart';
@@ -20,7 +21,7 @@ import 'package:kaabcafe/features/farm/presentation/screens/register_farm_screen
 import 'package:kaabcafe/features/farm/presentation/screens/farm_success_screen.dart';
 
 import 'package:kaabcafe/features/dashboard/presentation/screens/dashboard_screen.dart';
-import 'package:kaabcafe/features/dashboard/presentation/screens/profile_dashboard_screen.dart'; // ✅ NUEVO
+import 'package:kaabcafe/features/dashboard/presentation/screens/profile_dashboard_screen.dart';
 
 import 'package:kaabcafe/features/farms/presentation/screens/my_farms_screen.dart';
 import 'package:kaabcafe/features/farms/presentation/screens/farm_detail_screen.dart';
@@ -52,7 +53,7 @@ import 'package:kaabcafe/features/buyer/presentation/screens/producers_screen.da
 import 'package:kaabcafe/features/marketplace/presentation/screens/marketplace_screen.dart';
 import 'package:kaabcafe/features/marketplace/presentation/screens/explore_screen.dart';
 import 'package:kaabcafe/features/marketplace/presentation/screens/lot_detail_screen.dart' as marketplace;
-import 'package:kaabcafe/features/marketplace/data/models/lot_model.dart'; // ✅ Agregar este import
+import 'package:kaabcafe/features/marketplace/data/models/lot_model.dart';
 import 'package:kaabcafe/features/marketplace/presentation/screens/make_offer_screen.dart';
 import 'package:kaabcafe/features/marketplace/presentation/screens/negotiation_screen.dart';
 import 'package:kaabcafe/features/marketplace/presentation/screens/digital_passport_screen.dart';
@@ -65,7 +66,7 @@ import 'package:kaabcafe/features/technician/presentation/screens/technician_vis
 import 'package:kaabcafe/features/technician/presentation/screens/technician_lot_inspection_screen.dart';
 import 'package:kaabcafe/features/technician/presentation/screens/technician_crop_diagnosis_screen.dart';
 import 'package:kaabcafe/features/technician/presentation/screens/technician_lot_certification_screen.dart';
-import 'package:kaabcafe/features/auth/presentation/screens/pin_security_screen.dart'; // ✅ NUEVO
+import 'package:kaabcafe/features/auth/presentation/screens/pin_security_screen.dart';
 import 'package:kaabcafe/features/farms/presentation/screens/lot_public_screen.dart';
 import 'package:kaabcafe/features/buyer/presentation/screens/reports/reports_screen.dart';
 import 'package:kaabcafe/features/marketplace/presentation/screens/purchases_screen.dart';
@@ -156,11 +157,25 @@ class AppRouter {
         name: RouteNames.farmDetail,
         path: RouteNames.farmDetail,
         builder: (context, state) {
-          final farm = state.extra as FarmDetailsModel?;
-          if (farm == null) {
-            return const Scaffold(body: Center(child: Text('Error: Finca no encontrada')));
+          final extra = state.extra;
+
+          // ✅ MANEJAR CORRECTAMENTE EL EXTRA
+          if (extra is FarmDetailsModel) {
+            return FarmDetailScreen(farm: extra);
+          } else if (extra is Map<String, dynamic>) {
+            try {
+              final farm = FarmDetailsModel.fromJson(extra);
+              return FarmDetailScreen(farm: farm);
+            } catch (e) {
+              return const Scaffold(
+                body: Center(child: Text('Error: Datos de finca inválidos')),
+              );
+            }
           }
-          return FarmDetailScreen(farm: farm);
+
+          return const Scaffold(
+            body: Center(child: Text('Error: Finca no encontrada')),
+          );
         },
       ),
 
@@ -168,9 +183,24 @@ class AppRouter {
         name: RouteNames.editFarm,
         path: RouteNames.editFarm,
         builder: (context, state) {
-          final farm = state.extra as FarmDetailsModel?;
-          if (farm == null) return const Scaffold(body: Center(child: Text('Error')));
-          return EditFarmScreen(farm: farm);
+          final extra = state.extra;
+
+          if (extra is FarmDetailsModel) {
+            return EditFarmScreen(farm: extra);
+          } else if (extra is Map<String, dynamic>) {
+            try {
+              final farm = FarmDetailsModel.fromJson(extra);
+              return EditFarmScreen(farm: farm);
+            } catch (e) {
+              return const Scaffold(
+                body: Center(child: Text('Error: Datos de finca inválidos')),
+              );
+            }
+          }
+
+          return const Scaffold(
+            body: Center(child: Text('Error: Finca no encontrada')),
+          );
         },
       ),
 
@@ -178,10 +208,72 @@ class AppRouter {
         name: RouteNames.lotDetail,
         path: RouteNames.lotDetail,
         builder: (context, state) {
-          final args = state.extra as Map<String, dynamic>? ?? {};
-          return LotDetailScreen(
-            lot: args['lot'] as LotModel,
-            farm: args['farm'] as FarmDetailsModel,
+          final extra = state.extra;
+
+          // ✅ MANEJAR CORRECTAMENTE EL EXTRA
+          if (extra is Map<String, dynamic>) {
+            final lotData = extra['lot'];
+            final farmData = extra['farm'];
+
+            LotModel? lot;
+            FarmDetailsModel? farm;
+
+            // Procesar lot
+            if (lotData is LotModel) {
+              lot = lotData;
+            } else if (lotData is Map<String, dynamic>) {
+              try {
+                lot = LotModel.fromJson(lotData);
+              } catch (e) {
+                // Si falla, intentar con los datos básicos
+                lot = LotModel(
+                  id: lotData['id'] ?? '',
+                  name: lotData['name'] ?? 'Lote sin nombre',
+                  variety: lotData['variety'] ?? 'No especificada',
+                  estimatedProduction: (lotData['estimatedProduction'] ?? 0).toDouble(),
+                  area: (lotData['area'] ?? 0).toDouble(),
+                  status: LotStatus.values.firstWhere(
+                        (s) => s.toString() == lotData['status'],
+                    orElse: () => LotStatus.healthy,
+                  ),
+                  treesCount: lotData['treesCount'] ?? 0,
+                );
+              }
+            }
+
+            // Procesar farm
+            if (farmData is FarmDetailsModel) {
+              farm = farmData;
+            } else if (farmData is Map<String, dynamic>) {
+              try {
+                farm = FarmDetailsModel.fromJson(farmData);
+              } catch (e) {
+                // Si falla, crear uno básico
+                farm = FarmDetailsModel(
+                  id: farmData['id'] ?? '',
+                  name: farmData['name'] ?? 'Finca sin nombre',
+                  location: farmData['location'] ?? 'Ubicación no especificada',
+                  hectares: (farmData['hectares'] ?? 0).toDouble(),
+                  lots: farmData['lots'] ?? 0,
+                  productivity: (farmData['productivity'] ?? 0).toDouble(),
+                  status: FarmHealthStatus.values.firstWhere(
+                        (s) => s.toString() == farmData['status'],
+                    orElse: () => FarmHealthStatus.healthy,
+                  ),
+                  imageUrl: farmData['imageUrl'] ?? '',
+                  latitude: (farmData['latitude'] ?? 0).toDouble(),
+                  longitude: (farmData['longitude'] ?? 0).toDouble(),
+                );
+              }
+            }
+
+            if (lot != null && farm != null) {
+              return LotDetailScreen(lot: lot, farm: farm);
+            }
+          }
+
+          return const Scaffold(
+            body: Center(child: Text('Error: Datos del lote no encontrados')),
           );
         },
       ),
@@ -190,10 +282,67 @@ class AppRouter {
         name: RouteNames.editLot,
         path: RouteNames.editLot,
         builder: (context, state) {
-          final args = state.extra as Map<String, dynamic>? ?? {};
-          return EditLotScreen(
-            lot: args['lot'] as LotModel,
-            farm: args['farm'] as FarmDetailsModel,
+          final extra = state.extra;
+
+          if (extra is Map<String, dynamic>) {
+            final lotData = extra['lot'];
+            final farmData = extra['farm'];
+
+            LotModel? lot;
+            FarmDetailsModel? farm;
+
+            if (lotData is LotModel) {
+              lot = lotData;
+            } else if (lotData is Map<String, dynamic>) {
+              try {
+                lot = LotModel.fromJson(lotData);
+              } catch (e) {
+                lot = LotModel(
+                  id: lotData['id'] ?? '',
+                  name: lotData['name'] ?? 'Lote sin nombre',
+                  variety: lotData['variety'] ?? 'No especificada',
+                  estimatedProduction: (lotData['estimatedProduction'] ?? 0).toDouble(),
+                  area: (lotData['area'] ?? 0).toDouble(),
+                  status: LotStatus.values.firstWhere(
+                        (s) => s.toString() == lotData['status'],
+                    orElse: () => LotStatus.healthy,
+                  ),
+                  treesCount: lotData['treesCount'] ?? 0,
+                );
+              }
+            }
+
+            if (farmData is FarmDetailsModel) {
+              farm = farmData;
+            } else if (farmData is Map<String, dynamic>) {
+              try {
+                farm = FarmDetailsModel.fromJson(farmData);
+              } catch (e) {
+                farm = FarmDetailsModel(
+                  id: farmData['id'] ?? '',
+                  name: farmData['name'] ?? 'Finca sin nombre',
+                  location: farmData['location'] ?? 'Ubicación no especificada',
+                  hectares: (farmData['hectares'] ?? 0).toDouble(),
+                  lots: farmData['lots'] ?? 0,
+                  productivity: (farmData['productivity'] ?? 0).toDouble(),
+                  status: FarmHealthStatus.values.firstWhere(
+                        (s) => s.toString() == farmData['status'],
+                    orElse: () => FarmHealthStatus.healthy,
+                  ),
+                  imageUrl: farmData['imageUrl'] ?? '',
+                  latitude: (farmData['latitude'] ?? 0).toDouble(),
+                  longitude: (farmData['longitude'] ?? 0).toDouble(),
+                );
+              }
+            }
+
+            if (lot != null && farm != null) {
+              return EditLotScreen(lot: lot, farm: farm);
+            }
+          }
+
+          return const Scaffold(
+            body: Center(child: Text('Error: Datos del lote no encontrados')),
           );
         },
       ),
@@ -202,9 +351,24 @@ class AppRouter {
         name: RouteNames.createLot,
         path: RouteNames.createLot,
         builder: (context, state) {
-          final farm = state.extra as FarmDetailsModel?;
-          if (farm == null) return const Scaffold(body: Center(child: Text('Error')));
-          return CreateLotScreen(farm: farm);
+          final extra = state.extra;
+
+          if (extra is FarmDetailsModel) {
+            return CreateLotScreen(farm: extra);
+          } else if (extra is Map<String, dynamic>) {
+            try {
+              final farm = FarmDetailsModel.fromJson(extra);
+              return CreateLotScreen(farm: farm);
+            } catch (e) {
+              return const Scaffold(
+                body: Center(child: Text('Error: Datos de finca inválidos')),
+              );
+            }
+          }
+
+          return const Scaffold(
+            body: Center(child: Text('Error: Finca no encontrada')),
+          );
         },
       ),
 
@@ -212,10 +376,67 @@ class AppRouter {
         name: RouteNames.lotHistory,
         path: RouteNames.lotHistory,
         builder: (context, state) {
-          final args = state.extra as Map<String, dynamic>? ?? {};
-          return LotHistoryScreen(
-            lot: args['lot'] as LotModel,
-            farm: args['farm'] as FarmDetailsModel,
+          final extra = state.extra;
+
+          if (extra is Map<String, dynamic>) {
+            final lotData = extra['lot'];
+            final farmData = extra['farm'];
+
+            LotModel? lot;
+            FarmDetailsModel? farm;
+
+            if (lotData is LotModel) {
+              lot = lotData;
+            } else if (lotData is Map<String, dynamic>) {
+              try {
+                lot = LotModel.fromJson(lotData);
+              } catch (e) {
+                lot = LotModel(
+                  id: lotData['id'] ?? '',
+                  name: lotData['name'] ?? 'Lote sin nombre',
+                  variety: lotData['variety'] ?? 'No especificada',
+                  estimatedProduction: (lotData['estimatedProduction'] ?? 0).toDouble(),
+                  area: (lotData['area'] ?? 0).toDouble(),
+                  status: LotStatus.values.firstWhere(
+                        (s) => s.toString() == lotData['status'],
+                    orElse: () => LotStatus.healthy,
+                  ),
+                  treesCount: lotData['treesCount'] ?? 0,
+                );
+              }
+            }
+
+            if (farmData is FarmDetailsModel) {
+              farm = farmData;
+            } else if (farmData is Map<String, dynamic>) {
+              try {
+                farm = FarmDetailsModel.fromJson(farmData);
+              } catch (e) {
+                farm = FarmDetailsModel(
+                  id: farmData['id'] ?? '',
+                  name: farmData['name'] ?? 'Finca sin nombre',
+                  location: farmData['location'] ?? 'Ubicación no especificada',
+                  hectares: (farmData['hectares'] ?? 0).toDouble(),
+                  lots: farmData['lots'] ?? 0,
+                  productivity: (farmData['productivity'] ?? 0).toDouble(),
+                  status: FarmHealthStatus.values.firstWhere(
+                        (s) => s.toString() == farmData['status'],
+                    orElse: () => FarmHealthStatus.healthy,
+                  ),
+                  imageUrl: farmData['imageUrl'] ?? '',
+                  latitude: (farmData['latitude'] ?? 0).toDouble(),
+                  longitude: (farmData['longitude'] ?? 0).toDouble(),
+                );
+              }
+            }
+
+            if (lot != null && farm != null) {
+              return LotHistoryScreen(lot: lot, farm: farm);
+            }
+          }
+
+          return const Scaffold(
+            body: Center(child: Text('Error: Datos del lote no encontrados')),
           );
         },
       ),
@@ -224,10 +445,67 @@ class AppRouter {
         name: RouteNames.registerActivity,
         path: RouteNames.registerActivity,
         builder: (context, state) {
-          final args = state.extra as Map<String, dynamic>? ?? {};
-          return RegisterActivityScreen(
-            lot: args['lot'] as LotModel,
-            farm: args['farm'] as FarmDetailsModel,
+          final extra = state.extra;
+
+          if (extra is Map<String, dynamic>) {
+            final lotData = extra['lot'];
+            final farmData = extra['farm'];
+
+            LotModel? lot;
+            FarmDetailsModel? farm;
+
+            if (lotData is LotModel) {
+              lot = lotData;
+            } else if (lotData is Map<String, dynamic>) {
+              try {
+                lot = LotModel.fromJson(lotData);
+              } catch (e) {
+                lot = LotModel(
+                  id: lotData['id'] ?? '',
+                  name: lotData['name'] ?? 'Lote sin nombre',
+                  variety: lotData['variety'] ?? 'No especificada',
+                  estimatedProduction: (lotData['estimatedProduction'] ?? 0).toDouble(),
+                  area: (lotData['area'] ?? 0).toDouble(),
+                  status: LotStatus.values.firstWhere(
+                        (s) => s.toString() == lotData['status'],
+                    orElse: () => LotStatus.healthy,
+                  ),
+                  treesCount: lotData['treesCount'] ?? 0,
+                );
+              }
+            }
+
+            if (farmData is FarmDetailsModel) {
+              farm = farmData;
+            } else if (farmData is Map<String, dynamic>) {
+              try {
+                farm = FarmDetailsModel.fromJson(farmData);
+              } catch (e) {
+                farm = FarmDetailsModel(
+                  id: farmData['id'] ?? '',
+                  name: farmData['name'] ?? 'Finca sin nombre',
+                  location: farmData['location'] ?? 'Ubicación no especificada',
+                  hectares: (farmData['hectares'] ?? 0).toDouble(),
+                  lots: farmData['lots'] ?? 0,
+                  productivity: (farmData['productivity'] ?? 0).toDouble(),
+                  status: FarmHealthStatus.values.firstWhere(
+                        (s) => s.toString() == farmData['status'],
+                    orElse: () => FarmHealthStatus.healthy,
+                  ),
+                  imageUrl: farmData['imageUrl'] ?? '',
+                  latitude: (farmData['latitude'] ?? 0).toDouble(),
+                  longitude: (farmData['longitude'] ?? 0).toDouble(),
+                );
+              }
+            }
+
+            if (lot != null && farm != null) {
+              return RegisterActivityScreen(lot: lot, farm: farm);
+            }
+          }
+
+          return const Scaffold(
+            body: Center(child: Text('Error: Datos de actividad no encontrados')),
           );
         },
       ),
@@ -236,11 +514,67 @@ class AppRouter {
         name: RouteNames.activities,
         path: RouteNames.activities,
         builder: (context, state) {
-          final args = state.extra as Map<String, dynamic>?;
-          return ActivitiesListScreen(
-            initialLot: args?['lot'] as LotModel?,
-            initialFarm: args?['farm'] as FarmDetailsModel?,
-          );
+          final extra = state.extra;
+
+          if (extra is Map<String, dynamic>) {
+            final lotData = extra['lot'];
+            final farmData = extra['farm'];
+
+            LotModel? lot;
+            FarmDetailsModel? farm;
+
+            if (lotData is LotModel) {
+              lot = lotData;
+            } else if (lotData is Map<String, dynamic>) {
+              try {
+                lot = LotModel.fromJson(lotData);
+              } catch (e) {
+                lot = LotModel(
+                  id: lotData['id'] ?? '',
+                  name: lotData['name'] ?? 'Lote sin nombre',
+                  variety: lotData['variety'] ?? 'No especificada',
+                  estimatedProduction: (lotData['estimatedProduction'] ?? 0).toDouble(),
+                  area: (lotData['area'] ?? 0).toDouble(),
+                  status: LotStatus.values.firstWhere(
+                        (s) => s.toString() == lotData['status'],
+                    orElse: () => LotStatus.healthy,
+                  ),
+                  treesCount: lotData['treesCount'] ?? 0,
+                );
+              }
+            }
+
+            if (farmData is FarmDetailsModel) {
+              farm = farmData;
+            } else if (farmData is Map<String, dynamic>) {
+              try {
+                farm = FarmDetailsModel.fromJson(farmData);
+              } catch (e) {
+                farm = FarmDetailsModel(
+                  id: farmData['id'] ?? '',
+                  name: farmData['name'] ?? 'Finca sin nombre',
+                  location: farmData['location'] ?? 'Ubicación no especificada',
+                  hectares: (farmData['hectares'] ?? 0).toDouble(),
+                  lots: farmData['lots'] ?? 0,
+                  productivity: (farmData['productivity'] ?? 0).toDouble(),
+                  status: FarmHealthStatus.values.firstWhere(
+                        (s) => s.toString() == farmData['status'],
+                    orElse: () => FarmHealthStatus.healthy,
+                  ),
+                  imageUrl: farmData['imageUrl'] ?? '',
+                  latitude: (farmData['latitude'] ?? 0).toDouble(),
+                  longitude: (farmData['longitude'] ?? 0).toDouble(),
+                );
+              }
+            }
+
+            return ActivitiesListScreen(
+              initialLot: lot,
+              initialFarm: farm,
+            );
+          }
+
+          return const ActivitiesListScreen();
         },
       ),
 
@@ -259,11 +593,73 @@ class AppRouter {
         name: RouteNames.editActivity,
         path: RouteNames.editActivity,
         builder: (context, state) {
-          final args = state.extra as Map<String, dynamic>? ?? {};
-          return EditActivityScreen(
-            activity: args['activity'] as ActivityModel,
-            lot: args['lot'] as LotModel,
-            farm: args['farm'] as FarmDetailsModel,
+          final extra = state.extra;
+
+          if (extra is Map<String, dynamic>) {
+            final activityData = extra['activity'];
+            final lotData = extra['lot'];
+            final farmData = extra['farm'];
+
+            ActivityModel? activity;
+            LotModel? lot;
+            FarmDetailsModel? farm;
+
+            if (activityData is ActivityModel) {
+              activity = activityData;
+            }
+
+            if (lotData is LotModel) {
+              lot = lotData;
+            } else if (lotData is Map<String, dynamic>) {
+              try {
+                lot = LotModel.fromJson(lotData);
+              } catch (e) {
+                lot = LotModel(
+                  id: lotData['id'] ?? '',
+                  name: lotData['name'] ?? 'Lote sin nombre',
+                  variety: lotData['variety'] ?? 'No especificada',
+                  estimatedProduction: (lotData['estimatedProduction'] ?? 0).toDouble(),
+                  area: (lotData['area'] ?? 0).toDouble(),
+                  status: LotStatus.values.firstWhere(
+                        (s) => s.toString() == lotData['status'],
+                    orElse: () => LotStatus.healthy,
+                  ),
+                  treesCount: lotData['treesCount'] ?? 0,
+                );
+              }
+            }
+
+            if (farmData is FarmDetailsModel) {
+              farm = farmData;
+            } else if (farmData is Map<String, dynamic>) {
+              try {
+                farm = FarmDetailsModel.fromJson(farmData);
+              } catch (e) {
+                farm = FarmDetailsModel(
+                  id: farmData['id'] ?? '',
+                  name: farmData['name'] ?? 'Finca sin nombre',
+                  location: farmData['location'] ?? 'Ubicación no especificada',
+                  hectares: (farmData['hectares'] ?? 0).toDouble(),
+                  lots: farmData['lots'] ?? 0,
+                  productivity: (farmData['productivity'] ?? 0).toDouble(),
+                  status: FarmHealthStatus.values.firstWhere(
+                        (s) => s.toString() == farmData['status'],
+                    orElse: () => FarmHealthStatus.healthy,
+                  ),
+                  imageUrl: farmData['imageUrl'] ?? '',
+                  latitude: (farmData['latitude'] ?? 0).toDouble(),
+                  longitude: (farmData['longitude'] ?? 0).toDouble(),
+                );
+              }
+            }
+
+            if (activity != null && lot != null && farm != null) {
+              return EditActivityScreen(activity: activity, lot: lot, farm: farm);
+            }
+          }
+
+          return const Scaffold(
+            body: Center(child: Text('Error: Datos de actividad no encontrados')),
           );
         },
       ),

@@ -176,7 +176,9 @@ class _ProducersScreenState extends State<ProducersScreen> {
     });
   }
 
-  // ✅ NOTIFICAR AL TÉCNICO DE LA ASIGNACIÓN
+// En lib/features/buyer/presentation/screens/producers_screen.dart
+
+// ✅ NOTIFICAR AL TÉCNICO DE LA ASIGNACIÓN (ACTUALIZADO)
   void _notifyTechnicianOfAssignment(String technicianId, ProducerSummaryModel producer) {
     try {
       // Obtener el provider de productores del técnico
@@ -191,29 +193,42 @@ class _ProducersScreenState extends State<ProducersScreen> {
         return;
       }
 
-      // En _notifyTechnicianOfAssignment
+      // ✅ CREAR PRODUCTOR CON TODOS LOS DATOS DE FINCAS Y LOTES
       final technicianProducer = TechnicianProducerModel(
         id: producer.id,
         name: producer.name,
         email: producer.email,
-        phone: technician.phone, // ✅ Asegurar que el teléfono del técnico se guarda
+        phone: producer.phone,
         location: producer.location ?? 'Sin ubicación',
         production: producer.totalProduction,
-        traceability: 0,
-        status: ProducerStatus.excellent,
+        traceability: producer.lotsCount > 0 ? (producer.lotsCount / 10) * 100 : 0,
+        status: _getProducerStatus(producer),
         lastVisit: DateTime.now().toIso8601String().split('T').first,
         farmName: 'Finca asignada',
         lotName: 'Lote asignado',
+        // ✅ PASAR DATOS DE FINCAS Y LOTES
+        farmsCount: producer.farmsCount,
+        lotsCount: producer.lotsCount,
+        totalProduction: producer.totalProduction,
+        averageQuality: producer.averageQuality,
       );
+
       // Agregar el productor a la lista del técnico
       technicianProducersProvider.addProducer(technicianProducer);
 
       debugPrint('✅ Productor "${producer.name}" asignado al técnico "${technician.fullName}"');
-      debugPrint('📢 Notificación enviada al técnico');
+      debugPrint('   📊 Fincas: ${producer.farmsCount}, Lotes: ${producer.lotsCount}');
 
     } catch (e) {
       debugPrint('❌ Error al notificar al técnico: $e');
     }
+  }
+
+// ✅ Helper para determinar el estado del productor
+  ProducerStatus _getProducerStatus(ProducerSummaryModel producer) {
+    if (producer.averageQuality >= 80) return ProducerStatus.excellent;
+    if (producer.averageQuality >= 60) return ProducerStatus.requiresAttention;
+    return ProducerStatus.risk;
   }
 
   // ✅ ACEPTAR PRODUCTOR PENDIENTE

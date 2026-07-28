@@ -1,11 +1,14 @@
 // lib/features/farms/presentation/screens/create_lot_screen.dart
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
 import 'package:kaabcafe/core/providers/farm_provider.dart';
+import 'package:kaabcafe/core/providers/user_provider.dart';
+import 'package:kaabcafe/features/buyer/providers/cooperative_producers_provider.dart';
 import 'package:kaabcafe/features/farms/data/models/farm_details_model.dart';
 import 'package:kaabcafe/features/farms/data/models/lot_model.dart';
-import '../location/location_picker.dart'; // ✅ Importar LocationPicker
+import '../location/location_picker.dart';
 
 class CreateLotScreen extends StatefulWidget {
   final FarmDetailsModel farm;
@@ -20,16 +23,13 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _areaController = TextEditingController();
-  final TextEditingController _altitudeController = TextEditingController();
   final TextEditingController _ageController = TextEditingController();
   final TextEditingController _densityController = TextEditingController();
 
   String _selectedVariety = 'Bourbon';
   String _selectedStatus = 'Excelente';
-  List<String> _images = [];
   bool _isSaving = false;
 
-  // ✅ Variables para ubicación
   double? _lotLatitude;
   double? _lotLongitude;
   String _lotAddress = '';
@@ -69,13 +69,11 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
     _nameController.dispose();
     _descriptionController.dispose();
     _areaController.dispose();
-    _altitudeController.dispose();
     _ageController.dispose();
     _densityController.dispose();
     super.dispose();
   }
 
-  // Calcula el número estimado de árboles basado en el área y densidad
   int _calculateTreesCount() {
     final area = double.tryParse(_areaController.text) ?? 0.0;
     final density = double.tryParse(_densityController.text) ?? 0.0;
@@ -84,7 +82,6 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
       return (area * density).round();
     }
 
-    // Densidad promedio de café: ~5000 plantas por hectárea
     if (area > 0) {
       return (area * 5000).round();
     }
@@ -150,10 +147,63 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
         area: area,
         status: _mapStatusToEnum(_selectedStatus),
         treesCount: treesCount,
+        description: _descriptionController.text.isNotEmpty ? _descriptionController.text : null,
+        age: int.tryParse(_ageController.text),
+        density: int.tryParse(_densityController.text),
       );
 
       final farmProvider = Provider.of<FarmProvider>(context, listen: false);
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final coopProducersProvider = Provider.of<CooperativeProducersProvider>(context, listen: false);
+
+      // ✅ OBTENER EL EMAIL DEL USUARIO COMO ID
+      String producerId = userProvider.userEmail ?? '';
+
+      // ✅ Si no hay email en UserProvider, verificar en FirebaseAuth
+      if (producerId.isEmpty) {
+        final auth = FirebaseAuth.instance;
+        final user = auth.currentUser;
+        if (user != null && user.email != null) {
+          producerId = user.email!;
+          debugPrint('✅ Producer ID obtenido de FirebaseAuth: $producerId');
+        } else {
+          debugPrint('⚠️ No se pudo obtener el ID del productor');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('⚠️ Inicia sesión para registrar correctamente el lote'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          setState(() => _isSaving = false);
+          return;
+        }
+      }
+
+      debugPrint('📝 Productor ID final: $producerId');
+      debugPrint('📝 Email del usuario: $producerId');
+
+      // ✅ VERIFICAR SI LA FINCA YA EXISTE EN FarmProvider
+      final farmExists = farmProvider.farms.any((f) => f.id == widget.farm.id);
+      if (!farmExists) {
+        debugPrint('⚠️ La finca no existe en FarmProvider, agregándola...');
+        farmProvider.addFarmForProducer(widget.farm, producerId);
+      } else {
+        // ✅ VERIFICAR SI LA FINCA TIENE PRODUCTOR ASOCIADO
+        final farmsForProducer = farmProvider.getFarmsByProducer(producerId);
+        final isAssociated = farmsForProducer.any((f) => f.id == widget.farm.id);
+        if (!isAssociated) {
+          debugPrint('⚠️ La finca existe pero NO está asociada al productor, asociándola...');
+          farmProvider.associateFarmWithProducer(widget.farm.id, producerId);
+        } else {
+          debugPrint('✅ La finca ya está asociada al productor');
+        }
+      }
+
+      // ✅ AGREGAR EL LOTE A LA FINCA
       farmProvider.addLotToFarm(widget.farm.id, newLot);
+
+      // ✅ SINCRONIZAR CON CooperativeProducersProvider
+      coopProducersProvider.syncProducerWithFarms(producerId);
 
       setState(() => _isSaving = false);
 
@@ -189,15 +239,6 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
     }
   }
 
-  void _saveDraft() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Borrador guardado'),
-        backgroundColor: AppTheme.goldCoffee,
-      ),
-    );
-  }
-
   void _showSuccessDialog() {
     showDialog(
       context: context,
@@ -205,7 +246,6 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
       builder: (context) {
         final theme = Theme.of(context);
         final colorScheme = theme.colorScheme;
-        final isDark = theme.brightness == Brightness.dark;
 
         return AlertDialog(
           shape: RoundedRectangleBorder(
@@ -297,19 +337,16 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
       _nameController.clear();
       _descriptionController.clear();
       _areaController.clear();
-      _altitudeController.clear();
       _ageController.clear();
       _densityController.clear();
       _selectedVariety = 'Bourbon';
       _selectedStatus = 'Excelente';
-      _images.clear();
       _lotLatitude = null;
       _lotLongitude = null;
       _lotAddress = '';
     });
   }
 
-  // ✅ Manejar selección de ubicación
   void _onLocationSelected(double lat, double lng, String address) {
     setState(() {
       _lotLatitude = lat;
@@ -322,7 +359,6 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -341,7 +377,6 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // Barra superior dinámica
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
@@ -377,8 +412,6 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                   ],
                 ),
               ),
-
-              // Contenido
               Expanded(
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
@@ -434,7 +467,6 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 16),
 
                       // Información agrícola
@@ -483,14 +515,6 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                             ),
                             const SizedBox(height: 16),
                             _buildTextField(
-                              'Altitud',
-                              _altitudeController,
-                              Icons.height,
-                              suffix: 'msnm',
-                              keyboardType: TextInputType.number,
-                            ),
-                            const SizedBox(height: 16),
-                            _buildTextField(
                               'Edad del cultivo',
                               _ageController,
                               Icons.timer,
@@ -506,7 +530,6 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                               keyboardType: TextInputType.number,
                             ),
 
-                            // Mostrar cálculos automáticos
                             if (_areaController.text.isNotEmpty) ...[
                               const SizedBox(height: 16),
                               Divider(color: colorScheme.onSurface.withOpacity(0.1)),
@@ -525,10 +548,9 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 16),
 
-                      // ✅ Ubicación del lote - CON LOCATION PICKER
+                      // Ubicación del lote
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -566,7 +588,6 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                               initialLng: widget.farm.longitude,
                               initialAddress: widget.farm.location,
                             ),
-                            // Mostrar ubicación seleccionada si existe
                             if (_lotAddress.isNotEmpty) ...[
                               const SizedBox(height: 12),
                               Container(
@@ -598,7 +619,6 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 16),
 
                       // Estado inicial
@@ -683,96 +703,6 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                           ],
                         ),
                       ),
-
-                      const SizedBox(height: 16),
-
-                      // Fotografías
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surface,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Evidencia fotográfica',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: () {},
-                                    icon: const Icon(Icons.camera_alt),
-                                    label: const Text('Tomar foto'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppTheme.primaryGreen,
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: () {},
-                                    icon: const Icon(Icons.image),
-                                    label: const Text('Subir imagen'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppTheme.primaryGreen,
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (_images.isNotEmpty) ...[
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                height: 80,
-                                child: ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: _images.length,
-                                  itemBuilder: (context, index) {
-                                    return Container(
-                                      width: 80,
-                                      height: 80,
-                                      margin: const EdgeInsets.only(right: 12),
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: const Center(
-                                        child: Icon(Icons.image, color: Colors.grey),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-
                       const SizedBox(height: 16),
 
                       // Información de trazabilidad
@@ -830,7 +760,6 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 16),
 
                       // Resumen previo
@@ -871,70 +800,41 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 24),
 
-                      // Botones de acción
-                      Column(
-                        children: [
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: _isSaving ? null : _createLot,
-                              icon: _isSaving
-                                  ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                                  : const Icon(Icons.add_circle_outline, size: 22),
-                              label: Text(
-                                _isSaving ? 'Guardando...' : 'Crear Lote',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryGreen,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                ),
-                              ),
+                      // Botón de acción
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _isSaving ? null : _createLot,
+                          icon: _isSaving
+                              ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                              : const Icon(Icons.add_circle_outline, size: 22),
+                          label: Text(
+                            _isSaving ? 'Guardando...' : 'Crear Lote',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed: _isSaving ? null : _saveDraft,
-                              icon: const Icon(Icons.save_outlined, size: 20),
-                              label: const Text(
-                                'Guardar borrador',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppTheme.goldCoffee,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                side: BorderSide(color: AppTheme.goldCoffee.withOpacity(0.3)),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(24),
-                                ),
-                              ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryGreen,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
                             ),
                           ),
-                        ],
+                        ),
                       ),
-
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -947,6 +847,7 @@ class _CreateLotScreenState extends State<CreateLotScreen> {
     );
   }
 
+  // Widgets auxiliares
   Widget _buildTextField(
       String label,
       TextEditingController controller,

@@ -25,7 +25,6 @@ class _QRScannerWidgetState extends State<QRScannerWidget> {
   );
 
   bool _isScanning = true;
-  bool _isInitialized = false;
 
   @override
   void dispose() {
@@ -35,13 +34,10 @@ class _QRScannerWidgetState extends State<QRScannerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Cámara con MobileScanner
           MobileScanner(
             controller: _controller,
             onDetect: (capture) {
@@ -54,10 +50,6 @@ class _QRScannerWidgetState extends State<QRScannerWidget> {
                   setState(() {
                     _isScanning = false;
                   });
-
-                  // Vibrar o dar feedback (opcional)
-                  // HapticFeedback.lightImpact();
-
                   widget.onScanResult(code);
                   break;
                 }
@@ -65,7 +57,6 @@ class _QRScannerWidgetState extends State<QRScannerWidget> {
             },
           ),
 
-          // Overlay con el recuadro de escaneo
           CustomPaint(
             painter: _ScannerOverlayPainter(
               borderColor: AppTheme.primaryGreen,
@@ -77,7 +68,6 @@ class _QRScannerWidgetState extends State<QRScannerWidget> {
             size: MediaQuery.of(context).size,
           ),
 
-          // Botón cerrar
           Positioned(
             top: 40,
             left: 16,
@@ -94,7 +84,6 @@ class _QRScannerWidgetState extends State<QRScannerWidget> {
             ),
           ),
 
-          // Texto inferior
           Positioned(
             bottom: 80,
             left: 0,
@@ -109,7 +98,6 @@ class _QRScannerWidgetState extends State<QRScannerWidget> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Botón para encender/apagar linterna
                 IconButton(
                   onPressed: () {
                     _controller.toggleTorch();
@@ -128,7 +116,6 @@ class _QRScannerWidgetState extends State<QRScannerWidget> {
   }
 }
 
-// Painter para el overlay del escáner
 class _ScannerOverlayPainter extends CustomPainter {
   final Color borderColor;
   final double borderRadius;
@@ -150,29 +137,24 @@ class _ScannerOverlayPainter extends CustomPainter {
       ..color = Colors.black.withOpacity(0.5)
       ..style = PaintingStyle.fill;
 
-    // Área central (recorte)
     final double left = (size.width - cutOutSize) / 2;
     final double top = (size.height - cutOutSize) / 2;
     final Rect cutOutRect = Rect.fromLTWH(left, top, cutOutSize, cutOutSize);
 
-    // Dibujar fondo oscuro con recorte
     final Path path = Path()
       ..addRect(Rect.fromLTWH(0, 0, size.width, size.height))
       ..addRect(cutOutRect)
       ..fillType = PathFillType.evenOdd;
     canvas.drawPath(path, paint);
 
-    // Dibujar bordes del recuadro
     final Paint borderPaint = Paint()
       ..color = borderColor
       ..strokeWidth = borderWidth
       ..style = PaintingStyle.stroke;
 
-    // Esquinas del recuadro
     final double cornerLength = borderLength;
     final double cornerRadius = borderRadius;
 
-    // Esquina superior izquierda
     canvas.drawLine(
       Offset(left, top + cornerLength),
       Offset(left, top + cornerRadius),
@@ -183,7 +165,6 @@ class _ScannerOverlayPainter extends CustomPainter {
       Offset(left + cornerLength, top),
       borderPaint,
     );
-    // Redondear esquina
     canvas.drawArc(
       Rect.fromCircle(center: Offset(left + cornerRadius, top + cornerRadius), radius: cornerRadius),
       -3.14159,
@@ -192,7 +173,6 @@ class _ScannerOverlayPainter extends CustomPainter {
       borderPaint,
     );
 
-    // Esquina superior derecha
     canvas.drawLine(
       Offset(left + cutOutSize - cornerLength, top),
       Offset(left + cutOutSize, top),
@@ -211,7 +191,6 @@ class _ScannerOverlayPainter extends CustomPainter {
       borderPaint,
     );
 
-    // Esquina inferior izquierda
     canvas.drawLine(
       Offset(left, top + cutOutSize - cornerLength),
       Offset(left, top + cutOutSize),
@@ -230,7 +209,6 @@ class _ScannerOverlayPainter extends CustomPainter {
       borderPaint,
     );
 
-    // Esquina inferior derecha
     canvas.drawLine(
       Offset(left + cutOutSize - cornerLength, top + cutOutSize),
       Offset(left + cutOutSize, top + cutOutSize),
@@ -249,13 +227,11 @@ class _ScannerOverlayPainter extends CustomPainter {
       borderPaint,
     );
 
-    // Líneas guía sutiles en el centro
     final Paint guidePaint = Paint()
       ..color = borderColor.withOpacity(0.3)
       ..strokeWidth = 0.5
       ..style = PaintingStyle.stroke;
 
-    // Cruz en el centro
     final double centerX = size.width / 2;
     final double centerY = size.height / 2;
     final double crossSize = 20;

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:kaabcafe/core/providers/farm_provider.dart';
 import 'package:kaabcafe/core/providers/user_provider.dart';
 import 'package:kaabcafe/core/providers/appointment_provider.dart';
+import 'package:kaabcafe/core/providers/producer_technician_provider.dart';
 import 'package:kaabcafe/core/routes/app_router.dart';
 import 'package:kaabcafe/core/services/login_attempt_service.dart';
 import 'package:kaabcafe/core/themes/app_theme.dart';
@@ -20,6 +21,8 @@ import 'package:kaabcafe/core/providers/technician_contact_provider.dart';
 import 'package:kaabcafe/core/providers/notification_provider.dart';
 import 'package:kaabcafe/features/technician/providers/technician_visits_provider.dart';
 import 'package:kaabcafe/core/providers/cooperatives_provider.dart';
+
+import 'core/providers/qr_update_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,22 +44,29 @@ class MyApp extends StatelessWidget {
     // ✅ Crear instancias de providers que necesitan compartir datos
     final userProvider = UserProvider();
     final cooperativesProvider = CooperativesProvider();
+    final producerTechnicianProvider = ProducerTechnicianProvider();
+    final farmProvider = FarmProvider();
+    final cooperativeProducersProvider = CooperativeProducersProvider();
 
     // ✅ Conectar UserProvider con CooperativesProvider
     userProvider.setCooperativesProvider(cooperativesProvider);
+
+    // ✅ Conectar CooperativeProducersProvider con FarmProvider para sincronizar fincas y lotes
+    cooperativeProducersProvider.initWithFarmProvider(farmProvider);
 
     return MultiProvider(
       providers: [
         // ✅ Providers con instancias compartidas
         ChangeNotifierProvider<UserProvider>.value(value: userProvider),
         ChangeNotifierProvider<CooperativesProvider>.value(value: cooperativesProvider),
+        ChangeNotifierProvider<ProducerTechnicianProvider>.value(value: producerTechnicianProvider),
+        ChangeNotifierProvider<FarmProvider>.value(value: farmProvider),
+        ChangeNotifierProvider<CooperativeProducersProvider>.value(value: cooperativeProducersProvider),
 
         // ✅ Providers que se crean normalmente
         ChangeNotifierProvider(create: (_) => ActivitiesProviderFactory.create()),
-        ChangeNotifierProvider(create: (_) => FarmProvider()),
         ChangeNotifierProvider(create: (_) => LoginAttemptService()),
         ChangeNotifierProvider(create: (_) => AppointmentProvider()),
-        ChangeNotifierProvider(create: (_) => CooperativeProducersProvider()),
         ChangeNotifierProvider(create: (_) => TechniciansProvider()),
         ChangeNotifierProvider(create: (_) => TechnicianProducersProvider()),
         ChangeNotifierProvider(create: (_) => TechnicianReportsProvider()),
@@ -64,6 +74,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => TechnicianContactProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => TechnicianVisitsProvider()),
+        ChangeNotifierProvider(create: (_) => QRUpdateProvider()),
+
       ],
       child: MaterialApp.router(
         routerConfig: AppRouter.router,
