@@ -1,11 +1,15 @@
-// lib/core/providers/farm_provider.dart
-
+// lib/core/providers/farm_provider.dart (VERSIÓN MODIFICADA CON API)
 import 'package:flutter/material.dart';
+import 'package:kaabcafe/core/services/farm_service.dart';
 import 'package:kaabcafe/features/farms/data/models/farm_details_model.dart';
 import 'package:kaabcafe/features/farms/data/models/lot_model.dart';
 import 'package:kaabcafe/features/buyer/data/models/producer_summary_model.dart';
+import 'package:kaabcafe/features/farms/data/models/api_farm_model.dart';
+import 'package:kaabcafe/features/farms/data/models/create_farm_request.dart';
 
 class FarmProvider extends ChangeNotifier {
+  final FarmService _farmService = FarmService();
+
   final List<FarmDetailsModel> _farms = [];
   final Map<String, List<LotModel>> _lotsByFarm = {};
   final Map<String, String> _farmProducerMap = {}; // farmId -> producerId (email)
@@ -122,7 +126,186 @@ class FarmProvider extends ChangeNotifier {
     return '';
   }
 
-  // ✅ Agregar finca con productor
+  // ============================================================
+  // ✅ MÉTODOS CON API
+  // ============================================================
+
+  // ✅ Crear finca en la API y guardar localmente
+  Future<FarmDetailsModel> createFarmWithApi({
+    required FarmDetailsModel farm,
+    required String producerEmail,
+  }) async {
+    try {
+      // 1. Crear la solicitud
+      final request = CreateFarmRequest(
+        name: farm.name,
+        location: farm.location,
+        hectares: farm.hectares,
+        lots: farm.lots,
+        productivity: farm.productivity,
+        status: farm.status.toString().split('.').last,
+        imageUrl: farm.imageUrl,
+        latitude: farm.latitude,
+        longitude: farm.longitude,
+        altitude: farm.altitude,
+        establishmentYear: farm.establishmentYear,
+        mainVariety: farm.mainVariety,
+        productionSystem: farm.productionSystem,
+        certifications: farm.certifications,
+        producerEmail: producerEmail,
+      );
+
+      // 2. Llamar a la API
+      final apiFarm = await _farmService.createFarm(request);
+      debugPrint('✅ Finca creada en API con ID: ${apiFarm.id}');
+
+      // 3. Convertir a modelo local
+      final newFarm = _convertApiFarmToLocal(apiFarm);
+
+      // 4. Guardar localmente
+      _farms.add(newFarm);
+      _farmProducerMap[newFarm.id] = producerEmail;
+      notifyListeners();
+      debugPrintState();
+
+      return newFarm;
+    } catch (e) {
+      debugPrint('❌ Error al crear finca: $e');
+      rethrow;
+    }
+  }
+
+  // ✅ Cargar fincas desde la API
+  Future<void> loadFarmsFromApi(String producerEmail) async {
+    try {
+      debugPrint('📤 Cargando fincas de: $producerEmail');
+      final apiFarms = await _farmService.getFarmsByProducer(producerEmail);
+
+      // Limpiar fincas existentes del productor
+      _farms.removeWhere((farm) => _farmProducerMap[farm.id] == producerEmail);
+
+      // Agregar las fincas de la API
+      for (final apiFarm in apiFarms) {
+        final farm = _convertApiFarmToLocal(apiFarm);
+        _farms.add(farm);
+        _farmProducerMap[farm.id] = producerEmail;
+        debugPrint('✅ Finca cargada: ${farm.name} (${farm.id})');
+      }
+
+      notifyListeners();
+      debugPrintState();
+    } catch (e) {
+      debugPrint('❌ Error al cargar fincas: $e');
+    }
+  }
+
+  // ✅ Actualizar finca en la API
+  Future<FarmDetailsModel> updateFarmWithApi({
+    required FarmDetailsModel farm,
+    required String producerEmail,
+  }) async {
+    try {
+      final request = CreateFarmRequest(
+        name: farm.name,
+        location: farm.location,
+        hectares: farm.hectares,
+        lots: farm.lots,
+        productivity: farm.productivity,
+        status: farm.status.toString().split('.').last,
+        imageUrl: farm.imageUrl,
+        latitude: farm.latitude,
+        longitude: farm.longitude,
+        altitude: farm.altitude,
+        establishmentYear: farm.establishmentYear,
+        mainVariety: farm.mainVariety,
+        productionSystem: farm.productionSystem,
+        certifications: farm.certifications,
+        producerEmail: producerEmail,
+      );
+
+      final apiFarm = await _farmService.updateFarm(
+        int.parse(farm.id),
+        request,
+      );
+
+      final updatedFarm = _convertApiFarmToLocal(apiFarm);
+
+      // Actualizar localmente
+      final index = _farms.indexWhere((f) => f.id == farm.id);
+      if (index != -1) {
+        _farms[index] = updatedFarm;
+        notifyListeners();
+      }
+
+      return updatedFarm;
+    } catch (e) {
+      debugPrint('❌ Error al actualizar finca: $e');
+      rethrow;
+    }
+  }
+
+  // ✅ Eliminar finca en la API
+  Future<void> deleteFarmWithApi(String farmId) async {
+    try {
+      await _farmService.deleteFarm(int.parse(farmId));
+
+      // Eliminar localmente
+      _farms.removeWhere((farm) => farm.id == farmId);
+      _farmProducerMap.remove(farmId);
+      _lotsByFarm.remove(farmId);
+
+      notifyListeners();
+      debugPrint('✅ Finca eliminada: $farmId');
+    } catch (e) {
+      debugPrint('❌ Error al eliminar finca: $e');
+      rethrow;
+    }
+  }
+
+  // ============================================================
+  // ✅ MÉTODOS DE CONVERSIÓN
+  // ============================================================
+
+  FarmDetailsModel _convertApiFarmToLocal(ApiFarmModel apiFarm) {
+    FarmHealthStatus status;
+    switch (apiFarm.status.toLowerCase()) {
+      case 'healthy':
+        status = FarmHealthStatus.healthy;
+        break;
+      case 'attention':
+        status = FarmHealthStatus.attention;
+        break;
+      case 'risk':
+        status = FarmHealthStatus.risk;
+        break;
+      default:
+        status = FarmHealthStatus.healthy;
+    }
+
+    return FarmDetailsModel(
+      id: apiFarm.id.toString(),
+      name: apiFarm.name,
+      location: apiFarm.location,
+      hectares: apiFarm.hectares,
+      lots: apiFarm.lots,
+      productivity: apiFarm.productivity,
+      status: status,
+      imageUrl: apiFarm.imageUrl,
+      latitude: apiFarm.latitude,
+      longitude: apiFarm.longitude,
+      altitude: apiFarm.altitude,
+      establishmentYear: apiFarm.establishmentYear,
+      mainVariety: apiFarm.mainVariety,
+      productionSystem: apiFarm.productionSystem,
+      certifications: apiFarm.certifications,
+    );
+  }
+
+  // ============================================================
+  // ✅ MÉTODOS LOCALES (MANTENIDOS PARA COMPATIBILIDAD)
+  // ============================================================
+
+  // ✅ Agregar finca con productor (local)
   void addFarm(FarmDetailsModel newFarm, {String? producerId}) {
     _farms.add(newFarm);
     if (producerId != null && producerId.isNotEmpty) {
@@ -135,7 +318,7 @@ class FarmProvider extends ChangeNotifier {
     debugPrintState();
   }
 
-  // ✅ Agregar finca al productor (usando el email del productor)
+  // ✅ Agregar finca al productor (local)
   void addFarmForProducer(FarmDetailsModel newFarm, String producerEmail) {
     _farms.add(newFarm);
     _farmProducerMap[newFarm.id] = producerEmail;
@@ -146,14 +329,12 @@ class FarmProvider extends ChangeNotifier {
 
   // ✅ Asociar una finca existente a un productor
   void associateFarmWithProducer(String farmId, String producerId) {
-    // Verificar si la finca existe
     final farmExists = _farms.any((f) => f.id == farmId);
     if (!farmExists) {
       debugPrint('⚠️ La finca $farmId no existe en FarmProvider');
       return;
     }
 
-    // Verificar si ya está asociada
     if (_farmProducerMap.containsKey(farmId)) {
       debugPrint('⚠️ La finca $farmId ya está asociada a: ${_farmProducerMap[farmId]}');
       return;
@@ -173,7 +354,6 @@ class FarmProvider extends ChangeNotifier {
     _lotsByFarm[farmId]!.add(newLot);
     debugPrint('✅ Lote "${newLot.name}" agregado a finca: $farmId');
 
-    // Actualizar el contador de lotes en la finca
     final index = _farms.indexWhere((f) => f.id == farmId);
     if (index != -1) {
       _farms[index] = _farms[index].copyWith(lots: _lotsByFarm[farmId]!.length);

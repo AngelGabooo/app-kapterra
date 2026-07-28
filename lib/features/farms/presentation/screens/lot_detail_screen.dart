@@ -1179,4 +1179,4 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
       ],
     );
   }
-}|
+}

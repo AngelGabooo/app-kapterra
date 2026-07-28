@@ -4,22 +4,32 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kaabcafe/core/routes/route_names.dart';
 import 'package:kaabcafe/features/auth/data/models/user_type_model.dart';
 import 'package:kaabcafe/core/providers/cooperatives_provider.dart';
+import 'package:kaabcafe/core/services/auth_service.dart';
+import 'package:kaabcafe/features/auth/data/models/api_user_model.dart';
+import 'package:kaabcafe/features/auth/data/models/login_request_model.dart';
+import 'package:kaabcafe/features/auth/data/models/register_request_model.dart';
+import 'package:kaabcafe/features/auth/data/models/update_profile_request_model.dart';
 
 class UserProvider extends ChangeNotifier {
+  final AuthService _authService = AuthService();
+
   UserType? _selectedUserType;
   String? _userEmail;
   String? _userName;
   String? _userPhone;
   bool _isLoggedIn = false;
+  int? _userId;
 
   // ✅ Referencia al provider de cooperativas
   CooperativesProvider? _cooperativesProvider;
 
+  // Getters
   UserType? get selectedUserType => _selectedUserType;
   String? get userEmail => _userEmail;
   String? get userName => _userName;
   String? get userPhone => _userPhone;
   bool get isLoggedIn => _isLoggedIn;
+  int? get userId => _userId;
 
   // ✅ Método para inicializar con el provider de cooperativas
   void setCooperativesProvider(CooperativesProvider provider) {
@@ -50,7 +60,286 @@ class UserProvider extends ChangeNotifier {
   }
 
   // ============================================================
-  // ✅ MÉTODOS DE GUARDADO
+  // ✅ REGISTRO CON API
+  // ============================================================
+
+  Future<ApiUserModel> registerWithApi({
+    required String fullName,
+    required String email,
+    required String phoneNumber,
+    required String password,
+    required bool acceptTerms,
+  }) async {
+    final request = RegisterRequestModel(
+      fullName: fullName,
+      email: email,
+      phoneNumber: phoneNumber,
+      password: password,
+      acceptTerms: acceptTerms,
+    );
+
+    final user = await _authService.register(request);
+
+    // Guardar localmente también
+    await setUserInfo(
+      type: _getUserTypeFromRol(user.rol ?? 'Productor'),
+      email: user.email,
+      name: user.fullName,
+      phone: user.phoneNumber,
+    );
+    _userId = user.id;
+
+    notifyListeners();
+    return user;
+  }
+
+  // ============================================================
+  // ✅ REGISTRO CON API Y ROL SELECCIONADO (VERSIÓN CORREGIDA)
+  // ============================================================
+
+// lib/core/providers/user_provider.dart - Método registerWithApiAndRole mejorado
+
+  Future<ApiUserModel> registerWithApiAndRole({
+    required String fullName,
+    required String email,
+    required String phoneNumber,
+    required String password,
+    required bool acceptTerms,
+    required UserType userType,
+  }) async {
+    try {
+      // ✅ Enviar el rol directamente en el registro
+      final request = RegisterRequestModel(
+        fullName: fullName,
+        email: email,
+        phoneNumber: phoneNumber,
+        password: password,
+        acceptTerms: acceptTerms,
+        rol: _getRolFromUserType(userType), // ✅ Enviar el rol seleccionado
+      );
+
+      final user = await _authService.register(request);
+      debugPrint('✅ Usuario registrado en API con ID: ${user.id}');
+      debugPrint('✅ Rol asignado: ${user.rol}');
+
+      // Guardar localmente
+      await setUserInfo(
+        type: userType,
+        email: user.email,
+        name: user.fullName,
+        phone: user.phoneNumber,
+      );
+      _userId = user.id;
+
+      notifyListeners();
+      return user;
+    } catch (e) {
+      debugPrint('❌ Error en registerWithApiAndRole: $e');
+      rethrow;
+    }
+  }
+
+  // ============================================================
+  // ✅ LOGIN CON API
+  // ============================================================
+
+  Future<ApiUserModel> loginWithApi({
+    required String email,
+    required String password,
+    bool rememberMe = false,
+  }) async {
+    final request = LoginRequestModel(
+      email: email,
+      password: password,
+      rememberMe: rememberMe,
+    );
+
+    final response = await _authService.login(request);
+
+    // Guardar información del usuario
+    final user = response.user;
+    _userId = user.id;
+    _userEmail = user.email;
+    _userName = user.fullName;
+    _userPhone = user.phoneNumber;
+    _selectedUserType = _getUserTypeFromRol(user.rol ?? 'Productor');
+    _isLoggedIn = true;
+
+    // Guardar en SharedPreferences
+    await _saveUserEmail(user.email);
+    await _saveUserName(user.fullName);
+    await _saveUserPhone(user.phoneNumber);
+    await _saveUserType(_selectedUserType!, email: user.email);
+
+    // Si es cooperativa, registrarla
+    _registerCooperativeIfNeeded(
+      email: user.email,
+      name: user.fullName,
+      phone: user.phoneNumber,
+    );
+
+    notifyListeners();
+    return user;
+  }
+
+  // ============================================================
+  // ✅ ACTUALIZAR PERFIL CON API
+  // ============================================================
+
+  Future<void> updateProfileWithApi({
+    required String email,
+    required UserType type,
+    required String fullName,
+    required String phoneNumber,
+  }) async {
+    final request = UpdateProfileRequestModel(
+      email: email,
+      rol: _getRolFromUserType(type),
+      fullName: fullName,
+      phoneNumber: phoneNumber,
+    );
+
+    await _authService.updateProfile(request);
+
+    // Actualizar datos locales
+    _userEmail = email;
+    _userName = fullName;
+    _userPhone = phoneNumber;
+    _selectedUserType = type;
+
+    await _saveUserEmail(email);
+    await _saveUserName(fullName);
+    await _saveUserPhone(phoneNumber);
+    await _saveUserType(type, email: email);
+
+    notifyListeners();
+  }
+
+  // ============================================================
+  // ✅ ACTUALIZAR SOLO EL ROL (VERSIÓN CORREGIDA)
+  // ============================================================
+
+  Future<void> updateUserRole({
+    required String email,
+    required UserType userType,
+  }) async {
+    try {
+      // ✅ Usamos los datos locales en lugar de llamar a la API
+      final request = UpdateProfileRequestModel(
+        email: email,
+        rol: _getRolFromUserType(userType),
+        fullName: _userName ?? 'Usuario',
+        phoneNumber: _userPhone ?? '',
+      );
+
+      await _authService.updateProfile(request);
+
+      // Actualizar localmente
+      _selectedUserType = userType;
+      await _saveUserType(userType, email: email);
+
+      notifyListeners();
+      debugPrint('✅ Rol actualizado a: ${userType.title}');
+    } catch (e) {
+      debugPrint('❌ Error al actualizar rol: $e');
+      rethrow;
+    }
+  }
+
+  // ============================================================
+  // ✅ CIERRE DE SESIÓN CON API
+  // ============================================================
+
+  Future<void> logout() async {
+    await _authService.logout();
+    _selectedUserType = null;
+    _userEmail = null;
+    _userName = null;
+    _userPhone = null;
+    _isLoggedIn = false;
+    _userId = null;
+    await _clearSavedUserType();
+    notifyListeners();
+  }
+
+  // ============================================================
+  // ✅ VERIFICAR SESIÓN
+  // ============================================================
+
+  Future<bool> checkLoggedIn() async {
+    try {
+      // Primero verificar si hay token válido
+      final hasToken = await _authService.hasValidToken();
+      if (!hasToken) {
+        _isLoggedIn = false;
+        return false;
+      }
+
+      // Cargar datos locales
+      final prefs = await SharedPreferences.getInstance();
+      final email = prefs.getString('user_email');
+      if (email != null && email.isNotEmpty) {
+        _userEmail = email;
+        final key = 'user_type_${_sanitizeEmail(email)}';
+        final index = prefs.getInt(key);
+        if (index != null && index >= 0 && index < UserType.values.length) {
+          _selectedUserType = UserType.values[index];
+          _userName = prefs.getString('user_name');
+          final phoneKey = 'user_phone_${_sanitizeEmail(email)}';
+          _userPhone = prefs.getString(phoneKey) ?? prefs.getString('user_phone');
+          _isLoggedIn = true;
+
+          _registerCooperativeIfNeeded(
+            email: email,
+            name: _userName ?? 'Cooperativa',
+            phone: _userPhone ?? '',
+          );
+
+          notifyListeners();
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error verificando login: $e');
+      return false;
+    }
+  }
+
+  // ============================================================
+  // ✅ MÉTODOS DE UTILIDAD PARA CONVERSIÓN
+  // ============================================================
+
+  UserType _getUserTypeFromRol(String rol) {
+    switch (rol.toLowerCase()) {
+      case 'productor':
+        return UserType.producer;
+      case 'cooperativa':
+        return UserType.cooperative;
+      case 'tecnico':
+        return UserType.technician;
+      case 'comprador':
+        return UserType.buyer;
+      default:
+        return UserType.producer;
+    }
+  }
+
+  String _getRolFromUserType(UserType type) {
+    switch (type) {
+      case UserType.producer:
+        return 'Productor';
+      case UserType.cooperative:
+        return 'Cooperativa';
+      case UserType.technician:
+        return 'Tecnico';
+      case UserType.buyer:
+        return 'Comprador';
+    }
+  }
+
+  // ============================================================
+  // ✅ MÉTODOS DE GUARDADO (MANTENIDOS)
   // ============================================================
 
   Future<void> setUserEmail(String email) async {
@@ -66,7 +355,6 @@ class UserProvider extends ChangeNotifier {
     }
     await _saveUserType(type, email: email);
 
-    // ✅ Si es cooperativa, registrarla en el provider de cooperativas
     _registerCooperativeIfNeeded(
       email: _userEmail ?? email ?? 'sin-email',
       name: _userName ?? 'Cooperativa',
@@ -94,7 +382,6 @@ class UserProvider extends ChangeNotifier {
       await _saveUserPhone(phone);
     }
 
-    // ✅ Si es cooperativa, registrarla en el provider de cooperativas
     _registerCooperativeIfNeeded(
       email: email,
       name: name,
@@ -105,7 +392,7 @@ class UserProvider extends ChangeNotifier {
   }
 
   // ============================================================
-  // ✅ MÉTODOS DE CARGA
+  // ✅ MÉTODOS DE CARGA (MANTENIDOS)
   // ============================================================
 
   Future<void> login({required String email, required String name, String? phone}) async {
@@ -144,14 +431,12 @@ class UserProvider extends ChangeNotifier {
         _selectedUserType = UserType.values[index];
         _userEmail = email;
 
-        // ✅ Cargar teléfono específico para este email
         final phoneKey = 'user_phone_${_sanitizeEmail(email)}';
         _userPhone = prefs.getString(phoneKey);
         if (_userPhone == null || _userPhone!.isEmpty) {
           _userPhone = prefs.getString('user_phone');
         }
 
-        // ✅ Si es cooperativa, registrarla en el provider de cooperativas
         _registerCooperativeIfNeeded(
           email: email,
           name: _userName ?? 'Cooperativa',
@@ -180,14 +465,12 @@ class UserProvider extends ChangeNotifier {
           _selectedUserType = UserType.values[index];
           _userName = prefs.getString('user_name');
 
-          // ✅ Cargar teléfono específico para este email
           final phoneKey = 'user_phone_${_sanitizeEmail(email)}';
           _userPhone = prefs.getString(phoneKey);
           if (_userPhone == null || _userPhone!.isEmpty) {
             _userPhone = prefs.getString('user_phone');
           }
 
-          // ✅ Si es cooperativa, registrarla en el provider de cooperativas
           _registerCooperativeIfNeeded(
             email: email,
             name: _userName ?? 'Cooperativa',
@@ -210,20 +493,6 @@ class UserProvider extends ChangeNotifier {
       debugPrint('Error cargando tipo de usuario: $e');
     }
     return null;
-  }
-
-  // ============================================================
-  // ✅ MÉTODOS DE CIERRE DE SESIÓN
-  // ============================================================
-
-  Future<void> logout() async {
-    _selectedUserType = null;
-    _userEmail = null;
-    _userName = null;
-    _userPhone = null;
-    _isLoggedIn = false;
-    await _clearSavedUserType();
-    notifyListeners();
   }
 
   // ============================================================
@@ -342,45 +611,6 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-  /// ✅ CORREGIDO: Carga el teléfono correctamente
-  Future<bool> checkLoggedIn() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final email = prefs.getString('user_email');
-      if (email != null && email.isNotEmpty) {
-        _userEmail = email;
-        final key = 'user_type_${_sanitizeEmail(email)}';
-        final index = prefs.getInt(key);
-        if (index != null && index >= 0 && index < UserType.values.length) {
-          _selectedUserType = UserType.values[index];
-          _userName = prefs.getString('user_name');
-
-          // ✅ Cargar teléfono específico para este email
-          final phoneKey = 'user_phone_${_sanitizeEmail(email)}';
-          _userPhone = prefs.getString(phoneKey);
-          if (_userPhone == null || _userPhone!.isEmpty) {
-            _userPhone = prefs.getString('user_phone');
-          }
-
-          // ✅ Si es cooperativa, registrarla en el provider de cooperativas
-          _registerCooperativeIfNeeded(
-            email: email,
-            name: _userName ?? 'Cooperativa',
-            phone: _userPhone ?? '',
-          );
-
-          _isLoggedIn = true;
-          notifyListeners();
-          return true;
-        }
-      }
-      return false;
-    } catch (e) {
-      debugPrint('Error verificando login: $e');
-      return false;
-    }
-  }
-
   Future<Map<String, UserType>> getAllSavedUserTypes() async {
     final Map<String, UserType> result = {};
     try {
@@ -415,7 +645,6 @@ class UserProvider extends ChangeNotifier {
     required String name,
     required String phone,
   }) {
-    // Solo registrar si es cooperativa
     if (_selectedUserType != UserType.cooperative) {
       return;
     }
@@ -443,5 +672,30 @@ class UserProvider extends ChangeNotifier {
         phone: _userPhone ?? '',
       );
     }
+  }
+
+  // ============================================================
+  // ✅ OBTENER RUTA SEGÚN EL ROL
+  // ============================================================
+
+  String getRouteForRole(UserType role) {
+    switch (role) {
+      case UserType.producer:
+        return RouteNames.dashboard;
+      case UserType.cooperative:
+        return RouteNames.cooperativeDashboard;
+      case UserType.technician:
+        return RouteNames.technicianDashboard;
+      case UserType.buyer:
+        return RouteNames.marketplace;
+    }
+  }
+
+  // ============================================================
+  // ✅ VERIFICAR SI EL USUARIO TIENE ROL SELECCIONADO
+  // ============================================================
+
+  bool hasSelectedRole() {
+    return _selectedUserType != null;
   }
 }

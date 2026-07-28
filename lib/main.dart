@@ -1,3 +1,4 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -21,15 +22,21 @@ import 'package:kaabcafe/core/providers/technician_contact_provider.dart';
 import 'package:kaabcafe/core/providers/notification_provider.dart';
 import 'package:kaabcafe/features/technician/providers/technician_visits_provider.dart';
 import 'package:kaabcafe/core/providers/cooperatives_provider.dart';
-
-import 'core/providers/qr_update_provider.dart';
+import 'package:kaabcafe/core/providers/qr_update_provider.dart';
+import 'package:kaabcafe/core/services/api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // ✅ Inicializar Firebase
   await Firebase.initializeApp();
   debugPrint('✅ Firebase inicializado correctamente');
 
+  // ✅ Inicializar ApiService y cargar token guardado
+  await ApiService().loadToken();
+  debugPrint('✅ Token de API cargado');
+
+  // ✅ Inicializar notificaciones
   final notificationService = NotificationService();
   await notificationService.init();
 
@@ -75,7 +82,6 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => TechnicianVisitsProvider()),
         ChangeNotifierProvider(create: (_) => QRUpdateProvider()),
-
       ],
       child: MaterialApp.router(
         routerConfig: AppRouter.router,

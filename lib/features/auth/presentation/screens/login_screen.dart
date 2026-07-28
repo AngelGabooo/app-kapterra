@@ -1,5 +1,4 @@
 // lib/features/auth/presentation/screens/login_screen.dart
-
 import 'dart:convert';
 import 'dart:ui';
 
@@ -44,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
     });
   }
 
-  // ✅ LOGIN CON FIREBASE AUTH
+  // ✅ LOGIN CON FIREBASE AUTH + API
   Future<void> _handleLogin(String email, String password) async {
     final service = Provider.of<LoginAttemptService>(context, listen: false);
 
@@ -70,47 +69,43 @@ class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
     debugPrint('Login intentado con: $email');
 
     try {
-      // ✅ LOGIN CON FIREBASE AUTHENTICATION
+      // ✅ 1. LOGIN CON FIREBASE AUTHENTICATION
       final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
 
-      setState(() {
-        _isLoading = false;
-      });
-
       debugPrint('✅ Login exitoso en Firebase: ${userCredential.user?.email}');
       debugPrint('✅ UID: ${userCredential.user?.uid}');
       debugPrint('✅ Nombre: ${userCredential.user?.displayName}');
 
+      // ✅ 2. LOGIN CON TU API (obtener token JWT y datos del usuario)
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final apiUser = await userProvider.loginWithApi(
+        email: email.trim(),
+        password: password,
+        rememberMe: true,
+      );
+
+      debugPrint('✅ Login exitoso en API: ${apiUser.email}');
+      debugPrint('✅ ID: ${apiUser.id}');
+      debugPrint('✅ Rol: ${apiUser.rol}');
+
+      setState(() {
+        _isLoading = false;
+      });
+
       await service.resetBlock();
 
       if (mounted) {
-        final userProvider = Provider.of<UserProvider>(context, listen: false);
-        final userEmail = userCredential.user?.email ?? email;
-        final userName = userCredential.user?.displayName ?? 'Usuario';
-
-        // ✅ Cargar el tipo de usuario guardado
-        final userType = await userProvider.loadSavedUserTypeForEmail(userEmail);
+        final currentPhone = userProvider.userPhone;
+        final userType = userProvider.selectedUserType;
 
         if (userType == null) {
-          userProvider.setUserEmail(userEmail);
+          userProvider.setUserEmail(email);
           context.go(RouteNames.selectUserType);
           return;
         }
-
-        // ✅ Cargar el teléfono guardado
-        await userProvider.loadUserPhone(userEmail);
-        final currentPhone = userProvider.userPhone;
-
-        // ✅ Guardar información del usuario
-        userProvider.setUserInfo(
-          type: userType,
-          email: userEmail,
-          name: userName,
-          phone: currentPhone,
-        );
 
         String destinationRoute;
 
@@ -205,7 +200,22 @@ class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
         _isLoading = false;
       });
 
+      // ✅ Registrar intento fallido para errores de conexión
+      final (isBlocked, isPermanentlyBlocked, remaining) = await service.registerFailedAttempt();
+
       if (mounted) {
+        if (isPermanentlyBlocked) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('🔒 Cuenta bloqueada. Verifica tu identidad con el PIN.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          context.go(RouteNames.pinSecurity);
+          return;
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('⚠️ Error de conexión: ${e.toString()}'),
@@ -217,7 +227,7 @@ class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
     }
   }
 
-  // ✅ MÉTODO PARA LOGIN CON GOOGLE - CON FIREBASE
+  // ✅ MÉTODO PARA LOGIN CON GOOGLE - CON FIREBASE + API
   Future<void> _handleGoogleLogin() async {
     final service = Provider.of<LoginAttemptService>(context, listen: false);
 
@@ -299,56 +309,75 @@ class _LoginScreenState extends State<LoginScreen> with SessionTimeoutMixin {
     if (!mounted) return;
 
     final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final userType = await userProvider.loadSavedUserTypeForEmail(email);
 
-    // ✅ Guardar usuario en el provider
-    await userProvider.loadUserPhone(email);
-    final currentPhone = userProvider.userPhone;
+    // ✅ Intentar login con API usando las credenciales de Google
+    // Nota: Esto asume que el usuario ya existe en tu API
+    // Si no existe, deberías registrarlo primero
+    try {
+      // Intentamos obtener el usuario de la API
+      // Como no tenemos contraseña, usamos el método que carga desde SharedPreferences
+      final userType = await userProvider.loadSavedUserTypeForEmail(email);
 
-    userProvider.setUserInfo(
-      type: userType ?? UserType.producer,
-      email: email,
-      name: displayName,
-      phone: currentPhone,
-    );
+      // Guardar usuario en el provider
+      await userProvider.loadUserPhone(email);
+      final currentPhone = userProvider.userPhone;
 
-    String destinationRoute;
+      userProvider.setUserInfo(
+        type: userType ?? UserType.producer,
+        email: email,
+        name: displayName,
+        phone: currentPhone,
+      );
 
-    // ✅ Verificar si el usuario ya tiene teléfono
-    if (userType == UserType.producer &&
-        (currentPhone == null || currentPhone.isEmpty)) {
-      destinationRoute = RouteNames.setupProfile;
-    } else {
-      switch (userType ?? UserType.producer) {
-        case UserType.producer:
-          destinationRoute = RouteNames.dashboard;
-          break;
-        case UserType.cooperative:
-          destinationRoute = RouteNames.cooperativeDashboard;
-          break;
-        case UserType.buyer:
-          destinationRoute = RouteNames.marketplace;
-          break;
-        case UserType.technician:
-          destinationRoute = RouteNames.technicianDashboard;
-          break;
-        default:
-          destinationRoute = RouteNames.selectUserType;
+      String destinationRoute;
+
+      if (userType == UserType.producer &&
+          (currentPhone == null || currentPhone.isEmpty)) {
+        destinationRoute = RouteNames.setupProfile;
+      } else {
+        switch (userType ?? UserType.producer) {
+          case UserType.producer:
+            destinationRoute = RouteNames.dashboard;
+            break;
+          case UserType.cooperative:
+            destinationRoute = RouteNames.cooperativeDashboard;
+            break;
+          case UserType.buyer:
+            destinationRoute = RouteNames.marketplace;
+            break;
+          case UserType.technician:
+            destinationRoute = RouteNames.technicianDashboard;
+            break;
+          default:
+            destinationRoute = RouteNames.selectUserType;
+        }
       }
+
+      debugPrint('✅ Google Login - Navegando a: $destinationRoute');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Inicio de sesión con Google exitoso'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      context.go(destinationRoute);
+    } catch (e) {
+      debugPrint('❌ Error en Google Login (API): $e');
+
+      // Si falla, redirigir a selección de rol
+      userProvider.setUserEmail(email);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('⚠️ Usuario registrado con Google. Completa tu perfil.'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      context.go(RouteNames.selectUserType);
     }
-
-    debugPrint('✅ Google Login - Navegando a: $destinationRoute');
-
-    // ✅ Mostrar mensaje de éxito
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('✅ Inicio de sesión con Google exitoso'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
-      ),
-    );
-
-    context.go(destinationRoute);
   }
 
   void _handleRegister() {

@@ -1,3 +1,4 @@
+// lib/core/constants/app_constants.dart
 class AppConstants {
   static const String appName = 'KAAB TERRA';
   static const String slogan = 'Cultiva datos, cosecha valor';

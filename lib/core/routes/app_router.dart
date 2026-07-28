@@ -76,7 +76,6 @@ import 'package:kaabcafe/features/technician/presentation/screens/technician_pro
 import '../../features/dashboard/presentation/screens/dashboard_notifications_screen.dart';
 import '../../features/dashboard/presentation/screens/indicators_screen.dart';
 
-
 class AppRouter {
   static final router = GoRouter(
     initialLocation: RouteNames.splash,
@@ -146,6 +145,20 @@ class AppRouter {
         path: RouteNames.dashboard,
         builder: (context, state) => const DashboardScreen(),
       ),
+
+      // ✅ AGREGAR LA RUTA HOME - REDIRIGE AL DASHBOARD
+      GoRoute(
+        name: RouteNames.home,
+        path: RouteNames.home,
+        builder: (context, state) => const DashboardScreen(),
+      ),
+      // O puedes usar redirect:
+      // GoRoute(
+      //   name: RouteNames.home,
+      //   path: RouteNames.home,
+      //   redirect: (context, state) => RouteNames.dashboard,
+      // ),
+
       GoRoute(
         name: RouteNames.myFarms,
         path: RouteNames.myFarms,
@@ -159,7 +172,6 @@ class AppRouter {
         builder: (context, state) {
           final extra = state.extra;
 
-          // ✅ MANEJAR CORRECTAMENTE EL EXTRA
           if (extra is FarmDetailsModel) {
             return FarmDetailScreen(farm: extra);
           } else if (extra is Map<String, dynamic>) {
@@ -210,7 +222,6 @@ class AppRouter {
         builder: (context, state) {
           final extra = state.extra;
 
-          // ✅ MANEJAR CORRECTAMENTE EL EXTRA
           if (extra is Map<String, dynamic>) {
             final lotData = extra['lot'];
             final farmData = extra['farm'];
@@ -218,14 +229,12 @@ class AppRouter {
             LotModel? lot;
             FarmDetailsModel? farm;
 
-            // Procesar lot
             if (lotData is LotModel) {
               lot = lotData;
             } else if (lotData is Map<String, dynamic>) {
               try {
                 lot = LotModel.fromJson(lotData);
               } catch (e) {
-                // Si falla, intentar con los datos básicos
                 lot = LotModel(
                   id: lotData['id'] ?? '',
                   name: lotData['name'] ?? 'Lote sin nombre',
@@ -241,14 +250,12 @@ class AppRouter {
               }
             }
 
-            // Procesar farm
             if (farmData is FarmDetailsModel) {
               farm = farmData;
             } else if (farmData is Map<String, dynamic>) {
               try {
                 farm = FarmDetailsModel.fromJson(farmData);
               } catch (e) {
-                // Si falla, crear uno básico
                 farm = FarmDetailsModel(
                   id: farmData['id'] ?? '',
                   name: farmData['name'] ?? 'Finca sin nombre',

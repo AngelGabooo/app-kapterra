@@ -1,12 +1,20 @@
+// lib/features/auth/presentation/widgets/register_form.dart
 import 'package:flutter/material.dart';
+import 'package:kaabcafe/features/auth/data/models/user_type_model.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/login_button.dart';
 import 'package:kaabcafe/features/auth/presentation/widgets/password_strength_indicator.dart';
+import '../../../../core/themes/app_theme.dart';
 import 'neumorphic_box.dart';
 
 class RegisterForm extends StatefulWidget {
-  final Function(RegisterData data) onRegister;
+  final Function(RegisterData) onRegister;
+  final bool showRoleSelector; // ✅ Nuevo parámetro
 
-  const RegisterForm({super.key, required this.onRegister});
+  const RegisterForm({
+    super.key,
+    required this.onRegister,
+    this.showRoleSelector = true, // Por defecto true
+  });
 
   @override
   State<RegisterForm> createState() => _RegisterFormState();
@@ -18,6 +26,7 @@ class RegisterData {
   final String phoneNumber;
   final String password;
   final bool acceptTerms;
+  final UserType? userType; // ✅ Agregar rol
 
   RegisterData({
     required this.fullName,
@@ -25,6 +34,7 @@ class RegisterData {
     required this.phoneNumber,
     required this.password,
     required this.acceptTerms,
+    this.userType,
   });
 }
 
@@ -38,6 +48,7 @@ class _RegisterFormState extends State<RegisterForm> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _acceptTerms = false;
+  UserType? _selectedRole; // ✅ Rol seleccionado
 
   final _formKey = GlobalKey<FormState>();
 
@@ -60,6 +71,7 @@ class _RegisterFormState extends State<RegisterForm> {
           phoneNumber: _phoneController.text,
           password: _passwordController.text,
           acceptTerms: _acceptTerms,
+          userType: _selectedRole,
         ),
       );
     } else if (!_acceptTerms) {
@@ -72,8 +84,6 @@ class _RegisterFormState extends State<RegisterForm> {
     }
   }
 
-  /// Decoración "flat" pensada para vivir dentro de un [NeumorphicBox.inset]:
-  /// sin bordes ni relleno propio, ya que el hundido lo aporta el contenedor.
   InputDecoration _buildInputDecoration({
     required String hintText,
     required IconData prefixIcon,
@@ -115,12 +125,69 @@ class _RegisterFormState extends State<RegisterForm> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ✅ SELECTOR DE ROL (si está habilitado)
+          if (widget.showRoleSelector) ...[
+            _fieldLabel(theme, 'Selecciona tu rol'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: UserType.values.map((role) {
+                final isSelected = _selectedRole == role;
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedRole = role),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? theme.colorScheme.primary.withOpacity(0.15)
+                          : (isDark ? AppTheme.coffeeDeep : const Color(0xFFF0E8D8)),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected
+                            ? theme.colorScheme.primary
+                            : (isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade300),
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          role.icon,
+                          size: 18,
+                          color: isSelected
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          role.title,
+                          style: TextStyle(
+                            color: isSelected
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurface.withOpacity(0.8),
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+          ],
+
           // Nombre completo
           _fieldLabel(theme, 'Nombre completo'),
           const SizedBox(height: 8),
@@ -269,7 +336,7 @@ class _RegisterFormState extends State<RegisterForm> {
 
           const SizedBox(height: 24),
 
-          // Términos y condiciones — checkbox dentro de una píldora neumórfica
+          // Términos y condiciones
           NeumorphicBox(
             borderRadius: 16,
             intensity: 3,
@@ -312,7 +379,7 @@ class _RegisterFormState extends State<RegisterForm> {
 
           const SizedBox(height: 24),
 
-          // Botón principal adaptable para crear cuenta
+          // Botón principal
           LoginButton(
             text: 'Crear cuenta',
             onPressed: _handleSubmit,
